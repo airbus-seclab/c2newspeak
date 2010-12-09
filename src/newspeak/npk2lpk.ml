@@ -97,10 +97,10 @@ let translate prog =
 	    "translate_set not implemented yet"
   in
 
-  let translate_fn x =
+  let translate_fn x ft =
     match x with
         FunId f -> L.FunId f
-      | FunDeref (e, ft) -> L.FunDeref (translate_exp e, ft)
+      | FunDeref e -> L.FunDeref (translate_exp e, ft)
   in
     
   let translate_token x =
@@ -114,7 +114,7 @@ let translate prog =
   let translate_assertion x = List.map translate_token x in
 
   (* TOOD: find a way to factor prefix_args and suffix_rets!! *)
-  let prefix_args loc f args args_ids =
+  let prefix_args loc f args args_ids ft =
     let rec add args =
       match args with
 	  ((e, t)::args, x::args_ids) ->
@@ -148,7 +148,7 @@ let translate prog =
               in
 		L.Decl (x, t, full_call)
 *)
-        | ([], []) -> L.Call (translate_fn f)
+        | ([], []) -> L.Call (translate_fn f ft)
         | _ -> 
 	    Npkcontext.report_error "hpk2npk.prefix_args"
               "Mismatching number of parameters"
@@ -156,7 +156,7 @@ let translate prog =
       add (args, args_ids)
   in
 
-  let suffix_rets fid loc f (args, ret_vars) args_ids =
+  let suffix_rets fid loc f (args, ret_vars) args_ids ft =
     let add rets =
       match rets with
           (* TODO: should have one list instead of two here!!! *)
@@ -164,11 +164,11 @@ let translate prog =
             push tmp_var;
             let e = Lval (Local tmp_var, t) in
             let set = translate_set (lv, e, t) in
-            let call = prefix_args loc f args args_ids in
+            let call = prefix_args loc f args args_ids ft in
             let x = Temps.to_string (new_id ()) (Temps.Value_of fid) in
               pop tmp_var;
               L.Decl (x, t, (call, loc)::(set, loc)::[])
-        | [] -> prefix_args loc f args args_ids
+        | [] -> prefix_args loc f args args_ids ft
 	| _ ->
             Npkcontext.report_error "Npk2lpk.suffix_rets" 
 	      "case not implemented yet"
@@ -176,7 +176,7 @@ let translate prog =
     let add_fst rets =
       match rets with
           (Local v, _)::[] when Hashtbl.find env v = !stack_height -> 
-	    prefix_args loc f args args_ids
+	    prefix_args loc f args args_ids ft
         | _ -> add rets
     in
       add_fst ret_vars
@@ -203,7 +203,8 @@ let translate prog =
                   let fid = "fptr_call" in
                     (fid, default_args_ids fid (List.length args))
           in
-            suffix_rets fid loc f (args, ret_vars) args_ids
+	  let ft = (List.map snd args, List.map snd ret_vars) in
+            suffix_rets fid loc f (args, ret_vars) args_ids ft
       | DoWith (body, lbl) -> L.DoWith (translate_blk body, lbl)
       | Goto lbl -> L.Goto lbl
       | Decl (x, t, body) -> 

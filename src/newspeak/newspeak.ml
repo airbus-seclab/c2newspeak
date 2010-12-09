@@ -170,7 +170,7 @@ and field = offset * typ
 
 and funexp =
     FunId of fid
-  | FunDeref of (exp * ftyp)
+  | FunDeref of exp
 
 and unop =
     Belongs of bounds
@@ -430,17 +430,26 @@ and string_of_exp e =
 
     | UnOp (op, exp) -> (string_of_unop op)^" "^(string_of_exp exp)
 
-          
+
+(* TODO: remove this string_of_funexp_ftyp *)
+let string_of_funexp_ftyp f ftyp =
+  match f with
+      FunId fid -> fid
+    | FunDeref exp -> 
+	match ftyp with 
+	    (args_t, [ret_t]) ->
+	      (* TODO: factor string_of_exp in different branches here *)
+	      "["^(string_of_exp exp)^"]("^
+		(seq ", " string_of_typ args_t)^") -> "^(string_of_typ ret_t)
+	  | ([], _) ->
+              "["^(string_of_exp exp)^"]"
+	  | (args_t, _) ->
+              "["^(string_of_exp exp)^"]("^(seq ", " string_of_typ args_t)^")"
+
 let string_of_funexp f =
   match f with
       FunId fid -> fid
-    | FunDeref (exp, (args_t, [ret_t])) ->
-        "["^(string_of_exp exp)^"]("^
-          (seq ", " string_of_typ args_t)^") -> "^(string_of_typ ret_t)
-    | FunDeref (exp, ([], _)) ->
-        "["^(string_of_exp exp)^"]"
-    | FunDeref (exp, (args_t, _)) ->
-        "["^(string_of_exp exp)^"]("^(seq ", " string_of_typ args_t)^")"
+    | FunDeref exp -> "["^(string_of_exp exp)^"]"
 
 (* Actual dump *)
 let string_of_lbl l = "lbl"^(string_of_int l)
@@ -518,8 +527,9 @@ let string_of_blk offset x =
 		| _ -> (string_of_list (fun x -> x) out_vars) ^ " <- "
             in
 	    let arg_str = string_of_list (fun x -> x) in_vars in
+	    let ftyp = (List.map snd args, List.map snd ret_vars) in
             let result = 
-	      ret_str ^ (string_of_funexp fn) ^ arg_str ^ ";" 
+	      ret_str ^ (string_of_funexp_ftyp fn ftyp) ^ arg_str ^ ";" 
 	    in
               dump_line_at loc result
           end
@@ -924,7 +934,7 @@ let rec simplify_stmt actions (x, loc) =
   let simplify_funexp actions f =
     match f with
       | FunId s -> FunId s
-      | FunDeref (e, t) -> FunDeref (simplify_exp actions e, t)
+      | FunDeref e -> FunDeref (simplify_exp actions e)
   in
   List.iter (fun a -> a#enter_stmtkind x) actions;
   let x =
@@ -1201,10 +1211,7 @@ and build_choice builder (cond, body) =
 and build_funexp builder fn =
   match fn with
       FunId f -> FunId f
-    | FunDeref (e, ft) ->
-        let e = build_exp builder e in
-        let ft = build_ftyp builder ft in
-          FunDeref (e, ft)
+    | FunDeref e -> FunDeref (build_exp builder e)
 
 and build_lval builder lv =
   let lv =
@@ -1381,9 +1388,7 @@ and visit_binop visitor op =
 let visit_funexp visitor x =
   let continue = visitor#process_funexp x in
     match x with
-        FunDeref (e, t) when continue -> 
-          visit_exp visitor e;
-          visit_ftyp visitor t
+        FunDeref e when continue -> visit_exp visitor e
       | _ -> ()
 
 let rec visit_blk visitor x = List.iter (visit_stmt visitor) x
@@ -1545,7 +1550,7 @@ and belongs_of_lval x =
 
 let belongs_of_funexp x =
   match x with
-      FunDeref (e, _) -> belongs_of_exp e
+      FunDeref e -> belongs_of_exp e
     | _ -> []
 
 let exp_of_int x = Const (CInt (Nat.of_int x))

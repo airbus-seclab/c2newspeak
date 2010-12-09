@@ -178,7 +178,7 @@ and field = offset * typ
 
 and funexp =
     FunId of fid
-  | FunDeref of (exp * ftyp)
+  | FunDeref of exp
 
 and unop =
     Belongs of bounds
@@ -277,8 +277,8 @@ val string_of_sign_t: sign_t -> string
 val string_of_scalar : scalar_t -> string
 val string_of_typ : typ -> string
 val string_of_ftyp : ftyp -> string
-val string_of_exp : exp -> string
 val string_of_funexp: funexp -> string
+val string_of_exp : exp -> string
 val string_of_lval : lval -> string
 
 val string_of_stmt: stmt -> string

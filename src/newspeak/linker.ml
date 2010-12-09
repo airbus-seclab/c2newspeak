@@ -167,8 +167,7 @@ let rec generate_stmt (sk, loc) =
       | Call (in_vars, (in_t, out_t), fn, out_vars) ->
 (* TODO: push this code up into previous phase *)
 	  let in_vars = generate_args in_vars in_t in
-	  let ft = generate_ftyp (in_t, out_t) in
-          let fn = generate_fn fn ft in
+          let fn = generate_fn fn in
 	  let out_vars = generate_rets out_vars out_t in
             N.Call (in_vars, fn, out_vars)
       | Goto lbl -> N.Goto lbl
@@ -209,10 +208,10 @@ and generate_token x =
 
 and generate_blk x = List.map generate_stmt x
     
-and generate_fn fn ft =
+and generate_fn fn =
   match fn with
     | FunId f -> N.FunId f
-    | FunDeref e -> N.FunDeref (generate_exp e, ft)
+    | FunDeref e -> N.FunDeref (generate_exp e)
 
 and generate_body body = List.map generate_stmt body
 
