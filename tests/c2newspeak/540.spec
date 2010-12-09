@@ -7,7 +7,7 @@ void f(ptr ptr) {
 
 void main(void) {
   (540.c:29#7)^ptr x;
-  (540.c:30#2)^f(x_ptr);
+  (540.c:30#2)^f(x_ptr: ptr);
 }
 
 

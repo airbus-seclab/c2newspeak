@@ -5,6 +5,6 @@ int32 g(int32 x) {
 }
 
 void main(void) {
-  (004.c:33#2)^call_fptr(&_{(int32) -> int32}(g));
+  (004.c:33#2)^call_fptr(&_{(int32) -> int32}(g): fptr);
 }
 

@@ -7,7 +7,7 @@ void f(int8 x) {
 
 void main(void) {
   (475.c:34#6)^int32 c;
-  (475.c:35#2)^f(coerce[-128,127] c_int32);
+  (475.c:35#2)^f(coerce[-128,127] c_int32: int8);
 }
 
 

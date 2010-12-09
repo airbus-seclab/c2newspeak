@@ -5,7 +5,7 @@ Newspeak output
 119.c
 void main(void) {
   (119.c:27#2)^int32 tmp_cir!0;
-  (119.c:27#2)^tmp_cir!0 <- f();
+  (119.c:27#2)^tmp_cir!0: int32 <- f();
 }
 
 

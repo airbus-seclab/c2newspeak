@@ -4,7 +4,7 @@ Newspeak output
 ---------------
 542.c
 void main(void) {
-  (542.c:29#2)^f(0);
+  (542.c:29#2)^f(0: int32);
 }
 
 

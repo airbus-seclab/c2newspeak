@@ -10,7 +10,7 @@ void t369.main(void) {
   (t369.adb:14#7)^int32 u;
   (t369.adb:15#7)^int32 v;
   (t369.adb:17#8)^u =(int32) 4;
-  (t369.adb:18#7)^(u, v) <- t369.f(3);
+  (t369.adb:18#7)^(u: int32, v: int32) <- t369.f(3: int32);
 }
 
 

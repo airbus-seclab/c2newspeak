@@ -8,7 +8,7 @@ void f(ptr ptr) {
 
 void main(void) {
   (679.c:29#6)^int32 x;
-  (679.c:30#2)^f((ptr) x_int32);
+  (679.c:30#2)^f((ptr) x_int32: ptr);
 }
 
 

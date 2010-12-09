@@ -4,6 +4,6 @@ void f(void) {
 }
 
 void main(void) {
-  (007.c:32#2)^execute(&_{void -> void}(f));
+  (007.c:32#2)^execute(&_{void -> void}(f): fptr);
 }
 

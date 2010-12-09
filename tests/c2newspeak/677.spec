@@ -3,7 +3,7 @@ Newspeak output
 677.c
 void main(void) {
   (677.c:31#2)^int32 tmp_cir!0;
-  (677.c:31#2)^tmp_cir!0 <- f();
+  (677.c:31#2)^tmp_cir!0: int32 <- f();
   (677.c:31#2)^choose {
    -->
     (677.c:31#2)^guard(! (tmp_cir!0_int32 ==_int32 0));

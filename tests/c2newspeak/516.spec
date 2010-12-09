@@ -7,7 +7,7 @@ int32 f(void) {
 
 void main(void) {
   (516.c:31#2)^int32 tmp_cir!0;
-  (516.c:31#2)^tmp_cir!0 <- f();
+  (516.c:31#2)^tmp_cir!0: int32 <- f();
 }
 
 

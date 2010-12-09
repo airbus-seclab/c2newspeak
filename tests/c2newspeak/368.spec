@@ -4,7 +4,7 @@ Newspeak output
 void main(void) {
   (368.c:31#2)^int8[1] tmp_firstpass!0;
   (368.c:31#2)^tmp_firstpass!0 =(uint1) x_uint1;
-  (368.c:31#2)^printf(focus32 &(cstr!1!368.c.%d\n), focus8 &(tmp_firstpass!0));
+  (368.c:31#2)^printf(focus32 &(cstr!1!368.c.%d\n): ptr, focus8 &(tmp_firstpass!0): ptr);
 }
 
 int8[4] cstr!1!368.c.%d\n;

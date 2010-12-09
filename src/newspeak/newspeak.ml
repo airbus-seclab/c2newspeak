@@ -430,22 +430,6 @@ and string_of_exp e =
 
     | UnOp (op, exp) -> (string_of_unop op)^" "^(string_of_exp exp)
 
-
-(* TODO: remove this string_of_funexp_ftyp *)
-let string_of_funexp_ftyp f ftyp =
-  match f with
-      FunId fid -> fid
-    | FunDeref exp -> 
-	match ftyp with 
-	    (args_t, [ret_t]) ->
-	      (* TODO: factor string_of_exp in different branches here *)
-	      "["^(string_of_exp exp)^"]("^
-		(seq ", " string_of_typ args_t)^") -> "^(string_of_typ ret_t)
-	  | ([], _) ->
-              "["^(string_of_exp exp)^"]"
-	  | (args_t, _) ->
-              "["^(string_of_exp exp)^"]("^(seq ", " string_of_typ args_t)^")"
-
 let string_of_funexp f =
   match f with
       FunId fid -> fid
@@ -517,22 +501,21 @@ let string_of_blk offset x =
 
       | Goto l -> dump_line_at loc ("goto "^(string_of_lbl l)^";")
       | Call (args, fn, ret_vars) ->
-          begin
-	    let in_vars = List.map (fun (x, _) -> string_of_exp x) args in
-	    let out_vars = List.map (fun (x, _) -> string_of_lval x) ret_vars in
-            let ret_str = 
-	      match out_vars with
-		| [] -> ""
-		| r::[] -> r ^ " <- "
-		| _ -> (string_of_list (fun x -> x) out_vars) ^ " <- "
-            in
-	    let arg_str = string_of_list (fun x -> x) in_vars in
-	    let ftyp = (List.map snd args, List.map snd ret_vars) in
-            let result = 
-	      ret_str ^ (string_of_funexp_ftyp fn ftyp) ^ arg_str ^ ";" 
-	    in
-              dump_line_at loc result
-          end
+	  let string_of_args (x, t) = string_of_exp x^": "^string_of_typ t in
+	  let string_of_rets (x, t) = string_of_lval x^": "^string_of_typ t in
+	  let args = List.map string_of_args args in
+	  let rets = List.map string_of_rets ret_vars in
+          let ret_str = 
+	    match rets with
+	      | [] -> ""
+	      | r::[] -> r ^ " <- "
+	      | _ -> (string_of_list (fun x -> x) rets) ^ " <- "
+          in
+	  let arg_str = string_of_list (fun x -> x) args in
+          let result = 
+	    ret_str ^ (string_of_funexp fn) ^ arg_str ^ ";" 
+	  in
+            dump_line_at loc result
       | Select (body1, body2) ->
           dump_line_at loc "choose {";
           dump_line " -->";

@@ -12,7 +12,7 @@ void main(void) {
      -->
       (519.c:31#2)^guard((x_int32 ==_int32 0));
     }
-    (519.c:32#2)^y <- f();
+    (519.c:32#2)^y: int32 <- f();
   } with lbl0:
 }
 

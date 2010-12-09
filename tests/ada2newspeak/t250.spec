@@ -104,7 +104,7 @@ void t250.f(void) {
   (t250.adb:31#10)^y =(uint2) 0;
   (t250.adb:34#8)^{
     uint2 tmp_cir!0;
-    (t250.adb:34#8)^tmp_cir!0 <- t250.!op+(belongs[0,2] x_uint2, belongs[0,2] y_uint2);
+    (t250.adb:34#8)^tmp_cir!0: uint2 <- t250.!op+(belongs[0,2] x_uint2: uint2, belongs[0,2] y_uint2: uint2);
     (t250.adb:34#8)^z =(uint2) belongs[0,2] tmp_cir!0_uint2;
   }
 }
