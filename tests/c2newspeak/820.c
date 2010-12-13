@@ -25,7 +25,6 @@
 
 void main()
 {
-  goto a;
  a:
-  return;
+  goto a;
 }

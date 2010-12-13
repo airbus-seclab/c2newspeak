@@ -25,7 +25,11 @@
 
 void main()
 {
-  goto a;
- a:
+  {
+    int x;
+    x = 1;
+    goto a;
+  }
+  a:
   return;
 }

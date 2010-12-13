@@ -151,8 +151,8 @@ let opt_of_flag err =
     | DirtySyntax -> "--reject-dirty-syntax"
     | PartialFunDecl -> "--reject-incomplete-fundecl"
     | MissingFunDecl -> "--reject-missing-fundecl"
-    | ForwardGoto -> "--reject-forward-goto"
-    | BackwardGoto -> "--reject-goto"
+    | ForwardGoto -> "--reject-goto"
+    | BackwardGoto -> "--reject-backward-goto"
     | StrictSyntax -> "--use-strict-syntax"
     | ExternGlobal -> "--reject-extern"
     | FlexArray -> "--reject-flexible-array"
@@ -203,10 +203,11 @@ let argslist = [
   (opt_of_flag MissingFunDecl, Arg.Clear (flag_of_error MissingFunDecl),
    "rejects call to function whose prototype is not declared");
 
-  (opt_of_flag ForwardGoto, Arg.Clear (flag_of_error ForwardGoto),
-   "rejects forward goto statements");
+  (opt_of_flag ForwardGoto, Arg.Unit clear_gotos,
+   "rejects goto statements");
 
-  (opt_of_flag BackwardGoto, Arg.Unit clear_gotos, "accepts goto statements ");
+  (opt_of_flag BackwardGoto, Arg.Clear  (flag_of_error BackwardGoto), 
+   "rejects backward goto statements ");
 
   (opt_of_flag TransparentUnion, Arg.Clear (flag_of_error TransparentUnion),
    "rejects transparent unions");
