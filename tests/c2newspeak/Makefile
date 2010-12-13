@@ -180,11 +180,3 @@ include ../common.Makefile
 498: 499
 503: 539
 579: 712
-
-TESTS.CIL.SPEC=$(addsuffix .cil.spec, $(TESTS))
-
-.PHONY: $(TESTS.CIL.SPEC)
-
-$(TESTS.CIL.SPEC): %.cil.spec: $(PREREQ)
-	$(C2NEWSPEAK) --print-newspeak --use-cil `[ -e $*.in ] && cat $*.in` $*.c > $@ 2>&1; true
-	cat $@

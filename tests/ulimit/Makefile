@@ -1,4 +1,3 @@
-#
 # C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
 # well-suited for static analysis.
 # Copyright (C) 2007  Charles Hymans, Olivier Levillain
@@ -24,16 +23,9 @@
 # email: charles.hymans@penjili.org
 #
 
-DIR=c2newspeak mult-files lowspeak npkstats mem_opt npk2bytesz npkcheck \
-    npkbugfind npkdiff newspeak npkstrip ada2newspeak npkpointer options \
-    npkflow npkfuns npktests npknull simpleai npksolver ulimit
+COMMAND=ulimit -s 8192; $(C2NEWSPEAK) `[ -e $*.in ] && cat $*.in` $*.c
 
-.PHONY: $(DIR)
+TESTS=
+PREREQ=%.c
 
-all: $(DIR)
-
-clean: $(DIR)
-
-$(DIR):
-	@$(MAKE) -s -C $@ $(MAKECMDGOALS)
-
+include ../common.Makefile
