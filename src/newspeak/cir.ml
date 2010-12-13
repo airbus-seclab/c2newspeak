@@ -561,7 +561,7 @@ struct
 end
 module Set = Set.Make(Int)
 
-let normalize x =
+let hoist_variables x =
   let stack_height = ref 0 in
   let lbl_tbl = Hashtbl.create 20 in 
     (* maps each lbl to the variable that should be declared at this block *)
@@ -658,10 +658,37 @@ let normalize x =
 	    ((e, body)::tl, Set.union used_lbls1 used_lbls2)
       | [] -> ([], Set.empty)
   in
-
-  let x = normalize_blk x in
-  let (body, _) = set_scope_blk x in (* TODO: should optimize set_scope_blk *)
+  let (body, _) = set_scope_blk x in
     body
+
+let contains_goto x = 
+  let rec contains_goto_blk x =
+    match x with
+	(x, _)::tl -> contains_goto_stmtkind x || contains_goto_blk tl
+      | [] -> false
+
+  and contains_goto_stmtkind x =
+    match x with
+	Block (body, _) | Loop body -> contains_goto_blk body
+      | Goto _ -> true
+      | Decl _ | Set _ | Exp _ | UserSpec _ | Guard _ -> false
+      | Select (body1, body2) ->
+	  contains_goto_blk body1 || contains_goto_blk body2
+      | Switch (_, choices, default) ->
+	  contains_goto_choices choices || contains_goto_blk default
+
+  and contains_goto_choices x =
+    match x with
+	(_, body)::tl ->
+	  contains_goto_blk body || contains_goto_choices tl
+      | [] -> false
+  in
+    contains_goto_blk x
+      
+let normalize x =
+  let x = normalize_blk x in
+    if (contains_goto x) then hoist_variables x
+    else x
 
 (* TODO: this should be probably put in firstpass *)
 let cast (e, t) t' =

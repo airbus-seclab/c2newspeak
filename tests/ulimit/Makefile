@@ -25,7 +25,7 @@
 
 COMMAND=ulimit -s 8192; $(C2NEWSPEAK) `[ -e $*.in ] && cat $*.in` $*.c
 
-TESTS=
+TESTS=000
 PREREQ=%.c
 
 include ../common.Makefile
