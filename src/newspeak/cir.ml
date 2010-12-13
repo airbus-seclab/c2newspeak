@@ -572,6 +572,7 @@ let normalize x =
     Hashtbl.add age_tbl !stack_height lbl;
     incr stack_height
   in
+
   let pop_lbl lbl =
     let decls = Hashtbl.find lbl_tbl lbl in
       decr stack_height;
@@ -579,6 +580,7 @@ let normalize x =
       Hashtbl.remove lbl_tbl lbl;
       decls
   in
+
   let register_decl lbl x =
     let decls = 
       try Hashtbl.find lbl_tbl lbl 
@@ -621,7 +623,7 @@ let normalize x =
 	  in
 	  let (tl, used_lbls') = set_scope_blk tl in
 	    (body@tl, Set.union used_lbls used_lbls')
-	      
+
       | (x, loc)::tl -> 
 	  let (x, used_lbls1) = set_scope_stmtkind x in
 	  let (tl, used_lbls2) = set_scope_blk tl in
@@ -656,9 +658,9 @@ let normalize x =
 	    ((e, body)::tl, Set.union used_lbls1 used_lbls2)
       | [] -> ([], Set.empty)
   in
-    
+
   let x = normalize_blk x in
-  let (body, _) = set_scope_blk x in
+  let (body, _) = set_scope_blk x in (* TODO: should optimize set_scope_blk *)
     body
 
 (* TODO: this should be probably put in firstpass *)
@@ -670,11 +672,6 @@ let cast (e, t) t' =
 	Unop (Npkil.Cast (FunPtr, t'), AddrOf lv)
     | (_, Const (CInt i), Scalar (Int k))
 	when Newspeak.belongs i (Newspeak.domain_of_typ k) -> e
-(*
-    | (Scalar Int k, _, Scalar Int k') 
-	when Newspeak.contains 
-	  (Newspeak.domain_of_typ k') (Newspeak.domain_of_typ k) -> e
-*)
     | (Scalar (Int _), _, Scalar (Int k)) -> 
 	Unop (Npkil.Coerce (Newspeak.domain_of_typ k), e)
     | (Scalar t, _, Scalar t') -> Unop (Npkil.Cast (t, t'), e)
