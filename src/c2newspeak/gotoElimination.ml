@@ -1344,21 +1344,20 @@ let run prog =
     (* computing offset and level for each pair of goto/label statement *)
     (* making all goto stmt conditional *)
     let vdecls', stmts' = preprocessing lbls stmts in
-      if vdecls' = [] then 
-	(* no goto found *) 
-	stmts'
-      else 
-	(* processing goto elimination *)
-	let vars = ref [] in
-	let stmts' = vdecls'@stmts' in
-	  (* replacing vars with the same name and making them to be
-	  at function scope *)
-	let stmts' = renaming_block_variables stmts' in
-	let stmts' = promoting_block_variables stmts' in
-	let stmts' = elimination lbls stmts' vars in
-	let _, l = List.hd vdecls' in
-	let vars' = List.map (fun vdecl -> (vdecl, l)) !vars in
-	  vars'@stmts'
+      match vdecls' with
+	  [] -> (* no goto found *) 
+	    stmts'
+	| (_, l)::_ -> 
+	    (* processing goto elimination *)
+	    let vars = ref [] in
+	    let stmts' = vdecls'@stmts' in
+	      (* replacing vars with the same name and making them to be
+		 at function scope *)
+	    let stmts' = renaming_block_variables stmts' in
+	    let stmts' = promoting_block_variables stmts' in
+	    let stmts' = elimination lbls stmts' vars in
+	    let vars' = List.map (fun vdecl -> (vdecl, l)) !vars in
+	      vars'@stmts'
   in
   let lbls = Hashtbl.create 30 in
   let rec run prog = 
