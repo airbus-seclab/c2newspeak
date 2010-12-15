@@ -1359,15 +1359,13 @@ let run prog =
 	    let vars' = List.map (fun vdecl -> (vdecl, l)) !vars in
 	      vars'@stmts'
   in
-  let lbls = Hashtbl.create 30 in
   let process_function_definition (g, l) =
     let g =
       match g with
 	  FunctionDef (s, t, b, stmts) ->
+	    let lbls = Hashtbl.create 30 in
 	    let stmts' = in_fun_elimination lbls stmts in
-	    let g' = FunctionDef (s, t, b, stmts') in
-	      Hashtbl.clear lbls;		  
-	      g'
+	      FunctionDef (s, t, b, stmts')
 	| _ -> g
     in
       (g, l)
