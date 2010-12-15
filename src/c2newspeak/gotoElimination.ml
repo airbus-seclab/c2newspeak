@@ -1071,23 +1071,18 @@ let elimination stmts lbl gotos vdecls =
     let l_level, l = compute_level !stmts lbl id in
     let l = ref l in
       (* force goto and label to be directly related *)
-      if indirectly_related !stmts lbl id then
-	  stmts := outward !stmts lbl l id;
+      if indirectly_related !stmts lbl id 
+      then stmts := outward !stmts lbl l id;
       (* force goto and label to be siblings *)
       if directly_related !stmts lbl id then begin
-	if !l > l_level then begin
-	  stmts := outward !stmts lbl l id;
-	  stmts := sibling_elimination !stmts lbl id vdecls
-	end
-	else begin 
+	if !l > l_level then begin stmts := outward !stmts lbl l id
+	end else begin 
 	  let l_level = ref l_level in
-	    stmts := lifting_and_inward !stmts lbl l_level l id o vdecls;
-	    stmts := sibling_elimination !stmts lbl id vdecls
+	    stmts := lifting_and_inward !stmts lbl l_level l id o vdecls
 	end
-      end
-      else 
-	(* goto and label are sibling; eliminate goto and label *) 
-	stmts := sibling_elimination !stmts lbl id vdecls
+      end;
+      (* goto and label are sibling; eliminate goto and label *) 
+      stmts := sibling_elimination !stmts lbl id vdecls
 
   in
     List.iter move gotos;
