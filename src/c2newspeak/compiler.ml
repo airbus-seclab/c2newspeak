@@ -77,8 +77,8 @@ let compile fname =
       if !Npkcontext.verb_ast then Csyntax.print prog;
       let prog = 
 	if !Npkcontext.accept_goto then begin
-	  Npkcontext.print_debug "Running goto_elimination...";
-	  let g = Goto_elimination.run prog in
+	  Npkcontext.print_debug "Running goto elimination...";
+	  let g = GotoElimination.run prog in
 	    Npkcontext.print_debug "Goto elimination done.";
 	    Npkcontext.print_size (Csyntax.size_of g);
 	    g
