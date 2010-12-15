@@ -1339,7 +1339,8 @@ let run prog =
       deleting_goto_ids !stmts
       
   in
-  let in_fun_elimination lbls stmts =
+  let in_fun_elimination stmts =
+    let lbls = Hashtbl.create 30 in
     (* adding a fresh boolean variable to each label stmt *)
     (* computing offset and level for each pair of goto/label statement *)
     (* making all goto stmt conditional *)
@@ -1363,8 +1364,7 @@ let run prog =
     let g =
       match g with
 	  FunctionDef (s, t, b, stmts) ->
-	    let lbls = Hashtbl.create 30 in
-	    let stmts' = in_fun_elimination lbls stmts in
+	    let stmts' = in_fun_elimination stmts in
 	      FunctionDef (s, t, b, stmts')
 	| _ -> g
     in
