@@ -1360,16 +1360,17 @@ let run prog =
 	      vars'@stmts'
   in
   let lbls = Hashtbl.create 30 in
-  let rec run prog = 
-    match prog with
-	[] -> []
-      | (g, l)::prog -> 
-	  match g with
-	      FunctionDef (s, t, b, stmts) -> 
-		let stmts' = in_fun_elimination lbls stmts in
-		let g' = FunctionDef (s, t, b, stmts') in
-		  Hashtbl.clear lbls;
-		  (g', l)::(run prog)
-	    | _ -> (g, l)::(run prog)
-  in 
-    run prog
+  let process_function_definition (g, l) =
+    let g =
+      match g with
+	  FunctionDef (s, t, b, stmts) ->
+	    let stmts' = in_fun_elimination lbls stmts in
+	    let g' = FunctionDef (s, t, b, stmts') in
+	      Hashtbl.clear lbls;		  
+	      g'
+	| _ -> g
+    in
+      (g, l)
+  in
+    List.map process_function_definition prog
+
