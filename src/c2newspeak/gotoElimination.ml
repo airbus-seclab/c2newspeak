@@ -1329,15 +1329,13 @@ let promoting_block_variables stmts =
   let decl, stmts' = promote stmts in decl @ stmts'
 
 let run prog =
-  let elimination lbls stmts vars =
+  let elimination lbls stmts =
+    let vars = ref [] in
     (* goto elimination *)
     let stmts = ref stmts in
-    let move lbl (g, _) = 
-      stmts := elimination !stmts lbl g vars
-    in
+    let move lbl (g, _) = stmts := elimination !stmts lbl g vars in
       Hashtbl.iter move lbls;
-      deleting_goto_ids !stmts
-      
+      (deleting_goto_ids !stmts, !vars)
   in
   let in_fun_elimination stmts =
     let lbls = Hashtbl.create 30 in
@@ -1350,14 +1348,13 @@ let run prog =
 	    stmts'
 	| (_, l)::_ -> 
 	    (* processing goto elimination *)
-	    let vars = ref [] in
 	    let stmts' = vdecls'@stmts' in
 	      (* replacing vars with the same name and making them to be
 		 at function scope *)
 	    let stmts' = renaming_block_variables stmts' in
 	    let stmts' = promoting_block_variables stmts' in
-	    let stmts' = elimination lbls stmts' vars in
-	    let vars' = List.map (fun vdecl -> (vdecl, l)) !vars in
+	    let (stmts', vars) = elimination lbls stmts' in
+	    let vars' = List.map (fun vdecl -> (vdecl, l)) vars in
 	      vars'@stmts'
   in
   let process_function_definition (g, l) =
