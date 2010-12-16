@@ -444,7 +444,7 @@ let sibling_elimination stmts lbl g_offset vdecls =
 	[] -> raise Not_found
       | (stmt, l)::stmts -> 
 	  match stmt with
-	      If(_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
+	      If (_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
 		stmts, (stmt, l)
 	    | Block blk -> begin
 		try
@@ -470,21 +470,27 @@ let sibling_elimination stmts lbl g_offset vdecls =
 		let decls, before = extract_decls before in
 		  if before = [] then decls@after
 		  else begin
-		    let if' = If(Unop(Not, e), before, []) in 
+		    let if' = If (Unop(Not, e), before, []) in 
 		      decls @ ((if', l)::after)
 		  end
 	    | Block blk -> begin
 		try
 		  let blk', stmt = f_delete_goto blk in
 		  let decls, blk' = extract_decls blk' in
+(*		    print_endline (Csyntax.string_of_blk (stmt::[]));
+		    print_endline (Csyntax.string_of_blk blk');*)
 		  let stmts' = [Block blk', l] in
 		  let stmts' = stmt::(decls @ stmts' @ stmts) in
 		    forward stmts'
 		with Not_found -> (stmt, l)::(forward stmts)
 	      end
 	    | _ -> (stmt, l)::(forward stmts)
-  
   in
+(*
+  print_endline (Csyntax.string_of_blk ((stmt, l)::stmts));
+  print_endline (Csyntax.string_of_blk (forward ((stmt, l)::stmts)));
+*)
+
   let rec choose blk =
     match blk with
 	[] -> ([], false)
@@ -499,7 +505,12 @@ let sibling_elimination stmts lbl g_offset vdecls =
 	    backward stmts', true
       | Block blk -> begin
 	  try direction blk with 
-	      Gto  -> forward ((stmt, l)::stmts), true 
+	      Gto -> 
+(*
+		print_endline (Csyntax.string_of_blk ((stmt, l)::stmts));
+		print_endline (Csyntax.string_of_blk (forward ((stmt, l)::stmts)));
+*)
+		forward ((stmt, l)::stmts), true 
 	    | Lbl -> backward ((stmt, l)::stmts), true
 	    | Not_found -> 
 		let blk', b' = choose blk in 
@@ -538,7 +549,7 @@ let sibling_elimination stmts lbl g_offset vdecls =
 	    match cases with
 		[] -> [], false
 	      | (e, stmts, l)::cases -> 
-		  let stmts', b = choose stmts in 
+		  let stmts', b = choose stmts in
 		    if b then (e, stmts', l)::cases, true
 		    else begin
 		      let cases', b' = iter cases in 
@@ -551,7 +562,7 @@ let sibling_elimination stmts lbl g_offset vdecls =
 	      let default', b' = choose default in 
 		if b' then (CSwitch(e, cases, default'), l)::stmts, true
 		else begin
-		  let stmts', b' = choose stmts in 
+		  let stmts', b' = choose stmts in
 		    (stmt, l)::stmts', b'
 		end
 	    end
@@ -1105,10 +1116,8 @@ let elimination stmts lbl gotos vdecls =
 	    stmts := lifting_and_inward !stmts lbl l_level l id o vdecls
 	end
       end;
-(*TODO:    print_endline (Csyntax.string_of_blk !stmts);*)
       (* goto and label are sibling; eliminate goto and label *) 
       stmts := sibling_elimination !stmts lbl id vdecls
-(*TODO:	; print_endline (Csyntax.string_of_blk !stmts);*)
   in
     List.iter move gotos;
     !stmts
