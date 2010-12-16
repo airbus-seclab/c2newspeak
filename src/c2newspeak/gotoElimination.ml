@@ -375,23 +375,24 @@ let rec split_lbl stmts lbl =
 
 let sibling_elimination stmts lbl g_offset vdecls =
   let rec direction stmts =
-  match stmts with
-      [] -> raise Not_found
-    | (stmt, _)::stmts ->
-	match stmt with
-	    Label lbl' when lbl = lbl' -> raise Lbl
-	  | If(_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> raise Gto 
-	  | Block blk -> begin
-	      try direction blk with Not_found -> direction stmts
-	    end
-	  | _ -> direction stmts
-in
+    match stmts with
+	[] -> raise Not_found
+      | (stmt, _)::stmts ->
+	  match stmt with
+	      Label lbl' when lbl = lbl' -> raise Lbl
+	    | If(_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> raise Gto 
+	    | Block blk -> begin
+		try direction blk with Not_found -> direction stmts
+	      end
+	    | _ -> direction stmts
+  in
   let rec b_delete_goto stmts =
     match stmts with
 	[] -> raise Not_found
       | (stmt, l)::stmts ->
 	  match stmt with
-	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> e, [], [], stmts
+	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> 
+		e, [], [], stmts
 	    | Block blk -> begin
 		try
 		  let e, before, blk', after = b_delete_goto blk in
@@ -416,7 +417,9 @@ in
     try
       let e, before, blk', after = b_delete_goto ((stmt,l)::stmts) in
       let l' = try snd (List.hd (List.rev blk')) with Failure "hd" -> l in
-      let blk', after' = avoid_break_continue_capture blk' l l' g_offset vdecls in
+      let blk', after' = 
+	avoid_break_continue_capture blk' l l' g_offset vdecls 
+      in
 	before@((DoWhile (blk', e), l)::(after'@after))
     with
 	(* goto may have disappeared because of optimizations *)
@@ -442,12 +445,16 @@ in
 		stmts, (stmt, l)
 	    | Block blk -> begin
 		try
-		  let blk', stmt' = f_delete_goto blk in (Block blk', l)::stmts, stmt'
+		  let blk', stmt' = f_delete_goto blk in 
+		    (Block blk', l)::stmts, stmt'
 		with
 		    Not_found -> 
-		      let stmts', stmt' = f_delete_goto stmts in (stmt, l)::stmts', stmt'
+		      let stmts', stmt' = f_delete_goto stmts in 
+			(stmt, l)::stmts', stmt'
 	      end
-	    | _ -> let stmts', stmt' = f_delete_goto stmts in (stmt, l)::stmts', stmt'
+	    | _ -> 
+		let stmts', stmt' = f_delete_goto stmts in 
+		  (stmt, l)::stmts', stmt'
   in
 
   let rec forward stmts = 
@@ -455,12 +462,14 @@ in
 	[] -> []
       | (stmt, l)::stmts ->
 	  match stmt with
-	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> 
+	      If (e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> 
 		let before, after = split_lbl stmts lbl in
 		let decls, before = extract_decls before in
 		  if before = [] then decls@after
-		  else
-		    let if' = If(Unop(Not, e), before, []) in decls @ ((if', l)::after)
+		  else begin
+		    let if' = If(Unop(Not, e), before, []) in 
+		      decls @ ((if', l)::after)
+		  end
 	    | Block blk -> begin
 		try
 		  let blk', stmt = f_delete_goto blk in
@@ -478,42 +487,47 @@ in
 	[] -> [], false
       | (stmt, l)::stmts ->
 	  match stmt with
-	      If(_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
+	      If (_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
 		forward ((stmt, l)::stmts), true
 	    | Label lbl' when lbl' = lbl -> 
-	      let stmts' = (stmt, l)::stmts in backward stmts', true
+		let stmts' = (stmt, l)::stmts in 
+		  backward stmts', true
 	    | Block blk -> begin
 		  try direction blk with 
 		      Gto  -> forward ((stmt, l)::stmts), true 
 		    | Lbl -> backward ((stmt, l)::stmts), true
 		    | Not_found -> 
 			let blk', b' = choose blk in 
-			  if not b' then let stmts', b' = choose stmts in (stmt, l)::stmts', b'
-			  else (Block blk', l)::stmts, true
+			  if not b' then begin
+			    let stmts', b' = choose stmts in 
+			      (stmt, l)::stmts', b'
+			  end else (Block blk', l)::stmts, true
 	      end
-	    | If(e, if_blk, else_blk) -> 
+	    | If (e, if_blk, else_blk) -> 
 		let if_blk', b = choose if_blk in 
 		  if b then (If(e, if_blk', else_blk), l)::stmts, true
-		  else
+		  else begin
 		    let else_blk', b' = choose else_blk in
-		      if b' then 
-			(If(e, if_blk, else_blk'), l)::stmts, true
-		      else
-			let stmts', b' = choose stmts in (stmt, l)::stmts', b'
-
-	    | For(blk1, e, blk2, blk3) ->
+		      if b' then (If (e, if_blk, else_blk'), l)::stmts, true
+		      else begin
+			let stmts', b' = choose stmts in 
+			  (stmt, l)::stmts', b'
+		      end
+		  end
+	    | For (blk1, e, blk2, blk3) ->
 		let blk2', b = choose blk2 in 
-		  if b then 
-		    (For(blk1, e, blk2', blk3), l)::stmts, true
-		  else 
-		    let stmts', b' = choose stmts in (stmt, l)::stmts', b'
-
+		  if b then (For (blk1, e, blk2', blk3), l)::stmts, true
+		  else begin
+		    let stmts', b' = choose stmts in 
+		      (stmt, l)::stmts', b'
+		  end
 	    | DoWhile(blk, e) ->
 		let blk', b = choose blk in 
-		  if b then 
-		    (DoWhile(blk', e), l)::stmts, true
-		  else 
-		    let stmts', b' = choose stmts in (stmt, l)::stmts', b'
+		  if b then (DoWhile(blk', e), l)::stmts, true
+		  else begin
+		    let stmts', b' = choose stmts in 
+		      (stmt, l)::stmts', b'
+		  end
 
 	    | CSwitch(e, cases, default) ->
 		let rec iter cases =
@@ -522,17 +536,21 @@ in
 		    | (e, stmts, l)::cases -> 
 			let stmts', b = choose stmts in 
 			  if b then (e, stmts', l)::cases, true
-			  else
-			    let cases', b' = iter cases in (e, stmts', l)::cases', b'
+			  else begin
+			    let cases', b' = iter cases in 
+			      (e, stmts', l)::cases', b'
+			  end
 		in
 		let cases', b' = iter cases in
 		  if b' then (CSwitch(e, cases', default), l)::stmts, b'
-		  else
+		  else begin
 		    let default', b' = choose default in 
 		      if b' then (CSwitch(e, cases, default'), l)::stmts, b' 
-		      else 
-			let stmts', b' = choose stmts in (stmt, l)::stmts', b'
-
+		      else begin
+			let stmts', b' = choose stmts in 
+			  (stmt, l)::stmts', b'
+		      end
+		  end
 	    | _ -> let stmts', b' = choose stmts in (stmt, l)::stmts', b'
   in
     fst (choose stmts) 
@@ -1065,7 +1083,7 @@ let rec compute_level stmts lbl id =
 let elimination stmts lbl gotos vdecls =
   (* moves all gotos of the given label lbl. lo is the pair
      (level, offset) of the label statement *)
-  let stmts = ref stmts in	
+  let stmts = ref stmts in
   let move goto =
     let id, o = goto in
     let l_level, l = compute_level !stmts lbl id in
@@ -1081,9 +1099,10 @@ let elimination stmts lbl gotos vdecls =
 	    stmts := lifting_and_inward !stmts lbl l_level l id o vdecls
 	end
       end;
+(*TODO:    print_endline (Csyntax.string_of_blk !stmts);*)
       (* goto and label are sibling; eliminate goto and label *) 
       stmts := sibling_elimination !stmts lbl id vdecls
-
+(*TODO:	; print_endline (Csyntax.string_of_blk !stmts);*)
   in
     List.iter move gotos;
     !stmts
@@ -1180,10 +1199,9 @@ let rec renaming_block_variables stmts =
 	
   in
   let pop_block () = 
-    try
-      stack := List.tl !stack
-    with Failure "tl" -> invalid_arg "Goto_elimination.pop_block: the stack is empty"
-      
+    try stack := List.tl !stack
+    with Failure "tl" -> 
+      invalid_arg "Goto_elimination.pop_block: the stack is empty"
   in
   let rec explore stmts =
     match stmts with
