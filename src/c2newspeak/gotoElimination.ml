@@ -373,6 +373,7 @@ let rec split_lbl stmts lbl =
 
 	  | _ -> let before, stmts' = split_lbl stmts' lbl in (stmt, l)::before, stmts'
 
+
 let sibling_elimination stmts lbl g_offset vdecls =
   let rec direction stmts =
     match stmts with
@@ -380,9 +381,11 @@ let sibling_elimination stmts lbl g_offset vdecls =
       | (stmt, _)::stmts ->
 	  match stmt with
 	      Label lbl' when lbl = lbl' -> raise Lbl
-	    | If(_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> raise Gto 
+	    | If(_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> 
+		raise Gto 
 	    | Block blk -> begin
-		try direction blk with Not_found -> direction stmts
+		try direction blk with Not_found -> 
+		  direction stmts
 	      end
 	    | _ -> direction stmts
   in
@@ -482,76 +485,79 @@ let sibling_elimination stmts lbl g_offset vdecls =
 	    | _ -> (stmt, l)::(forward stmts)
   
   in
-  let rec choose stmts =
-    match stmts with
-	[] -> [], false
-      | (stmt, l)::stmts ->
-	  match stmt with
-	      If (_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
-		forward ((stmt, l)::stmts), true
-	    | Label lbl' when lbl' = lbl -> 
-		let stmts' = (stmt, l)::stmts in 
-		  backward stmts', true
-	    | Block blk -> begin
-		  try direction blk with 
-		      Gto  -> forward ((stmt, l)::stmts), true 
-		    | Lbl -> backward ((stmt, l)::stmts), true
-		    | Not_found -> 
-			let blk', b' = choose blk in 
-			  if not b' then begin
-			    let stmts', b' = choose stmts in 
-			      (stmt, l)::stmts', b'
-			  end else (Block blk', l)::stmts, true
-	      end
-	    | If (e, if_blk, else_blk) -> 
-		let if_blk', b = choose if_blk in 
-		  if b then (If(e, if_blk', else_blk), l)::stmts, true
-		  else begin
-		    let else_blk', b' = choose else_blk in
-		      if b' then (If (e, if_blk, else_blk'), l)::stmts, true
-		      else begin
-			let stmts', b' = choose stmts in 
-			  (stmt, l)::stmts', b'
-		      end
-		  end
-	    | For (blk1, e, blk2, blk3) ->
-		let blk2', b = choose blk2 in 
-		  if b then (For (blk1, e, blk2', blk3), l)::stmts, true
-		  else begin
-		    let stmts', b' = choose stmts in 
-		      (stmt, l)::stmts', b'
-		  end
-	    | DoWhile(blk, e) ->
-		let blk', b = choose blk in 
-		  if b then (DoWhile(blk', e), l)::stmts, true
-		  else begin
-		    let stmts', b' = choose stmts in 
-		      (stmt, l)::stmts', b'
-		  end
+  let rec choose blk =
+    match blk with
+	[] -> ([], false)
+      | stmt::blk -> choose_stmt stmt blk
 
-	    | CSwitch(e, cases, default) ->
-		let rec iter cases =
-		  match cases with
-		      [] -> [], false
-		    | (e, stmts, l)::cases -> 
-			let stmts', b = choose stmts in 
-			  if b then (e, stmts', l)::cases, true
-			  else begin
-			    let cases', b' = iter cases in 
-			      (e, stmts', l)::cases', b'
-			  end
-		in
-		let cases', b' = iter cases in
-		  if b' then (CSwitch(e, cases', default), l)::stmts, b'
-		  else begin
-		    let default', b' = choose default in 
-		      if b' then (CSwitch(e, cases, default'), l)::stmts, b' 
-		      else begin
-			let stmts', b' = choose stmts in 
-			  (stmt, l)::stmts', b'
-		      end
-		  end
-	    | _ -> let stmts', b' = choose stmts in (stmt, l)::stmts', b'
+  and choose_stmt (stmt, l) stmts =
+    match stmt with
+	If (_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
+	  forward ((stmt, l)::stmts), true
+      | Label lbl' when lbl' = lbl -> 
+	  let stmts' = (stmt, l)::stmts in 
+	    backward stmts', true
+      | Block blk -> begin
+	  try direction blk with 
+	      Gto  -> forward ((stmt, l)::stmts), true 
+	    | Lbl -> backward ((stmt, l)::stmts), true
+	    | Not_found -> 
+		let blk', b' = choose blk in 
+		  if not b' then begin
+		    let stmts', b' = choose stmts in 
+		      (stmt, l)::stmts', b'
+		  end else (Block blk', l)::stmts, true
+	end
+      | If (e, if_blk, else_blk) -> 
+	  let if_blk', b = choose if_blk in 
+	    if b then (If(e, if_blk', else_blk), l)::stmts, true
+	    else begin
+	      let else_blk', b' = choose else_blk in
+		if b' then (If (e, if_blk, else_blk'), l)::stmts, true
+		else begin
+		  let stmts', b' = choose stmts in 
+		    (stmt, l)::stmts', b'
+		end
+	    end
+      | For (blk1, e, blk2, blk3) ->
+	  let blk2', b = choose blk2 in 
+	    if b then (For (blk1, e, blk2', blk3), l)::stmts, true
+	    else begin
+	      let stmts', b' = choose stmts in 
+		(stmt, l)::stmts', b'
+	    end
+      | DoWhile(blk, e) ->
+	  let blk', b = choose blk in 
+	    if b then (DoWhile(blk', e), l)::stmts, true
+	    else begin
+	      let stmts', b' = choose stmts in 
+		(stmt, l)::stmts', b'
+	    end
+      | CSwitch(e, cases, default) ->
+	  let rec iter cases =
+	    match cases with
+		[] -> [], false
+	      | (e, stmts, l)::cases -> 
+		  let stmts', b = choose stmts in 
+		    if b then (e, stmts', l)::cases, true
+		    else begin
+		      let cases', b' = iter cases in 
+			(e, stmts', l)::cases', b'
+		    end
+	  in
+	  let cases', b' = iter cases in
+	    if b' then (CSwitch(e, cases', default), l)::stmts, b'
+	    else begin
+	      let default', b' = choose default in 
+		if b' then (CSwitch(e, cases, default'), l)::stmts, b' 
+		else begin
+		  let stmts', b' = choose stmts in 
+		    (stmt, l)::stmts', b'
+		end
+	    end
+      | _ -> 
+	  let stmts', b' = choose stmts in 
+	    (stmt, l)::stmts', b'
   in
     fst (choose stmts) 
 
