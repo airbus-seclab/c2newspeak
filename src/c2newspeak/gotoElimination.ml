@@ -526,14 +526,14 @@ let sibling_elimination stmts lbl g_offset vdecls =
 	      let stmts', b' = choose stmts in 
 		(stmt, l)::stmts', b'
 	    end
-      | DoWhile(blk, e) ->
+      | DoWhile (blk, e) ->
 	  let blk', b = choose blk in 
 	    if b then (DoWhile(blk', e), l)::stmts, true
 	    else begin
 	      let stmts', b' = choose stmts in 
 		(stmt, l)::stmts', b'
 	    end
-      | CSwitch(e, cases, default) ->
+      | CSwitch (e, cases, default) ->
 	  let rec iter cases =
 	    match cases with
 		[] -> [], false
@@ -546,10 +546,10 @@ let sibling_elimination stmts lbl g_offset vdecls =
 		    end
 	  in
 	  let cases', b' = iter cases in
-	    if b' then (CSwitch(e, cases', default), l)::stmts, b'
+	    if b' then (CSwitch(e, cases', default), l)::stmts, true
 	    else begin
 	      let default', b' = choose default in 
-		if b' then (CSwitch(e, cases, default'), l)::stmts, b' 
+		if b' then (CSwitch(e, cases, default'), l)::stmts, true
 		else begin
 		  let stmts', b' = choose stmts in 
 		    (stmt, l)::stmts', b'
