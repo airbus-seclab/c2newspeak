@@ -439,25 +439,27 @@ let sibling_elimination stmts lbl g_offset vdecls =
 	    | _ -> (stmt, l)::(backward stmts)
   in
   
-  let rec f_delete_goto stmts =
+  let rec extract_first_goto stmts =
     match stmts with
 	[] -> raise Not_found
       | (stmt, l)::stmts -> 
 	  match stmt with
 	      If (_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
-		stmts, (stmt, l)
+		([], (stmt, l), stmts)
 	    | Block blk -> begin
 		try
-		  let blk', stmt' = f_delete_goto blk in 
-		    (Block blk', l)::stmts, stmt'
+		  let prefix, goto_stmt, suffix = extract_first_goto blk in 
+		    ((Block prefix, l)::[], goto_stmt, (Block suffix, l)::[])
 		with
 		    Not_found -> 
-		      let stmts', stmt' = f_delete_goto stmts in 
-			(stmt, l)::stmts', stmt'
+		      let prefix, goto_stmt, suffix = 
+			extract_first_goto stmts 
+		      in
+			((stmt, l)::prefix, goto_stmt, suffix)
 	      end
 	    | _ -> 
-		let stmts', stmt' = f_delete_goto stmts in 
-		  (stmt, l)::stmts', stmt'
+		let prefix, goto_stmt, suffix = extract_first_goto stmts in 
+		  ((stmt, l)::prefix, goto_stmt, suffix)
   in
 
   let rec forward stmts = 
@@ -475,13 +477,17 @@ let sibling_elimination stmts lbl g_offset vdecls =
 		  end
 	    | Block blk -> begin
 		try
-		  let blk', stmt = f_delete_goto blk in
+(*		  print_endline (Csyntax.string_of_blk blk);*)
+(*		  let prefix = [] in*)
+		  let (prefix, goto_stmt, blk') = extract_first_goto blk in
+(*		  print_endline (Csyntax.string_of_blk (goto_stmt::[]));*)
 		  let decls, blk' = extract_decls blk' in
 (*		    print_endline (Csyntax.string_of_blk (stmt::[]));
 		    print_endline (Csyntax.string_of_blk blk');*)
 		  let stmts' = [Block blk', l] in
-		  let stmts' = stmt::(decls @ stmts' @ stmts) in
-		    forward stmts'
+(*		    print_endline (Csyntax.string_of_blk (stmt::(decls @ stmts')));*)
+		  let stmts' = goto_stmt::(decls @ stmts' @ stmts) in
+		    prefix @ (forward stmts')
 		with Not_found -> (stmt, l)::(forward stmts)
 	      end
 	    | _ -> (stmt, l)::(forward stmts)
