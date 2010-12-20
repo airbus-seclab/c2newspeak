@@ -93,7 +93,9 @@ val accept_goto: bool ref
     preprocessed. *)
 val input_files : string list ref
 
-(** TODO: document *)
+(** Compiles the input files to .no, without linking them into a .npk.
+    corresponds to -c option 
+*)
 val compile_only : bool ref
 
 (** Name of the result file of the process *)

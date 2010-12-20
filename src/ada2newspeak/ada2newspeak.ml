@@ -93,40 +93,38 @@ let compile (fname: string): Npkil.t =
 
 let create_no name = (Filename.chop_extension name) ^ Params.npko_suffix
 
-let _ =
-  try
-    Npkcontext.handle_cmdline_options
-      Params.version_string Params.comment_string;
-    let extract_no fname =
-      if Filename.check_suffix fname Params.npko_suffix then fname
-      else begin
-        let no = create_no fname in
-        let prog = compile fname in
-          Npkil.write no prog;
-          no
-      end
-    in
-
-      (* TODO: this code should be factored with c2newspeak!!! *)
-      match !Npkcontext.input_files with
-          file::[]
-            when !Npkcontext.compile_only && (!Npkcontext.output_file <> "") ->
-	      let prog = compile file in
-		Npkil.write !Npkcontext.output_file prog
-		  
-	| files ->
-	    Normalize.init_bodies files;
-	    let nos  = List.map extract_no files in
-	    let bods = Normalize.bodies_to_add() in
-	    let bods_less_files = 
+let execute () =
+  let extract_no fname =
+    if Filename.check_suffix fname Params.npko_suffix then fname
+    else begin
+      let no = create_no fname in
+      let prog = compile fname in
+        Npkil.write no prog;
+        no
+    end
+  in
+    
+    (* TODO: this code should be factored with c2newspeak!!! *)
+    match !Npkcontext.input_files with
+        file::[]
+          when !Npkcontext.compile_only && (!Npkcontext.output_file <> "") ->
+	    let prog = compile file in
+	      Npkil.write !Npkcontext.output_file prog
+		
+      | files ->
+	  Normalize.init_bodies files;
+	  let nos  = List.map extract_no files in
+	  let bods = Normalize.bodies_to_add() in
+	  let bods_less_files = 
 	      List.filter (fun x -> not (List.mem x files)) bods 
-	    in
-	    let bodies_nos = 
-	      List.map extract_no (List.rev bods_less_files)
-	    in 
-	      if not !Npkcontext.compile_only then begin
-		Linker.link (List.append bodies_nos nos)
-	      end
-
-  with Invalid_argument msg -> Npkcontext.exit_on_error msg
+	  in
+	  let bodies_nos = 
+	    List.map extract_no (List.rev bods_less_files)
+	  in 
+	    if not !Npkcontext.compile_only then begin
+	      Linker.link (List.append bodies_nos nos)
+	    end
+	      
+let _ =
+  X2newspeak.process Params.version_string Params.comment_string execute
     
