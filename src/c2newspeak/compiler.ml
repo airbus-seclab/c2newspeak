@@ -26,51 +26,46 @@
 open Newspeak
 open Csyntax
 
+let process lexer_name lexbuf =
+  Lexer.init lexer_name lexbuf;
+  Synthack.init_tbls ();
+  try Parser.parse Lexer.token lexbuf
+  with Parsing.Parse_error -> 
+    let src_file = "Compiler.parse" in
+    let lexeme = Lexing.lexeme lexbuf in
+    let msg = "syntax error: unexpected token: "^lexeme in
+    let advice = ", rewrite your code" in
+    let pos = Lexing.lexeme_start_p lexbuf in
+    let loc = 
+      (pos.Lexing.pos_fname, pos.Lexing.pos_lnum, 
+       pos.Lexing.pos_cnum-pos.Lexing.pos_bol) 
+    in
+      Npkcontext.set_loc loc;
+      if (not !Npkcontext.accept_gnuc)
+      then Npkcontext.report_accept_warning src_file msg Npkcontext.GnuC;
+      Npkcontext.report_error src_file (msg^advice)
+
 let parse fname =
   let cin = open_in fname in
   let lexbuf = Lexing.from_channel cin in
-    Lexer.init fname lexbuf;
-    Synthack.init_tbls ();
-    try
-      let (fnames, globals) = Parser.parse Lexer.token lexbuf in
-	close_in cin;
-	(fnames, globals)
-    with Parsing.Parse_error -> 
-      let src_file = "Compiler.parse" in
-      let lexeme = Lexing.lexeme lexbuf in
-      let msg = "syntax error: unexpected token: "^lexeme in
-      let advice = ", rewrite your code" in
-      let pos = Lexing.lexeme_start_p lexbuf in
-      let loc = 
-	(pos.Lexing.pos_fname, pos.Lexing.pos_lnum, 
-	 pos.Lexing.pos_cnum-pos.Lexing.pos_bol) 
-      in
-	Npkcontext.set_loc loc;
-	if (not !Npkcontext.accept_gnuc)
-	then Npkcontext.report_accept_warning src_file msg Npkcontext.GnuC;
-	Npkcontext.report_error src_file (msg^advice)
+  let result = process fname lexbuf in
+    close_in cin;
+    result
 
-(* TODO: try to do this using function parse ? factor code with previous 
-   function *)
 let append_gnu_symbols globals =
-  let lexbuf = Lexing.from_string Gnuc.builtins in
-    Lexer.init "__gnuc_builtin_symbols" lexbuf;
-    Synthack.init_tbls ();
-    try 
-      let (_, gnuc_symbols) = Parser.parse Lexer.token lexbuf in
-	gnuc_symbols@globals
-    with Parsing.Parse_error -> 
-      Npkcontext.report_error "Compiler.append_gnu_symbols" 
-	"unexpected error while parsing GNU C symbols"
+  if not !Npkcontext.accept_gnuc then globals
+  else begin
+    let lexbuf = Lexing.from_string Gnuc.builtins in
+    let (_, gnuc_symbols) = process "__gnuc_builtin_symbols" lexbuf in
+      gnuc_symbols@globals
+  end
 
 let compile fname =
   Npkcontext.print_debug ("Parsing "^fname^"...");
   let (src_fnames, prog) = parse fname in
     Npkcontext.forget_loc ();
     Npkcontext.print_size (Csyntax.size_of prog);
-    let prog = 
-      if !Npkcontext.accept_gnuc then append_gnu_symbols prog else prog
-    in
+    let prog = append_gnu_symbols prog in
     let src_fnames = if src_fnames = [] then fname::[] else src_fnames in
       Npkcontext.forget_loc ();
       Npkcontext.print_debug "Parsing done.";
