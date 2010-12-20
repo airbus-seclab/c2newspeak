@@ -48,9 +48,10 @@ let process lexer_name lexbuf =
 let parse_file fname =
   let cin = open_in fname in
   let lexbuf = Lexing.from_channel cin in
-  let result = process fname lexbuf in
+  let (src_fnames, prog) = process fname lexbuf in
+  let src_fnames = if src_fnames = [] then fname::[] else src_fnames in
     close_in cin;
-    result
+    (src_fnames, prog)
 
 let append_gnu_symbols globals =
   if not !Npkcontext.accept_gnuc then globals
@@ -66,7 +67,6 @@ let parse fname =
     Npkcontext.forget_loc ();
     Npkcontext.print_size (Csyntax.size_of prog);
     let prog = append_gnu_symbols prog in
-    let src_fnames = if src_fnames = [] then fname::[] else src_fnames in
       Npkcontext.forget_loc ();
       Npkcontext.print_debug "Parsing done.";
       if !Npkcontext.verb_ast then Csyntax.print prog;

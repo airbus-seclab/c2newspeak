@@ -28,7 +28,7 @@ open Newspeak
 module B = Csyntax
 module C = Cir
 
-module String_set = Set.Make(String)
+module StringSet = Set.Make(String)
 
 type base_typ =
     | Void 
@@ -59,11 +59,11 @@ type sdecls = (string * B.decl) list
 (** TODO: remove these globals, by putting them as argument of the lexer ??
     and then passing them through the tokens *)
 let typedefs = Hashtbl.create 100
-let fnames = ref String_set.empty
+let fnames = ref StringSet.empty
 
 let init_tbls () =
   Hashtbl.clear typedefs;
-  fnames := String_set.empty;
+  fnames := StringSet.empty;
 (* initialize table of predefined types *)
 (* GNU C predefined types *)
 (* TODO: clean up put in gnuc.ml and think about architecture *)
@@ -74,9 +74,9 @@ let _ =
   init_tbls ()
 
 let add_fname x =
-  fnames := String_set.add x !fnames
+  fnames := StringSet.add x !fnames
 
-let get_fnames () = String_set.elements !fnames
+let get_fnames () = StringSet.elements !fnames
 
 let define_type x t = Hashtbl.add typedefs x t
 
