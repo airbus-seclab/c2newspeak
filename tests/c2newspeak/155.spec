@@ -1,6 +1,5 @@
 Newspeak Object output
 ----------------------
-155.c
 Global used
 
 Global variables

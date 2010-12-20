@@ -95,19 +95,18 @@ let translate_typedC2cir fname prog =
     if !Npkcontext.verb_cir then Cir.print prog;
     prog
 
-let translate_cir2npkil fname prog src_fnames =
+let translate_cir2npkil fname prog =
   Npkcontext.print_debug ("Translating "^fname^"...");
-  let prog = Cir2npkil.translate Newspeak.C prog src_fnames in
+  let prog = Cir2npkil.translate Newspeak.C prog in
     Npkcontext.forget_loc ();
     Npkcontext.print_debug ("Translation done.");
     prog
 
 let compile fname =
-    (* TODO: should put fname inside prog *)
-  let (src_fnames, prog) = parse fname in
+    (* TODO: should remove src_fnames alltogether *)
+  let (_, prog) = parse fname in
   let prog = remove_gotos prog in
   let prog = add_types prog in
     (* TODO: should put fname inside prog *)
   let prog = translate_typedC2cir fname prog in
-    (* TODO: should put src_fnames into prog? *)
-    translate_cir2npkil fname prog src_fnames
+    translate_cir2npkil fname prog

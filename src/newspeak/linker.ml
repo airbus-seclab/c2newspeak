@@ -246,11 +246,8 @@ let generate_fundecs fundecs =
    program and then again a second time!!! reprogram Npkil.read and write *)
 let merge npkos =
   let glb_decls = Hashtbl.create 100 in
-  let fnames = ref StrSet.empty in
   let init = ref [] in
   let fundefs = ref [] in
-
-  let add_fname x = fnames := StrSet.add x !fnames in
 
   let add_fundef f body = fundefs := (f, body)::!fundefs in
 
@@ -305,7 +302,6 @@ let merge npkos =
   let merge npko =
     (* TODO: merge these two operations into one *)
     let prog = Npkil.read npko in
-      List.iter add_fname prog.fnames;
       Hashtbl.iter add_global prog.globals;
       init := prog.init@(!init);
       Hashtbl.iter add_fundef prog.fundecs;
@@ -320,7 +316,7 @@ let merge npkos =
               ()
           in
             List.iter check_merge tl;
-            (StrSet.elements !fnames, glb_decls, !fundefs, src_lang, !init)
+            (glb_decls, !fundefs, src_lang, !init)
 
 let reject_backward_gotos prog =
   let defined_lbls = ref [] in
@@ -351,8 +347,7 @@ let link npkos =
   Npkcontext.forget_loc ();
     
   Npkcontext.print_debug "Linking files...";
-(* TODO: remove first return value from merge, it is not usefull anymore *)
-  let (_, glb_decls, fun_decls, src_lang, init) = merge npkos in
+  let (glb_decls, fun_decls, src_lang, init) = merge npkos in
     
     Npkcontext.print_debug "Globals...";
     Hashtbl.iter generate_global glb_decls;
