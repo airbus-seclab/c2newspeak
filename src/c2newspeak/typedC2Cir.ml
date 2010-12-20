@@ -402,7 +402,9 @@ let translate fname prog =
 (* TODO: it's strange to need fname here! 
    should maybe be factored with code in csyntax2TypedC
 *)
-    let name = Temps.to_string (new_id ()) (Temps.Cstr (fname, String.escaped str)) in
+    let name = 
+      Temps.to_string (new_id ()) (Temps.Cstr (fname, String.escaped str)) 
+    in
     let t = Array (char_typ, Some (exp_of_int ((String.length str) + 1))) in
       if not (Hashtbl.mem used_globals name) then begin
 	let loc = Npkcontext.get_loc () in

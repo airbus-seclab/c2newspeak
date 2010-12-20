@@ -48,29 +48,28 @@ let process lexer_name lexbuf =
 let parse_file fname =
   let cin = open_in fname in
   let lexbuf = Lexing.from_channel cin in
-  let (src_fnames, prog) = process fname lexbuf in
-  let src_fnames = if src_fnames = [] then fname::[] else src_fnames in
+  let prog = process fname lexbuf in
     close_in cin;
-    (src_fnames, prog)
+    prog
 
 let append_gnu_symbols globals =
   if not !Npkcontext.accept_gnuc then globals
   else begin
     let lexbuf = Lexing.from_string Gnuc.builtins in
-    let (_, gnuc_symbols) = process "__gnuc_builtin_symbols" lexbuf in
+    let gnuc_symbols = process "__gnuc_builtin_symbols" lexbuf in
       gnuc_symbols@globals
   end
 
 let parse fname = 
   Npkcontext.print_debug ("Parsing "^fname^"...");
-  let (src_fnames, prog) = parse_file fname in
+  let prog = parse_file fname in
     Npkcontext.forget_loc ();
     Npkcontext.print_size (Csyntax.size_of prog);
     let prog = append_gnu_symbols prog in
       Npkcontext.forget_loc ();
       Npkcontext.print_debug "Parsing done.";
       if !Npkcontext.verb_ast then Csyntax.print prog;
-      (src_fnames, (fname, prog))
+      (fname, prog)
 
 let remove_gotos (fname, prog) = 
   if not !Npkcontext.accept_goto then (fname, prog)
@@ -103,8 +102,7 @@ let translate_cir2npkil prog =
     prog
 
 let compile fname =
-    (* TODO: should remove src_fnames alltogether *)
-  let (_, prog) = parse fname in
+  let prog = parse fname in
   let prog = remove_gotos prog in
   let prog = add_types prog in
     (* TODO: should put fname inside prog *)

@@ -223,8 +223,8 @@ let report_asm tokens =
 %right    PLUSPLUS MINUSMINUS
 %left     DOT ARROW
 %left     LPAREN LBRACKET
-// TODO: remove the string list here 
-%type <string list * Csyntax.t> parse
+
+%type <Csyntax.t> parse
 %start parse
 
 %type <Csyntax.assertion> assertion
@@ -239,7 +239,7 @@ try to remove multiple occurence of same pattern: factor as much as possible
 // TODO: simplify parser and link it to C standard sections!!!
 
 parse:
-  translation_unit EOF                      { (Synthack.get_fnames (), $1) }
+  translation_unit EOF                      { ($1) }
 ;;
 
 translation_unit:

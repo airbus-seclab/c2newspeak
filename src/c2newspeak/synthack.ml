@@ -76,8 +76,6 @@ let _ =
 let add_fname x =
   fnames := StringSet.add x !fnames
 
-let get_fnames () = StringSet.elements !fnames
-
 let define_type x t = Hashtbl.add typedefs x t
 
 let is_type x = Hashtbl.mem typedefs x
