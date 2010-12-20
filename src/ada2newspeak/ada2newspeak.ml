@@ -93,18 +93,17 @@ let compile (fname: string): Npkil.t =
 
 let create_no name = (Filename.chop_extension name) ^ Params.npko_suffix
 
-let execute () =
-  let extract_no fname =
-    if Filename.check_suffix fname Params.npko_suffix then fname
-    else begin
-      let no = create_no fname in
-      let prog = compile fname in
-        Npkil.write no prog;
-        no
-    end
-  in
+let extract_no fname =
+  if Filename.check_suffix fname Params.npko_suffix then fname
+  else begin
+    let no = create_no fname in
+    let prog = compile fname in
+      Npkil.write no prog;
+      no
+  end
     
-    (* TODO: this code should be factored with c2newspeak!!! *)
+let execute () =
+    (* TODO: this code should be factored with c2newspeak!!! into x2newspeak *)
     match !Npkcontext.input_files with
         file::[]
           when !Npkcontext.compile_only && (!Npkcontext.output_file <> "") ->
@@ -116,11 +115,9 @@ let execute () =
 	  let nos  = List.map extract_no files in
 	  let bods = Normalize.bodies_to_add() in
 	  let bods_less_files = 
-	      List.filter (fun x -> not (List.mem x files)) bods 
+	    List.filter (fun x -> not (List.mem x files)) bods 
 	  in
-	  let bodies_nos = 
-	    List.map extract_no (List.rev bods_less_files)
-	  in 
+	  let bodies_nos = List.map extract_no (List.rev bods_less_files) in 
 	    if not !Npkcontext.compile_only then begin
 	      Linker.link (List.append bodies_nos nos)
 	    end
