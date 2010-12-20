@@ -804,9 +804,11 @@ let simplify_gotos blk =
   let used_lbls = ref LblSet.empty in
   let new_lbl () = incr current_lbl; !current_lbl in
   let find lbl = 
-    let lbl' = List.assoc lbl !stack in
-      used_lbls := LblSet.add lbl' !used_lbls;
-      lbl'
+    try
+      let lbl' = List.assoc lbl !stack in
+	used_lbls := LblSet.add lbl' !used_lbls;
+	lbl'
+    with Not_found -> lbl
   in
   let push lbl1 lbl2 = stack := (lbl1, lbl2)::(!stack) in
   let pop () = 
@@ -908,6 +910,7 @@ let simplify_gotos blk =
     let body = remove_final_goto lbl body in
       simplify_dowith loc (body, lbl)
   in
+
   let blk = simplify_blk blk in
     if not (LblSet.is_empty !used_lbls) 
     then invalid_arg "Newspeak.simplify_gotos: unexpected goto without label";

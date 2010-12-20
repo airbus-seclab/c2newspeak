@@ -322,6 +322,31 @@ let merge npkos =
             List.iter check_merge tl;
             (StrSet.elements !fnames, glb_decls, !fundefs, src_lang, !init)
 
+let reject_backward_gotos prog =
+  let defined_lbls = ref [] in
+
+  let rec reject_blk x = List.iter reject_stmt x
+
+  and reject_stmt (x, _) =
+    match x with
+	N.Decl (_, _, blk) | N.InfLoop blk -> reject_blk blk
+      | N.Select (blk1, blk2) -> 
+	  reject_blk blk1;
+	  reject_blk blk2
+      | N.DoWith (blk, lbl) -> 
+	  let backup = !defined_lbls in
+	    defined_lbls := lbl::!defined_lbls;
+	    reject_blk blk;
+	    defined_lbls := backup
+      | N.Goto lbl when not (List.mem lbl !defined_lbls) -> 
+	  Npkcontext.report_error "Linker.reject_backward_gotos" 
+	    "backward goto not accepted"
+      | _ -> ()
+  in
+
+    reject_blk prog.N.init;
+    Hashtbl.iter (fun _ fundec -> reject_blk fundec.N.body) prog.N.fundecs
+
 let link npkos =
   Npkcontext.forget_loc ();
     
@@ -347,22 +372,23 @@ let link npkos =
     in
       
       Npkcontext.print_debug "File linked.";
+      reject_backward_gotos prog;
       let prog_simpl = 
         if !Npkcontext.no_opt then prog
         else Newspeak.simplify !Npkcontext.opt_checks prog
       in
-      Newspeak.write !Npkcontext.output_file prog_simpl;
-      if !Npkcontext.verb_newspeak then begin
-        print_endline "Newspeak output";
-        print_endline "---------------";
-        Newspeak.dump prog_simpl;
-        print_newline ()
-      end;
-      if !Npkcontext.verb_lowspeak then begin
-	print_endline "Lowspeak output";
-	print_endline "---------------";
-	Lowspeak.dump (Npk2lpk.translate prog_simpl);
-	print_newline ()
-      end
+	Newspeak.write !Npkcontext.output_file prog_simpl;
+	if !Npkcontext.verb_newspeak then begin
+          print_endline "Newspeak output";
+          print_endline "---------------";
+          Newspeak.dump prog_simpl;
+          print_newline ()
+	end;
+	if !Npkcontext.verb_lowspeak then begin
+	  print_endline "Lowspeak output";
+	  print_endline "---------------";
+	  Lowspeak.dump (Npk2lpk.translate prog_simpl);
+	  print_newline ()
+	end
 
 
