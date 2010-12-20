@@ -111,11 +111,3 @@ let compile fname =
   let prog = translate_typedC2cir fname prog in
     (* TODO: should put src_fnames into prog? *)
     translate_cir2npkil fname prog src_fnames
-
-let eval_exp x =
-  match x with
-      Cst (Cir.CInt n, _) -> n
-    | _ -> 
-	Npkcontext.report_error "Compiler.compile_config" 
-	  "constant address expected"
-  
