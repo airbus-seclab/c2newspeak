@@ -45,7 +45,7 @@ let process lexer_name lexbuf =
       then Npkcontext.report_accept_warning src_file msg Npkcontext.GnuC;
       Npkcontext.report_error src_file (msg^advice)
 
-let parse fname =
+let parse_file fname =
   let cin = open_in fname in
   let lexbuf = Lexing.from_channel cin in
   let result = process fname lexbuf in
@@ -60,9 +60,9 @@ let append_gnu_symbols globals =
       gnuc_symbols@globals
   end
 
-let compile fname =
+let parse fname = 
   Npkcontext.print_debug ("Parsing "^fname^"...");
-  let (src_fnames, prog) = parse fname in
+  let (src_fnames, prog) = parse_file fname in
     Npkcontext.forget_loc ();
     Npkcontext.print_size (Csyntax.size_of prog);
     let prog = append_gnu_symbols prog in
@@ -70,28 +70,47 @@ let compile fname =
       Npkcontext.forget_loc ();
       Npkcontext.print_debug "Parsing done.";
       if !Npkcontext.verb_ast then Csyntax.print prog;
-      let prog = 
-	if !Npkcontext.accept_goto then begin
-	  Npkcontext.print_debug "Running goto elimination...";
-	  let g = GotoElimination.run prog in
-	    Npkcontext.print_debug "Goto elimination done.";
-	    Npkcontext.print_size (Csyntax.size_of g);
-	    g
-	end else prog
-      in
-	Npkcontext.print_debug "Typing...";
-	let prog = Csyntax2TypedC.process fname prog in
-	  Npkcontext.print_debug "Running first pass...";
-	  let prog = TypedC2Cir.translate fname prog in
-	    Npkcontext.forget_loc ();
-	    Npkcontext.print_debug "First pass done.";
-	    Npkcontext.print_size (Cir.size_of prog);
-	    if !Npkcontext.verb_cir then Cir.print prog;
-	    Npkcontext.print_debug ("Translating "^fname^"...");
-	    let tr_prog = Cir2npkil.translate Newspeak.C prog src_fnames in
-	      Npkcontext.forget_loc ();
-	      Npkcontext.print_debug ("Translation done.");
-	      tr_prog
+      (src_fnames, prog)
+
+let remove_gotos prog = 
+  if not !Npkcontext.accept_goto then prog
+  else begin
+    Npkcontext.print_debug "Running goto elimination...";
+    let prog = GotoElimination.run prog in
+      Npkcontext.print_debug "Goto elimination done.";
+      Npkcontext.print_size (Csyntax.size_of prog);
+      prog
+  end
+
+let add_types fname prog = 
+  Npkcontext.print_debug "Typing...";
+  Csyntax2TypedC.process fname prog
+
+let translate_typedC2cir fname prog =
+  Npkcontext.print_debug "Running first pass...";
+  let prog = TypedC2Cir.translate fname prog in
+    Npkcontext.forget_loc ();
+    Npkcontext.print_debug "First pass done.";
+    Npkcontext.print_size (Cir.size_of prog);
+    if !Npkcontext.verb_cir then Cir.print prog;
+    prog
+
+let translate_cir2npkil fname prog src_fnames =
+  Npkcontext.print_debug ("Translating "^fname^"...");
+  let prog = Cir2npkil.translate Newspeak.C prog src_fnames in
+    Npkcontext.forget_loc ();
+    Npkcontext.print_debug ("Translation done.");
+    prog
+
+let compile fname =
+    (* TODO: should put fname inside prog *)
+  let (src_fnames, prog) = parse fname in
+  let prog = remove_gotos prog in
+  let prog = add_types fname prog in
+    (* TODO: should put fname inside prog *)
+  let prog = translate_typedC2cir fname prog in
+    (* TODO: should put src_fnames into prog? *)
+    translate_cir2npkil fname prog src_fnames
 
 let eval_exp x =
   match x with
