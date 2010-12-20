@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-502.c
 void main(void) {
   (502.c:33#2)^choose {
    -->

@@ -1,7 +1,6 @@
 Warning: 559.c:32#2: dirty cast from integer to pointer accepted
 Newspeak output
 ---------------
-559.c
 void main(void) {
   (559.c:29#7)^ptr ptr;
   (559.c:30#6)^int32 x;

@@ -2,7 +2,6 @@ Warning: 383.c:33#2: expression of type signed integer used as an array index ac
 Warning: 383.c:33#2: expression of type signed integer used as an array index accepted
 Newspeak output
 ---------------
-383.c
 void main(void) {
   (383.c:30#6)^int32[2][2] y;
   (383.c:31#7)^ptr ptr;

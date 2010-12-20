@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t041.adb
 void t041(void) {
   (t041.adb:7#13)^t041a.z =(uint1) 0;
 }

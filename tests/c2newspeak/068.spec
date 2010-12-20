@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-068.c
 int32 f(void) {
   (068.c:27#2)^!return =(int32) 1;
 }

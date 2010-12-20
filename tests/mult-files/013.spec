@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-matcher.h
 ptr !013-a.c.0.name;
 ptr !013-b.c.0.name;
 int8[6] cstr!1!013-b.c.ASCII;

@@ -1,6 +1,5 @@
 Lowspeak output
 ---------------
-000.c
 uint16 f(void) {
   (000.c:30#2)^0- =(uint16) 1;
 }

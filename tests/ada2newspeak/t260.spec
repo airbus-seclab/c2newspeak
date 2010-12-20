@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t260.adb
 void t260(uint1 x) {
   (t260.adb:8#5)^uint1 y;
   (t260.adb:8#5)^uint1 tmp_ada_firstpass!0;

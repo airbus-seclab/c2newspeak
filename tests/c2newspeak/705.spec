@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-705.c
 void main(void) {
   (705.c:29#6)^int32 x;
   (705.c:31#2)^int32 tmp_cir!0;

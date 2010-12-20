@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t265.adb
 void t265.f(void) {
 }
 

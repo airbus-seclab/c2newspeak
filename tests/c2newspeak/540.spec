@@ -1,7 +1,6 @@
 Warning: 540.c:26#5: incomplete prototype for function f
 Newspeak output
 ---------------
-540.c
 void f(ptr ptr) {
 }
 

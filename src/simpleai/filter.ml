@@ -196,7 +196,6 @@ let process prog =
     Hashtbl.iter process_fundec prog.fundecs;
     let prog =
       {
-	S.fnames = prog.fnames;
 	S.globals = globals;
 	S.init = init;
 	S.fundecs = fundecs;

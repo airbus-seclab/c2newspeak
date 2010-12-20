@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-489.c
 void f(int32 x) {
 }
 

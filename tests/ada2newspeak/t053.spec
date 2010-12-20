@@ -2,9 +2,6 @@ Warning: t097.ads:4#6: multiple definitions of global variable t097.a, in file t
 Warning: t097.ads:4#6: multiple definitions of global variable t097.a, in file t097.ads variable t097.a should probably be extern accepted
 Newspeak output
 ---------------
-t053.adb
-t097.adb
-t098.adb
 void t053(uint2 z) {
   (t053.adb:9#13)^t097.proc(12: int32);
 }

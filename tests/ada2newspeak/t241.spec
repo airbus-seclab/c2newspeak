@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t241.adb
 void t241(int32 x, int32 y, int32 z) {
   (t241.adb:10#9)^t241(6: int32, 1: int32, 9: int32);
   (t241.adb:11#9)^t241(6: int32, 1: int32, 9: int32);

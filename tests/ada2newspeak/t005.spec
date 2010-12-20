@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t005.adb
 void t005(int32 x, uint1 y) {
   (t005.adb:4#6)^x =(int32) belongs[-2147483648,2147483647] (0 - belongs[-2147483648,2147483647] (2 * x_int32));
   (t005.adb:5#6)^x =(int32) -2;

@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-284.c
 void main(void) {
   (284.c:31#2)^x =(float64) y_float64;
 }

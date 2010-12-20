@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t087.adb
 void t087(void) {
   (t087.adb:7#6)^int32 x;
   (t087.adb:8#7)^int32 x2;

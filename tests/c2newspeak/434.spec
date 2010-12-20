@@ -1,7 +1,6 @@
 Warning: 434.c:32#0: block within expression accepted
 Newspeak output
 ---------------
-434.c
 void main(void) {
   (434.c:27#6)^int32 y;
   (434.c:29#10)^int32 x;

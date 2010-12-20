@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t240.adb
 void t240(void) {
   (t240.adb:7#7)^int32 x;
   (t240.adb:9#7)^{

@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t286.adb
 int32 t286.f(void) {
   (t286.adb:9#10)^!return =(int32) 0;
 }

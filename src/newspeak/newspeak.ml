@@ -86,7 +86,6 @@ end
     function definitions and the size of pointers. *)
 
 type t = {
-  fnames: file list;
   globals: globals;
   init: blk;
   fundecs: (fid, fundec) Hashtbl.t; (** table of all declared functions *)
@@ -567,7 +566,6 @@ let dump_globals gdecls =
 
 (* Exported print functions *)
 let dump prog =
-  List.iter (fun x -> print_endline x) prog.fnames;
   (* TODO: Clean this mess... StringMap *)
   let funs = ref (StringMap.empty) in
   let collect_funbody name body =

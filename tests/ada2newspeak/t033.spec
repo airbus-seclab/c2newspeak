@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t033.adb
 void t033.appelfonction(void) {
   (t033.adb:11#9)^int32 x;
   (t033.adb:14#10)^int32 tmp_cir!0;

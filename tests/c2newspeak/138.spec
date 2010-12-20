@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-138.c
 void main(void) {
   (138.c:30#9)^float64 x;
   (138.c:31#8)^float32 y;

@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-245.c
 void main(void) {
   (245.c:35#2)^y =(int32) 0;
 }

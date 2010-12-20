@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-472.c
 void main(void) {
   (472.c:33#2)^b1 + (belongs[0,3] 0 * 8) =(int8) 97;
 }

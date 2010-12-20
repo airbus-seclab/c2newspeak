@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t206.adb
 int32 t206.id(int32 x) {
   (t206.adb:6#9)^!return =(int32) x_int32;
 }

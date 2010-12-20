@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t368.adb
 void t368(void) {
   (t368.adb:9#5)^int32 x;
   (t368.adb:11#6)^x =(int32) 6;

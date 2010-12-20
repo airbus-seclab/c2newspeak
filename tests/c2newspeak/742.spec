@@ -2,7 +2,6 @@ Warning: 742.c:29#0: comma in expression accepted
 Warning: 742.c:30#0: comma in expression accepted
 Newspeak output
 ---------------
-742.c
 void main(void) {
   (742.c:29#2)^choose {
    -->

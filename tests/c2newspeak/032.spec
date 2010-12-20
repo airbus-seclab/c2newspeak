@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-032.c
 ptr f(void) {
   (032.c:34#2)^!return =(ptr) nil;
 }

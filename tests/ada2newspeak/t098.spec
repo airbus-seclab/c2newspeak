@@ -1,10 +1,6 @@
 Warning: t097.ads:4#6: multiple definitions of global variable t097.a, in file t097.ads variable t097.a should probably be extern accepted
 Newspeak output
 ---------------
-t096.adb
-t097.adb
-t098.adb
-t099.adb
 int32 t096(void) {
   (t096.adb:3#9)^!return =(int32) 10;
 }

@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-272.c
 void main(void) {
   (272.c:27#6)^int32 x;
   (272.c:28#6)^int32 y;

@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-763.c
 void main(void) {
   (763.c:27#9)^float64 x;
   (763.c:28#6)^int32 rnd;

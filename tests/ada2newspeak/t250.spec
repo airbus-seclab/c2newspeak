@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t250.adb
 uint2 t250.!op+(uint2 left, uint2 right) {
   (t250.adb:9#10)^do {
     (t250.adb:11#8)^choose {

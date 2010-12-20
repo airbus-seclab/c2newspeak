@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t342.adb
 void t342(void) {
   (t342.adb:9#5)^uint1[10] a;
   (t342.adb:9#5)^a + 1 =(uint1) 1;

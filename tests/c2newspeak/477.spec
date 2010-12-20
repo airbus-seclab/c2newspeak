@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-477.c
 void main(void) {
   (477.c:30#9)^int32 j;
   (477.c:31#2)^j =(int32) 0;

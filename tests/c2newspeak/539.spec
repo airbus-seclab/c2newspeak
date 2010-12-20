@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-539.c
 void main(void) {
   (539.c:29#2)^choose {
    -->

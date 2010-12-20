@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t235.adb
 void t235(void) {
   (t235.adb:8#7)^int32 x;
   (t235.adb:10#7)^int32 i;

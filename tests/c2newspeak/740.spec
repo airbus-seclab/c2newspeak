@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-740.c
 void main(void) {
   (740.c:31#2)^!740.c.1.x =(int32) 1;
 }

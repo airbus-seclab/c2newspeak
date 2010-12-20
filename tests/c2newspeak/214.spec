@@ -1,7 +1,6 @@
 Warning: 214.c:32#2: the order of execution of side-effects in expressions not specified, picking a random one, be careful
 Newspeak output
 ---------------
-214.c
 void f(int32 x, int32 y) {
 }
 

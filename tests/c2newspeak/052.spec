@@ -5,7 +5,6 @@ Warning: 052.c:39#7: extra initializer for array accepted
 Warning: 052.c:41#7: not enough initializers for array
 Newspeak output
 ---------------
-052.c
 void main(void) {
   (052.c:31#8)^ptr x;
   (052.c:31#8)^x =(ptr) focus48 &(cstr!1!052.c.Hello);

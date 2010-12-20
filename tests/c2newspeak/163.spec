@@ -1,7 +1,6 @@
 Warning: 163.c:26#6: not enough initializers for array
 Newspeak output
 ---------------
-163.c
 void main(void) {
   (163.c:29#2)^x =(float32) (float32 <= float64) 1.0;
 }

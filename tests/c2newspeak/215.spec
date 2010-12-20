@@ -1,7 +1,6 @@
 Warning: 215.c:36#2: expression of type signed integer used as an array index accepted
 Newspeak output
 ---------------
-215.c
 int32 f(void) {
   (215.c:30#2)^!return =(int32) 4;
 }

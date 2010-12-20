@@ -351,7 +351,8 @@ let link npkos =
   Npkcontext.forget_loc ();
     
   Npkcontext.print_debug "Linking files...";
-  let (filenames, glb_decls, fun_decls, src_lang, init) = merge npkos in
+(* TODO: remove first return value from merge, it is not usefull anymore *)
+  let (_, glb_decls, fun_decls, src_lang, init) = merge npkos in
     
     Npkcontext.print_debug "Globals...";
     Hashtbl.iter generate_global glb_decls;
@@ -362,7 +363,6 @@ let link npkos =
     let fundecs = generate_fundecs fun_decls in
         
     let prog = { 
-      N.fnames = filenames;
       N.globals = globals;
       N.init = init;
       N.fundecs = fundecs;

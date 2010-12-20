@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t348.adb
 void t348(void) {
   (t348.adb:8#5)^ptr p;
   (t348.adb:9#5)^int32 x;

@@ -44,7 +44,6 @@ module N = Newspeak
 (*-------*)
 
 type t = {
-  fnames: N.file list;
   globals: N.globals;
   init: blk;
   fundecs: (N.fid, fundec) Hashtbl.t;
@@ -417,7 +416,6 @@ let dump_globals gdecls =
       
 (* Exported print functions *)
 let dump prog =
-  List.iter (fun x -> print_endline x) prog.fnames;
   (* TODO: Clean this mess... StringMap *)
   let funs = ref (StringMap.empty) in
   let collect_funbody name body =

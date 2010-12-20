@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-475.c
 void f(int8 x) {
   (475.c:30#2)^x =(int8) 2;
 }

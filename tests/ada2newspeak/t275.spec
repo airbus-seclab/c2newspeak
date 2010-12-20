@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t275.adb
 void t275(void) {
   (t275.adb:7#6)^uint1 tt;
   (t275.adb:8#6)^uint1 ft;

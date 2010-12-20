@@ -1,7 +1,6 @@
 Warning: 764.c:28#0: comma in expression accepted
 Newspeak output
 ---------------
-764.c
 void main(void) {
   (764.c:27#6)^int32 x;
   (764.c:28#2)^do {

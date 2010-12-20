@@ -1,7 +1,6 @@
 Warning: 065.c:32#2: the order of execution of side-effects in expressions not specified, picking a random one, be careful
 Newspeak output
 ---------------
-065.c
 int32 f(int32 a) {
   (065.c:27#2)^!return =(int32) a_int32;
 }

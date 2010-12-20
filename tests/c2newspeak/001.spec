@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-001.c
 void main(void) {
   (001.c:36#6)^int32 i1;
   (001.c:37#15)^uint32 i2;

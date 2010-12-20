@@ -1,7 +1,6 @@
 Warning: 384.c:38#2: expression of type signed integer used as an array index accepted
 Newspeak output
 ---------------
-384.c
 void main(void) {
   (384.c:35#4)^{ int32 0; int32 32; }64[2] y;
   (384.c:36#7)^ptr ptr;

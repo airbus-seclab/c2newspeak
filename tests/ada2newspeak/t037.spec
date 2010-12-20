@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t037.adb
 void t037.appelfonction(void) {
   (t037.adb:9#9)^uint1 x;
   (t037.adb:12#10)^{

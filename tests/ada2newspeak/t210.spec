@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t210.adb
 int32 t210.f(int32 y) {
   (t210.adb:5#12)^!return =(int32) 1;
 }

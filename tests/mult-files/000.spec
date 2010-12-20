@@ -1,7 +1,5 @@
 Newspeak output
 ---------------
-000-a.c
-000-b.c
 void f(void) {
   (000-b.c:28#2)^[y_ptr]8 =(int8) 1;
 }

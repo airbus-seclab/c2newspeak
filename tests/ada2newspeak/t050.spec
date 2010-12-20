@@ -1,7 +1,5 @@
 Newspeak output
 ---------------
-t050.adb
-t095.adb
 void t050.main(void) {
   (t050.adb:11#10)^t050.x: uint1 <- t095.a();
 }

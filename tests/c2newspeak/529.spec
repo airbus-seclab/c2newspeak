@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-529.c
 void main(void) {
   (529.c:27#8)^ptr y;
   (529.c:28#8)^ptr dst;

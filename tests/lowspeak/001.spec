@@ -1,6 +1,5 @@
 Lowspeak output
 ---------------
-001.c
 void f(int32) {
 }
 

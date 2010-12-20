@@ -4,7 +4,6 @@ Warning: 629.c:45#0: init statement expected
 Warning: 629.c:48#0: goto statement accepted
 Newspeak output
 ---------------
-629.c
 void main(void) {
   (629.c:28#2)^uint32 continue.629.c:38#3.0;
   (629.c:28#2)^continue.629.c:38#3.0 =(uint32) 0;

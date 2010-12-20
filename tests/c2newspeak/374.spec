@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-374.c
 void main(void) {
   (374.c:29#1)^choose {
    -->

@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-018.c
 int32 f1(int32 n1) {
   (018.c:32#2)^!return: int32 <- f2(n1_int32: int32);
 }

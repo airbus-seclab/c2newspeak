@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-305.c
 void main(void) {
   (305.c:29#6)^int32[10] t;
   (305.c:30#2)^int8[4] tmp_firstpass!0;

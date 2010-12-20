@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t369.adb
 void t369.f(int32 x, int32 y, int32 z) {
   (t369.adb:9#8)^y =(int32) belongs[-2147483648,2147483647] (y_int32 + 1);
   (t369.adb:10#8)^z =(int32) 8;

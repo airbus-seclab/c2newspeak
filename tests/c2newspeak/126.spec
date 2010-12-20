@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-126.c
 void main(void) {
   (126.c:31#7)^int8[4] b1;
   (126.c:31#7)^b1 =(int8) 97;

@@ -1,7 +1,5 @@
 Newspeak output
 ---------------
-t046.adb
-t093.adb
 void t046(void) {
   (t046.adb:6#5)^uint1 tmp_cir!0;
   (t046.adb:6#5)^tmp_cir!0: uint1 <- t093.z(42: int32);

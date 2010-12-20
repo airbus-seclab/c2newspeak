@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t390.adb
 void t390(void) {
   (t390.adb:11#8)^int32 add;
   (t390.adb:12#6)^int32 i;

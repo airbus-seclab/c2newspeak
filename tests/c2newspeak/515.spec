@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-515.c
 int32 f(int32 x) {
   (515.c:27#2)^!return =(int32) x_int32;
 }

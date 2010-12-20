@@ -1,7 +1,6 @@
 Warning: 796.c:3#2: the order of execution of side-effects in expressions not specified, picking a random one, be careful
 Newspeak output
 ---------------
-796.c
 void main(void) {
   (796.c:2#6)^int32 i;
   (796.c:3#2)^int32 tmp_parser!1;

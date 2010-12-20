@@ -1,4 +1,3 @@
-004.c
 void main(void) {
   (004.c:35#7)^ptr x;
   (004.c:36#6)^int4[100] t;

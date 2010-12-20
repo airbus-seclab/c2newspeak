@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t036.adb
 void t036.appelprocedure(void) {
   (t036.adb:17#9)^t036.inc();
   (t036.adb:18#10)^t036.set(10: int32);

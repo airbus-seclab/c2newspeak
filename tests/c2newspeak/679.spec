@@ -2,7 +2,6 @@ Warning: 679.c:26#5: incomplete prototype for function f
 Warning: 679.c:30#2: dirty cast from integer to pointer accepted
 Newspeak output
 ---------------
-679.c
 void f(ptr ptr) {
 }
 

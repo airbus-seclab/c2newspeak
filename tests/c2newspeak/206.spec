@@ -1,7 +1,6 @@
 Warning: 206.c:30#2: expression of type signed integer used as an array index accepted
 Newspeak output
 ---------------
-206.c
 void main(void) {
   (206.c:27#7)^int8[10] t;
   (206.c:28#6)^int32 x;

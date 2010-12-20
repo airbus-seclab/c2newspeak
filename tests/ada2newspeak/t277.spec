@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t277.adb
 void t277(void) {
   (t277.adb:7#5)^uint1 x;
   (t277.adb:9#6)^x =(uint1) 0;

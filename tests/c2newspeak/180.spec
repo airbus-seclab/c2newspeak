@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-180.c
 void main(void) {
   (180.c:34#6)^int32 A;
   (180.c:35#6)^int32 x;

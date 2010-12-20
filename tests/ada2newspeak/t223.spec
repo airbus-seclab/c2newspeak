@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t223.adb
 void t223(void) {
   (t223.adb:9#17)^int32 n51966;
   (t223.adb:10#17)^int32 n14;

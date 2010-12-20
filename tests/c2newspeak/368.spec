@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-368.c
 void main(void) {
   (368.c:31#2)^int8[1] tmp_firstpass!0;
   (368.c:31#2)^tmp_firstpass!0 =(uint1) x_uint1;

@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t104.adb
 int32 t104.a(void) {
   (t104.adb:5#12)^!return =(int32) 12;
 }

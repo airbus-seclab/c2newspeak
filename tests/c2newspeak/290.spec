@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-290.c
 void !290.c.0.f(void) {
 }
 

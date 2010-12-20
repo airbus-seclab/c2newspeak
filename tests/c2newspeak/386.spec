@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-386.c
 void main(void) {
   (386.c:27#8)^ptr t;
   (386.c:27#8)^t =(ptr) focus96 &(cstr!1!386.c.Hello world);

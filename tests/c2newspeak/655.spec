@@ -4,7 +4,6 @@ Warning: 655.c:35#0: goto statement accepted
 Warning: 655.c:36#0: goto statement accepted
 Newspeak output
 ---------------
-655.c
 void main(void) {
   (655.c:26#6)^uint32 goto!lbl1;
   (655.c:26#6)^goto!lbl1 =(uint32) 0;

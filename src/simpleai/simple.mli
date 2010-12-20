@@ -30,7 +30,6 @@
 module type T =
 sig 
   type t = {
-    fnames: Newspeak.file list;           (** list of source file names *)
     globals: globals;                     (** program variables *)
     init: blk;                            (** initialization block of globals *)
     fundecs: (fid, fundec) Hashtbl.t;     (** table of all declared functions *)

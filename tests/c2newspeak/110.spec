@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-110.c
 void main(void) {
   (110.c:29#2)^int32 tmp_cir!0;
   (110.c:29#2)^tmp_cir!0: int32 <- f();

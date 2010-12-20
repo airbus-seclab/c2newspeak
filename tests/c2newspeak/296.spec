@@ -1,7 +1,6 @@
 Warning: 296.c:28#0: halting condition should be explicit
 Newspeak output
 ---------------
-296.c
 void main(void) {
   (296.c:27#6)^int32 i;
   (296.c:28#7)^i =(int32) 0;

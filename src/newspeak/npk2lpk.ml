@@ -256,7 +256,6 @@ let translate prog =
     Hashtbl.iter translate_global prog.globals;
 
     { 
-      L.fnames = prog.fnames; 
       L.globals = globals;
       L.init = init;
       L.fundecs = fundecs;

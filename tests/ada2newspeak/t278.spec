@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t278.adb
 void t278.a(void) {
 }
 

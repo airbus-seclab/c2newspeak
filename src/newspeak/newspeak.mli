@@ -89,8 +89,6 @@ end
     function definitions and the size of pointers. *)
 
 type t = {
-  fnames: file list;                (** names of all files included for 
-					compilation *)
   globals: globals;                 (** table of all declared global 
 					variables *)
   init: blk;                        (** initialization block for globals *)

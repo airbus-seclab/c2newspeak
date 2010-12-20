@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-133.c
 void f(void) {
   (133.c:33#2)^!133.c.f.2.x =(int32) 0;
 }

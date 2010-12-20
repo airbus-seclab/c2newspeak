@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-570.c
 void main(void) {
   (570.c:29#2)^ptr tmp_cir!0;
   (570.c:29#2)^tmp_cir!0: ptr <- f();

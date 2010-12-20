@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t058.adb
 void t058(void) {
   (t058.adb:3#6)^int32 y;
   (t058.adb:9#10)^int32 tmp_cir!0;

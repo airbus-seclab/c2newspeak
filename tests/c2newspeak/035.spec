@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-035.c
 int32 f(void) {
   (035.c:34#2)^!return: int32 <- g();
 }

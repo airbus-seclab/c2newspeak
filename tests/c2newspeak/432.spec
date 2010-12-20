@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-432.c
 void main(void) {
 }
 

@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t411.adb
 void t411(void) {
   (t411.adb:11#6)^{ int32 32; int32 0; }64[2] ci;
   (t411.adb:11#6)^ci =(int32) 1;

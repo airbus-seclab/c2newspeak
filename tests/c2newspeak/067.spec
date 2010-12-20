@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-067.c
 void f(int32 a) {
 }
 

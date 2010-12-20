@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-721.c
 void f(void) {
   (721.c:33#7)^ptr ptr;
   (721.c:34#2)^ptr =(ptr) u_ptr;

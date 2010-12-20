@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t038.adb
 uint1 t038.a(void) {
   (t038.adb:5#12)^!return =(uint1) 0;
 }

@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t325.adb
 void t325(void) {
   (t325.adb:10#5)^float32[10] a;
   (t325.adb:11#5)^float32 f;

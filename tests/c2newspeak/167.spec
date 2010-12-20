@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-167.c
 void main(void) {
   (167.c:32#2)^i =(int32) coerce[-2147483648,2147483647] (coerce[-2147483648,2147483647] (x_int32 + y_int32) + z_int32);
 }
