@@ -38,5 +38,3 @@ val define_type: string -> Csyntax.typ -> unit
 val is_type: string -> bool
 
 val init_tbls: unit -> unit
-
-val add_fname: string -> unit

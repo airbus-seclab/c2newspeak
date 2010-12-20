@@ -105,6 +105,9 @@ let compile fname =
   let prog = parse fname in
   let prog = remove_gotos prog in
   let prog = add_types prog in
-    (* TODO: should put fname inside prog *)
+    (* TODO: should put fname inside prog instead of passing it as an 
+       argument here
+       or better => fname should not be needed in translate_typedC2cir!!
+    *)
   let prog = translate_typedC2cir fname prog in
     translate_cir2npkil prog
