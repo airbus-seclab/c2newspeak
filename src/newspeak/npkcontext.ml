@@ -341,11 +341,6 @@ let print_size sz = print_debug ("Current size: "^(string_of_int sz))
 
 let report_error where msg = invalid_arg (string_of_error where msg)
 
-let exit_on_error msg =
-  prerr_endline ("Fatal error: "^msg);
-  exit 1
-
-
 let handle_cmdline_options version_string comment_string = 
   let usage_msg =
     version_string ^ "\nUsage: "^
@@ -354,13 +349,8 @@ let handle_cmdline_options version_string comment_string =
     
     Arg.parse argslist anon_fun usage_msg;
 
-(*    if !(flag_of_error MissingFunDecl) 
-    then (flag_of_error PartialFunDecl) := true;
-*)   
     if (not !(flag_of_error PartialFunDecl)) 
     then (flag_of_error MissingFunDecl) := false;
-
-
 
     if !version then begin
       print_endline version_string;
@@ -391,7 +381,9 @@ let report_ignore_warning loc msg err_typ =
     
 let report_accept_warning loc msg err_typ =
   if not !(flag_of_error err_typ) then begin
-    let advice = ", rewrite your code or remove option "^(opt_of_flag err_typ) in
+    let advice = 
+      ", rewrite your code or remove option "^(opt_of_flag err_typ) 
+    in
       report_error loc (msg^advice)
   end;
   report_warning loc (msg^" accepted")

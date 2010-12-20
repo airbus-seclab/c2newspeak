@@ -140,9 +140,6 @@ val report_error : string -> string -> 'a
 (** Displays a message to the user *)
 val print_debug : string -> unit
 
-(** Displays a message as a fatal error and exits the program *)
-val exit_on_error : string -> 'a
-
 (** [print_size sz] displays [sz] as the current size of the representation 
     in debug mode. *)
 val print_size: int -> unit
