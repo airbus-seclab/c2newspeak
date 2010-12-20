@@ -70,21 +70,21 @@ let parse fname =
       Npkcontext.forget_loc ();
       Npkcontext.print_debug "Parsing done.";
       if !Npkcontext.verb_ast then Csyntax.print prog;
-      (src_fnames, prog)
+      (src_fnames, (fname, prog))
 
-let remove_gotos prog = 
-  if not !Npkcontext.accept_goto then prog
+let remove_gotos (fname, prog) = 
+  if not !Npkcontext.accept_goto then (fname, prog)
   else begin
     Npkcontext.print_debug "Running goto elimination...";
     let prog = GotoElimination.run prog in
       Npkcontext.print_debug "Goto elimination done.";
       Npkcontext.print_size (Csyntax.size_of prog);
-      prog
+      (fname, prog)
   end
 
-let add_types fname prog = 
+let add_types prog = 
   Npkcontext.print_debug "Typing...";
-  Csyntax2TypedC.process fname prog
+  Csyntax2TypedC.process prog
 
 let translate_typedC2cir fname prog =
   Npkcontext.print_debug "Running first pass...";
@@ -106,7 +106,7 @@ let compile fname =
     (* TODO: should put fname inside prog *)
   let (src_fnames, prog) = parse fname in
   let prog = remove_gotos prog in
-  let prog = add_types fname prog in
+  let prog = add_types prog in
     (* TODO: should put fname inside prog *)
   let prog = translate_typedC2cir fname prog in
     (* TODO: should put src_fnames into prog? *)

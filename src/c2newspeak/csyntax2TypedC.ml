@@ -44,7 +44,7 @@ let find_field f r =
 
 (* TODO: remove the maximum of occurences of symbtbl *)
 
-let process fname globals =
+let process (fname, globals) =
   (* TODO: find a way to remove Symbtbl and use a standard Hashtbl here! 
      but first needs to put the whole typing phase before firstpass
   *)

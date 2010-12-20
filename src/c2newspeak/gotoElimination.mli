@@ -22,6 +22,5 @@
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: sarah (dot) zennou (at) eads (dot) net
 *)
-open Newspeak
-open Csyntax
-val run: (global * location) list -> (global * location) list 
+
+val run: Csyntax.t -> Csyntax.t
