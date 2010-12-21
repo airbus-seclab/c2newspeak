@@ -32,13 +32,11 @@ module OptionSet = Set.Make(struct type t = option let compare = compare end)
 
 let options = ref OptionSet.empty
 
-let option_is_set option = OptionSet.mem option !options
-
 let current_loc = ref (Newspeak.dummy_loc "initialization")
 
 let errors = ref StrSet.empty
 
-let warn_cnt = ref 0
+let option_is_set option = OptionSet.mem option !options
 
 let set_option option () = options := OptionSet.add option !options
 
