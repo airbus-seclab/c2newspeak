@@ -792,18 +792,21 @@ let rec is_compatible one another =
         "testing compatibility against unknown type";
        (one.base = another.base)
     || (match (one.base.trait, another.base.trait) with
-        | Signed   _ , Univ_int
+        | Signed   _ , Univ_int (*constant return Iniv_Int*)
         | Univ_int   , Signed   _
         | Float    _ , Univ_real
         | Univ_real  , Float    _
             -> true
-	| Array (t1, ts1) , Array (t2, ts2) -> 
-	    (is_compatible t1 t2) &&
-	      List.for_all2 (fun x y ->
-		(is_compatible x y) &&
-		(compare (List.length (all_values x))  
-		         (List.length (all_values y)) = 0)
-	       ) ts1 ts2
+	| Array _ , Array _ (*t2, ts2*) -> 
+	    one =  another
+ (*t1 = t2) && List.for_all2 (fun x y -> x = y) ts1 ts2*) 
+	    
+	    (* (is_compatible t1 t2) && *)
+	    (*   List.for_all2 (fun x y -> *)
+	    (* 	    (is_compatible x y) && *)
+	    (* 	    (compare (List.length (all_values x))   *)
+	    (* 	    (List.length (all_values y)) = 0) *)
+	    (*    ) ts1 ts2 *)
 	       
         | _ -> false
         )

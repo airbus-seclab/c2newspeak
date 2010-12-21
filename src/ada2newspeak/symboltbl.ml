@@ -206,7 +206,7 @@ module Table = struct
 	  (*WG *)) 
     then
       begin
-	Npkcontext.print_debug ("Multiple interpretations for " ^ desc ^ " :");
+	Npkcontext.print_debug("Multiple interpretations for " ^desc^ " :");
 	List.iter (fun (_,x) -> Npkcontext.print_debug
 		     ("\t" ^ print_symbol_join x)) lst
       end;
@@ -260,97 +260,81 @@ module Table = struct
    (fun (wh,(x,y,z)) -> wh,(x,y,z))
      (cast_s (find_symbols tbl n))
 
-  let tbl_find_subprogram n_args xpect  my_find tbl n =
-  
-    let do_match xpect z = 
-      match (xpect, z) with 
-	  Some xpec, Some ret -> 
-	    T.is_compatible xpec ret
-	| None, None -> true
-	| _ -> false
-    in
+     
+ let tbl_find_subprogram  n_args xpect my_find tbl n =
 
+    let match_ret_typ xpect z =
+      match (xpect, z) with
+    	  Some xpec, Some ret -> T.is_compatible xpec ret
+    	| _ -> true
+    in
     let filter_args norm_args (_, (_, params, _))  =
-      let lgth1 = List.length norm_args in
-      let lgth2 = List.length params in
-	if ((compare  lgth1 lgth2 <> 0) ||
-	      (List.exists (fun x -> match 
-			      fst x with Some _ -> true
-				|_ -> false) norm_args)
-	   )
-	then 
-	  error ("Symbtbl: looking for a subprogram use of "^
-		   "default param, or named not handled yet...")
-	else (*pas de param 'nommés': on check la compatibilité dans l'ordre*)
-	  (*comparing expected type and return type in compared lists*)
-	   List.for_all2 (
-	    fun x y -> 
-	      let act_typ = snd x in
-	      let for_typ = 
-		let  n =  match y.param_type with 
-		  | [] -> Npkcontext.report_error 
-		      "symboltbl:find_subprogram" "unreachable"
-		  | x::[]    -> None  , x
-		  | x::y::[] -> Some x, y
-		  | _ -> Npkcontext.report_error
-		      "symboltbl:find_subprogram"
-			"chain of selected names is too deep"
-		in
-		  try 
-		    begin
-		      try
-			snd (my_find  n)
-		      with Not_found -> Npkcontext.report_error
-			("Cannot find type '") ""
-		    end
-		  with Not_found ->
-		    Npkcontext.report_error "Symbtbl:not found" ""
+       let argtbl = Hashtbl.create 5 in
+       let rec extract_positional_parameters ar =
+	match ar with
+	  | []   -> []
+	  | (Some  _, _)::_  ->
+	      let process_argument (x, typ) =
+		match x with
+		  | None -> 
+		      Npkcontext.report_error "tbl_find_subprogram "
+			"Named parameters shall follow positional ones"
+		  | Some id when Hashtbl.mem argtbl id ->
+                      Npkcontext.report_error "tbl_find_subprogram "
+			("Parameter " ^ id ^ " appears twice")
+		  | Some id -> Hashtbl.add argtbl id typ
 	      in
-		T.is_compatible act_typ for_typ
-	  ) norm_args params
+		List.iter process_argument ar;
+		[]
+	  | (None, ty)::tl -> ty::(extract_positional_parameters tl)
+      in
+       let make_subt arg  =
+	 let  n =  match arg.param_type with
+    	   | [] -> Npkcontext.report_error
+    	       "symboltbl:find_subprogram" "unreachable"
+    	   | x::[]    -> None  , x 
+	   | x::y::[] -> Some x, y
+    	   | _ -> Npkcontext.report_error "symboltbl:find_subprogram"
+    	       "chain of selected names is too deep"
+    	 in try 
+	     begin 
+	       try snd (my_find n)
+    	       with Not_found -> Npkcontext.report_error
+    		 ("Cannot   find type '") "" end
+    	   with Not_found ->
+    	     Npkcontext.report_error "Symbtbl:not found" ""
+       in
+	 
+       let rec are_compatible pos_list spec =
+         match pos_list, spec with
+           |  [], _  -> (* end of positional parameters *)
+		List.for_all ( function x -> 
+		try    
+		  let typo  = Hashtbl.find argtbl x.formal_name in
+		    T.is_compatible typo (make_subt x) 
+		with Not_found -> true
+			     ) spec
+
+           | tp::pt, s::st ->
+	       let subtyp = make_subt s in
+	 	 ( T.is_compatible tp subtyp) &&
+		   ( are_compatible pt st)
+		   
+          | _::_,[]     -> 
+	      Npkcontext.report_error "normalize.function_call"
+              "Too many actual arguments in function call"
+      in
+      let pos  = extract_positional_parameters norm_args in
+	are_compatible pos params 
     in
-      
     let subs = find_symbols tbl n in
-      (*Attention au cas de multiple avec des parametres par defaut*)
-    
-      if (compare (List.length subs) 1 = 0) then 
-      begin
-	try 
-	(fun (wh,(x,y,z)) -> wh,(x,y,z))
-	(cast_s ~filter:(fun x -> 
-	    let (_, (_, _, z)) = x in 
-	     (filter_args n_args  x) && (do_match xpect z)
-			) subs
+      (cast_s 
+	 ~filter:(fun x -> let (_, (_sn, _, z)) = x in
+		    ( filter_args n_args x)
+		    && ( match_ret_typ xpect z) 
+		 ) 
+	 subs
 	)
-	with _ -> 
-	  (fun (wh,(x,y,z)) -> wh,(x,y,z))  (cast_s subs)
-(*WG TO DO*)
-
-      end
-      else
-	(fun (wh,(x,y,z)) -> wh,(x,y,z))
-	(cast_s ~filter:(fun x -> 
-	    let (_, (_, _, z)) = x in 
-	     (filter_args n_args  x) && (do_match xpect z)
-			) subs
-	)
-      (* peut etre un potentiel renaming mais dont les 
-	 args ne correspondent 
-	if (compare (List.length subs) 1 = 0)
-	then begin 
-	print_endline "____________________only one ___________";
-	(fun (wh,(x,y,z)) -> wh,(x,y,z))
-        (cast_s  subs)
-	end
-	else
-	(fun (wh,(x,y,z)) -> wh,(x,y,z))
-	(cast_s ~filter:(fun x -> 
-			     let (_, (_, _, z)) = x in 
-	(filter_args n_args  x) && (do_match xpect z)
-			  ) subs
-	)
-      *)
-
 
   let tbl_find_variable tbl ?expected_type n =
     let ovl_predicate = match expected_type with
@@ -436,7 +420,11 @@ open Table
 type t = {         s_stack    : table Tree.t
          ; mutable s_cpkg     : string option
          ; mutable s_with     : string list
-         ; mutable s_renaming : (string * (string option * string)) list
+         ; mutable s_renaming : (string *
+				   ((string option * string) * 
+				    (Syntax_ada.param list) option
+				   ) list
+				 ) list
          }
 
 let top s = Tree.top s.s_stack
@@ -517,18 +505,22 @@ let find_rec s f =
  * call is (A -> A) and the circular dependency will be detected.
  * 
 *)
-let add_renaming_decl s new_name old_name =
+let add_renaming_decl s new_name new_args old_name  =
+  (*Making sure old name can later be found *)
   if ((None,new_name) = old_name) then
     Npkcontext.report_error "add_renaming_decl"
                   ( "Circular declaration detected for '" ^ new_name ^ "'.")
   else
-    (*Multiple renaming is possible: on ne le rajoute pas car s_renaming 
-    n'a pas l'info sur les types params et retour
-    on ne le rajoute pas pour ne pas boucler infiniment la recherche ulterieur*)
-    (*WG *)
-    if (List.mem new_name (List.map fst s.s_renaming)) then
-      Npkcontext.report_warning "add_renaming_decl"
-	( "Already renamed '"^ new_name ^ "'.")
+    (*Multiple renaming is possible*)    
+    if (List.mem_assoc new_name  s.s_renaming) then
+      begin
+	Npkcontext.report_warning "add_renaming_decl"
+	  ( "Already renamed '"^ new_name ^ "' but added");
+	let bindings = List.assoc new_name s.s_renaming in
+	let removeds  = List.remove_assoc new_name  s.s_renaming in
+	  s.s_renaming <-  (new_name,
+			    (old_name, new_args)::bindings)::removeds
+      end
     else
       (* dans le cas contraire (et seulement) on le rajoute*)
       begin
@@ -541,7 +533,7 @@ let add_renaming_decl s new_name old_name =
 				   )
 				 ^ (snd old_name)
                                );
-	s.s_renaming <- (new_name,old_name)::s.s_renaming
+	s.s_renaming <- (new_name,[(old_name, new_args)])::s.s_renaming
       end
 	
 let enter_context ?name ?desc (s:t) =
@@ -658,14 +650,21 @@ let find_variable_value s ?(silent = false) ?expected_type (package,n) =
 let rec find_variable s ?silent ?expected_type name =
   let var_name = snd name in 
   try
-    let nam_assoc = List.assoc var_name s.s_renaming in
-      (*Particular case: renaming with the same name: 
-	only allowed one-level deep*)
-      if (compare  var_name (snd nam_assoc) = 0) then
-	(fun (x,(n,y,_,z)) -> (x,(n,y,z)))
-	  (find_variable_value ?silent s ?expected_type nam_assoc) 
-      else
-	find_variable s ?silent ?expected_type nam_assoc
+    match List.assoc var_name s.s_renaming with 
+	(nam_assoc, _)::[]  -> 
+	  (*Particular case: renaming with the same name: 
+	    only allowed one-level deep*)
+	  if (compare  var_name (snd nam_assoc) = 0) then
+	    (fun (x,(n,y,_,z)) -> (x,(n,y,z)))
+	      (find_variable_value ?silent s ?expected_type nam_assoc) 
+	  else
+	    find_variable s ?silent ?expected_type nam_assoc
+      |  _ -> begin
+	   Npkcontext.report_warning "find_variable"
+	     ( "Already renamed variable '"^ var_name ^ 
+		 "' not impelmented for variable"); 
+	   raise Not_found 
+	 end
   with Not_found ->
     (fun (x,(n,y,_,z)) -> (x,(n,y,z)))
       (find_variable_value ?silent s ?expected_type name) 
@@ -678,49 +677,74 @@ let rec find_variable s ?silent ?expected_type name =
    (find_variable_value ?silent s ?expected_type name) 
 *)
 
-let find_type s (package,n) =
+let find_type s (package,n) = 
   try
     s_find "type" tbl_find_type s ?package n
   with Not_found -> error ("Cannot find type '" ^ n ^ "'")
 
 
 let rec find_subprogram s ?(silent = false) (pack,n) norm_args xpect t_find =
-  try 
-    let ( p_opt, n_assoc) =  List.assoc n s.s_renaming in
-      if (compare n n_assoc = 0) then
-	begin 
-
+   let find_one_renaming  ((p_opt, n_a), params_opt) n = 
+    if (compare n n_a = 0) then
+      begin 
 	match p_opt with 
 	    Some pck -> 
+	      (*TO DO add the params_opt here see 'swap_formals'*)
 	      s_find "subprogram" 
 		(tbl_find_subprogram norm_args xpect t_find) s
-		~package:(pck) n_assoc
-	  | _ ->  (*WG should not happen *)
-	      s_find "subprogram" (tbl_find_subprogram norm_args xpect t_find) s n_assoc
-	end
-      else
-	begin
-	  find_subprogram s (p_opt, n_assoc) norm_args  xpect t_find 
-	end
-
-	  
-  with Not_found ->
-    (*No need for tbl_find_subprogram here*)
+		~package:(pck) n_a
+	  | _ ->  	
+	      error  ("program '" ^ n ^ "'" ^"can not be resolved")
+      end
+    else
+      let (sc,(act_name,_, top)) =
+	find_subprogram s ~silent (p_opt, n_a) norm_args  xpect t_find 
+      in
+	match params_opt with 
+	    Some formals -> 
+		(sc,(act_name,  formals, top))
+	  | None  ->  error  ("program renamed'" ^ n ^ 
+				"'" ^"can not find previous formal parameters")
+  in
+  
+  let res = ref[] in 
+  
+  let multiple_renaming x = 
+    try
+      let new_spec = find_one_renaming x n in
+	res:=new_spec::(!res)
+    with _ -> ()
+  in
+  
     try 
-      match pack with 
-	  Some pck ->  
-	    s_find "subprogram"
-	      (tbl_find_subprogram norm_args xpect t_find) s ~package:(pck) n 
-	      
-	|_-> s_find "subprogram" 
-	   (tbl_find_subprogram norm_args xpect t_find) s n  
-    
-    with Not_found ->
-	  if silent then
-	    raise Not_found
+      let names =  List.assoc n s.s_renaming in
+	List.iter  multiple_renaming names;
+	let nb_solution = List.length !res in 
+	  if (compare  nb_solution 0 = 0) then
+	    raise Not_found 
+	  else if (compare nb_solution 1 > 0) then
+	    error ("More than one program match spec:'" ^ n ^ "'")
 	  else
-	    error ("Cannot find subprogram '" ^ n ^ "'")
-	  
+	    List.hd (!res)
+
+    with Not_found ->
+      (*No need for tbl_find_subprogram here*)
+      try 
+	match pack with 
+	    Some pck ->  
+	      s_find "subprogram"
+		(tbl_find_subprogram norm_args xpect t_find) s ~package:(pck) n 
+		
+	  | _ -> 
+	      s_find "subprogram" 
+		(tbl_find_subprogram norm_args xpect t_find) s n  
+		
+      with Not_found ->
+	if silent then
+	  raise Not_found
+	else
+	  error ("Cannot find subprogram '" ^ n ^ "'")
+	    
   (*
     try  
     find_subprogram s (List.assoc n s.s_renaming) norm_args t_find 
@@ -739,7 +763,9 @@ let is_operator_overloaded s n =
     ignore (s_find "overloaded operator" tbl_find_subprogram_simple s n);
     true
   end
-  with Not_found -> false
+  with Not_found -> (*false*)
+    List.mem_assoc n s.s_renaming 
+
 
 let scope t =
   t.t_scope

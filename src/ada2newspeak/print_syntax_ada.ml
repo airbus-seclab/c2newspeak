@@ -271,7 +271,7 @@ and basic_declaration_to_string basic_decl = match basic_decl with
   | RepresentClause(id,rc) ->
       "RepresentClause("^id^","
       ^(representation_clause_to_string rc)^")"
-  | RenamingDecl(n,n') ->  "Renaming : "
+  | RenamingDecl(n, _, n') ->  "Renaming : "
                           ^n
                           ^" renames "
                           ^name_to_string n'

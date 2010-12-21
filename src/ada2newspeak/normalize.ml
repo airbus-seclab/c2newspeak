@@ -139,6 +139,7 @@ type selected =
 
 
 let rec resolve_selected ?expected_type n =
+  
  let resolve_variable pkg id =
     begin
       try
@@ -301,7 +302,8 @@ let rec normalize_exp ?expected_type exp =
                                 )
     | CFloat x -> Ast.CFloat x,T.universal_real
     | CChar  x -> Ast.CChar  x,T.character
-    | Lval(ParExp(n, params)) -> normalize_fcall (n, params) expected_type
+    | Lval(ParExp(n, params)) -> 
+	normalize_fcall (n, params) expected_type
     | Lval(PtrDeref _ as lv) -> let nlv, tlv = normalize_lval lv in
                                 Ast.Lval (nlv), tlv
     (*TODO: improve this code for t412 *)
@@ -329,8 +331,7 @@ let rec normalize_exp ?expected_type exp =
     | Lval lv ->  
         begin
           match resolve_selected ?expected_type lv with
-          | SelectedVar   (sc, id,  t, _) -> 
-	      Ast.Lval(Ast.Var(sc,id,t)) ,t
+          | SelectedVar (sc, id,  t, _) -> Ast.Lval(Ast.Var(sc,id,t)) ,t
           | SelectedFCall (sc, id, rt) -> Ast.FunctionCall (sc, id, [], rt), rt
           | SelectedConst (t,v) -> insert_constant ~t v
           | SelectedRecord (lv, off, tf) ->
@@ -459,21 +460,21 @@ and make_arg_list args spec =
           match pos_list, spec with
             |  [],_  -> (* end of positional parameters *)
 	         List.map (function x ->
-                          let value =
-                            ( try Hashtbl.find argtbl x.formal_name
-                              with Not_found ->
-                                match x.default_value with
-                                  | Some value -> normalize_exp value
-                                  | None -> Npkcontext.report_error
-                                              "normalize.fcall"
-                                            ( "No value provided for "
-                                            ^ "parameter " ^ x.formal_name
-                                            ^ ", which has no default one.")
-                            ) in
-                          make_arg x value) spec
-            | (ev,_)::pt,s::st -> let t = subtyp_to_adatyp s.param_type in
-                                  (make_arg s (ev,t))
-                                  ::(merge_with_specification pt st)
+                   let value =
+                     ( try Hashtbl.find argtbl x.formal_name
+                       with Not_found ->
+                         match x.default_value with
+                           | Some value -> normalize_exp value
+                           | None -> Npkcontext.report_error
+                               "normalize.fcall"
+                                 ( "No value provided for "
+                                   ^ "parameter " ^ x.formal_name
+                                   ^ ", which has no default one.")
+                     ) in
+                     make_arg x value) spec
+            | (ev,_)::pt,s::st -> 
+		let t = subtyp_to_adatyp s.param_type in
+                  (make_arg s (ev,t))::(merge_with_specification pt st)
             | _::_,[]     -> Npkcontext.report_error "normalize.function_call"
                             "Too many actual arguments in function call"
   in
@@ -534,69 +535,62 @@ and normalize_binop bop e1 e2 xpec =
       (* Otherwise : direct translation *)		
       | _ ->  
 	  let bop' = direct_op_trans bop in
-	    (*TO DO unused !!!!!!!!!!!!*)
+	    (*  match xpec with 	(*ca du Eq boolean *) 
+		| Some typt when (not (T.is_boolean typt)) ->
+	    *)
+	  let n = Ada_utils.make_operator_name bop in
+	    
 	  let expected_type =
-            match (e1, e2) with
-	      | Lval l1 , Lval l2 -> begin
-		  try
-		    let v1 = make_name_of_lval l1 in
-		      let v2 = make_name_of_lval l2 in
-			Sym.type_ovl_intersection gtbl
-			  (ListUtils.last v1)
-			  (ListUtils.last v2)
-		    with _ -> None
-		  end
-		  
-	      | _ , Qualified (lvn,_) -> let n = make_name_of_lval lvn in
-                  Some (subtyp_to_adatyp n)
-	      | _ -> None
-          in
-  
-          let (e1',t1) = normalize_exp ?expected_type e1 in
-          let (e2',t2) = normalize_exp ?expected_type e2 in
-	  	      
-	    match xpec with
-		(*ca du Eq boolean *)
-	      | Some typtyptyp when (not (T.is_boolean typtyptyp)) -> begin
-		  try
-		    let norm_args =
-		      List.map (fun x -> (None,normalize_exp ?expected_type:xpec x)) [e1; e2] in
-	      	    let norm_typs = List.map (fun (s,(_,t)) -> (s,t)) norm_args in
-		    let n = Ada_utils.make_operator_name bop in
-
-		    let (sc,( act_name, spec, top)) =
-		    
-		      Sym.find_subprogram ~silent:true gtbl (None, n) 
-			norm_typs xpec
-	      		(fun x -> Symboltbl.find_type gtbl x)
-	      		
-		    in
-		      begin
-	      		let t = match top with	
-			  | None -> Npkcontext.report_error "normalize_"
-	      		      "Expected function, got procedure"
-	      			
-			  | Some top -> top
-	      			
-			in
-	      		let effective_args = make_arg_list norm_args spec in
-
-	      		  Ast.FunctionCall (sc, act_name, effective_args, t), t
-	      		    
+	    match (e1, e2) with
+		    | Lval l1 , Lval l2 -> begin
+			try
+			  let v1 = make_name_of_lval l1 in
+			  let v2 = make_name_of_lval l2 in
+			    Sym.type_ovl_intersection gtbl
+			      (ListUtils.last v1)
+			      (ListUtils.last v2)
+			with _ -> None
 		      end
-	      		(*TODO, no overloading has been found we are
-	      		  going back to 'normal' case *)
+		    | _ , Qualified (lvn,_) -> let n = make_name_of_lval lvn in
+			Some (subtyp_to_adatyp n)
+		    | _ -> None
+	  in
+	    	 
+	  let (e1',t1) = normalize_exp ?expected_type e1 in
+	  let (e2',t2) = normalize_exp ?expected_type e2 in
+	    
+	    if ( Sym.is_operator_overloaded gtbl n) then 
+	      begin 
+		(*No Expected type : might raise error in typecheck*)
+		let norm_args = [(None, (e1',t1));(None, (e2',t2))] in 
+		let norm_typs = [(None, t1);(None, t2)] in
+		let n = Ada_utils.make_operator_name bop in
+		  try
+		    let (sc,( act_name, spec, top)) =
+		    Sym.find_subprogram ~silent:true gtbl (None, n) 
+		      norm_typs xpec
+	      	      (fun x -> Symboltbl.find_type gtbl x)
+	      	  in 
+		  let t = match top with	
+		    | None -> Npkcontext.report_error "normalize_"
+	      		"Expected function, got procedure"
+	      		  
+		    | Some top -> top
+	      	  in
+	      	  let effective_args = make_arg_list norm_args spec 
+		  in
+		    Ast.FunctionCall (sc, act_name, effective_args, t), t
+	
 		  with Not_found ->
-		      let tc = TC.type_of_binop bop' t1 t2  in
-		      Ast.Binary (bop', (e1',t1), (e2',t2)), tc
-		end
-	      | _  ->  
-	      	  (*TO DO ... check when this case can happen ..?*)
-	      	  (*on ne sait pas il faudrait peut
-	      	    aller voir dans les renamings   *)
-	      	  Ast.Binary (bop', (e1',t1), (e2',t2)),
-	      	  TC.type_of_binop bop' t1 t2
-		    
+		  (*Overloaded but no renaming matches expected spec*)
+		    let tc = TC.type_of_binop bop' t1 t2  in
+		    Ast.Binary (bop', (e1',t1), (e2',t2)), tc
+	      end
+
+	    else
+	      let tc = TC.type_of_binop bop' t1 t2  in
+		Ast.Binary (bop', (e1',t1), (e2',t2)), tc
+		  
 		      
 and make_abs (exp,t) =
   let x = (exp,t) in
@@ -630,6 +624,7 @@ and normalize_uop uop exp =
      | Not    -> Ast.Not(ne,t), TC.type_of_not t
 
 and normalize_fcall (n, params) expectedtype =
+ 
   (* Maybe this indexed expression is an array-value *)
   let n = make_name_of_lval n in
   let n = mangle_sname n in
@@ -649,6 +644,7 @@ and normalize_fcall (n, params) expectedtype =
       let effective_args = make_arg_list norm_args spec in
 	Ast.FunctionCall(sc, act_name, effective_args, t),t
     with Not_found ->
+    
       try 
 	(*To do double checked because conversion de tablo
 	  contraint/non contraint cf 8.2 *)
@@ -692,7 +688,7 @@ and normalize_fcall (n, params) expectedtype =
 	    | _ -> raise Not_found
 		
 	with _ ->   (*Variable not found in gtbl could be a 'cast' case*)
-      	  try
+	  try
       	    let   (_, cast_t) = Sym.find_type gtbl n in
       	      if (compare (List.length params) 1 <> 0) then    
       		Npkcontext.report_error "normalize_fcall"
@@ -1000,7 +996,7 @@ and normalize_basic_decl item loc =
                                       Ast.Constant
       end
       in
-        List.map (fun ident ->
+        List.map ( fun ident ->
           Ast.ObjectDecl( ident
                         , t
                         , status
@@ -1030,11 +1026,18 @@ and normalize_basic_decl item loc =
       let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
       Sym.add_type gtbl ident loc (merge_types norm_subtyp_ind);
       []
-  | RenamingDecl (n, o) -> let o' = mangle_sname o in
-                           Sym.add_renaming_decl gtbl n o';
-                           []
+  | RenamingDecl (n, arguments, o) -> 
+      let (pk, o') = mangle_sname o in
+      (*if no package adding current*)
+      let add_p = match pk with  
+	| None -> Sym.current gtbl
+	| Some _ -> pk
+      in
+      let old = (add_p,o') in
+	Sym.add_renaming_decl gtbl n arguments old;
+        []
   | RepresentClause (id, EnumRepClause aggr) ->
-      add_representation_clause id aggr loc;[]
+	    add_representation_clause id aggr loc;[]
   | RepresentClause (id, _) -> Npkcontext.report_warning "normalize"
                               ( "Ignoring representation clause "
                               ^ "for '" ^ id ^ "'");
@@ -1276,7 +1279,7 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
  
 	let effective_args = make_arg_list norm_args spec in
 
-      [Ast.ProcedureCall( sc, act_name, effective_args), loc]
+	  [Ast.ProcedureCall( sc, act_name, effective_args), loc]
   | LvalInstr((Var _|SName (Var _,_)) as lv) ->
       normalize_instr (LvalInstr (ParExp(lv, [])),loc)
   | LvalInstr _ -> Npkcontext.report_error "normalize_instr"

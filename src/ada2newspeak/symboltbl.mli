@@ -164,4 +164,4 @@ val add_with          : t -> string -> unit
 val is_with           : t -> string -> bool
 val s_get_use         : t -> string list
 
-val add_renaming_decl : t -> string -> string option * string -> unit
+val add_renaming_decl : t -> string ->  (Syntax_ada.param list) option ->  string option * string -> unit

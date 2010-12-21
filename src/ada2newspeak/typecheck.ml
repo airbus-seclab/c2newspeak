@@ -31,8 +31,7 @@ let error = Npkcontext.report_error "Typecheck"
 let expect ?desc t1 t2 =
   if (T.is_unknown t1 || T.is_unknown t2) then
     error "Unknown type";
-  if (not (T.is_compatible t1 t2
-  ))
+  if (not (T.is_compatible t1 t2))
   then (* is_compatible ? *)
     error ("incompatible types"
           ^ (match desc with
@@ -61,24 +60,23 @@ let type_of_binop op t1 t2 = match op with
                error "Ordering operator is not defined -- 4.5.2.(8)";
              T.boolean
   | Plus | Minus -> expect ~desc:"binary adding" t1 t2;
-                    if not (T.is_numeric t1) then
-                          error "Binary adding operator is not defined -- 4.5.3.(1)"
-                    ;
-	(*	    print_endline "-------------binary minus/  adding ";
-		    print_endline (T.print  (T.coerce_types t1 t2));
-	*)
-                    T.coerce_types t1 t2
+      if not (T.is_numeric t1) then
+        error "Binary adding operator is not defined -- 4.5.3.(1)";
+                  (*print_endline "-------------binary minus/  adding ";
+		    print_endline (T.print  (T.coerce_types t1 t2)); *)
+      T.coerce_types t1 t2
+	
   | Mult | Div -> expect ~desc:"binary multiplying" t1 t2;
-                  if not (T.is_float t1 || T.is_integer t1) then
-                    error "Multiplying operator is not defined -- 4.5.5.(2)";
-	(*	   print_endline "-----------------binary mul/div "; 
-		   print_endline (T.print  (T.coerce_types t1 t2));
-	*)
-                  T.coerce_types t1 t2
-  | Rem  | Mod -> expect ~desc:"binary multiplying" t1 t2;
-                  if not (T.is_integer t1) then
-                    error "Multiplying operator is not defined -- 4.5.5.(2)";
-                  t1
+      if not (T.is_float t1 || T.is_integer t1) then 
+        error "Multiplying operator is not defined -- 4.5.5.(2)";
+                 (*print_endline "-----------------binary mul/div "; 
+		   print_endline (T.print  (T.coerce_types t1 t2)); *)
+      T.coerce_types t1 t2
+
+  | Rem  | Mod -> expect ~desc:"binary Rem/Mod" t1 t2;
+      if not (T.is_integer t1) then
+        error "Multiplying operator is not defined -- 4.5.5.(2)";
+      t1
   | Power -> expect t2 T.integer;
              if not (T.is_integer t1 || T.is_float t1) then
               error "Highest precedence operator \"**\" is not defined -- 4.5.6";

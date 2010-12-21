@@ -314,12 +314,12 @@ basic_declaration :
                                              snd (fst $1)), snd $1 }
 | subprogram_spec RENAMES name SEMICOLON   { let nm = fst $3 in
                                              match (fst $1) with
-                                             | Subprogram (n,_,_) ->
-                                                 RenamingDecl (n, nm),$2
+                                             | Subprogram (n, ag, _) ->
+                                                 RenamingDecl(n,Some ag,nm),$2
                                            }
 | ident_list COLON subtyp_indication
   RENAMES name SEMICOLON                   { match $1 with
-                                             | [x] -> RenamingDecl(x, fst $5),$2
+                                             | [x] -> RenamingDecl(x, None, fst $5),$2
                                              | _ -> Npkcontext.report_error
                                                  "Parser" ("Only one identifier"
                                                  ^" is allowed before "
