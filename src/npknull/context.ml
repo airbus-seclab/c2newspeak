@@ -36,13 +36,22 @@ let current_loc = ref (Newspeak.dummy_loc "initialization")
 
 let errors = ref StrSet.empty
 
-let option_is_set option = OptionSet.mem option !options
+let string_of_option option =
+  match option with
+      Verbose -> "--verbose"
+    | UseStubs -> "--use-stubs"
+    | PrintGraph -> "--graph"
+
+let set_current_loc loc = current_loc := loc
+
+let get_current_loc () = Newspeak.string_of_loc !current_loc
 
 let set_option option () = options := OptionSet.add option !options
 
+let option_is_set option = OptionSet.mem option !options
+
 let print_verbose msg = if option_is_set Verbose then print_endline msg
-  
-(* TODO: factor print_err and report_stub_used *)
+
 let print_err msg = 
   let msg = Newspeak.string_of_loc !current_loc^": "^msg in
     if not (StrSet.mem msg !errors) then begin
@@ -50,11 +59,15 @@ let print_err msg =
       prerr_endline msg
     end
       
-let report_stub_used msg = if not (option_is_set UseStubs) then print_err msg
+let print_err_with_advice missing_option message = 
+  if not (option_is_set missing_option) 
+  then begin
+    let message = 
+      message^ ", use option "^string_of_option missing_option
+      ^" to skip this message"
+    in
+      print_err message
+ end
   
-let get_current_loc () = Newspeak.string_of_loc !current_loc
-
-let set_current_loc loc = current_loc := loc
-
 let print_graph str = 
   if option_is_set PrintGraph then print_endline ("[G] "^str)

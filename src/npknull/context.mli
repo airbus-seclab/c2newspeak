@@ -28,16 +28,18 @@ type option =
   | UseStubs
   | PrintGraph
 
+val string_of_option: option -> string
+
 val set_option: option -> unit -> unit
-
-val print_graph: string -> unit
-
-val print_verbose: string -> unit
-
-val report_stub_used: string -> unit
 
 val get_current_loc: unit -> string
 
 val set_current_loc: Newspeak.location -> unit
 
+val print_graph: string -> unit
+
+val print_verbose: string -> unit
+
 val print_err: string -> unit
+
+val print_err_with_advice: option -> string -> unit
