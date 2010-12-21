@@ -1,7 +1,6 @@
 Warning: 622.c:33#0: goto statement accepted
 Newspeak output
 ---------------
-622.c
 void main(void) {
   (622.c:28#2)^uint32 goto!fail;
   (622.c:28#2)^goto!fail =(uint32) 0;

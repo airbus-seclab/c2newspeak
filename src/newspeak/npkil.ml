@@ -31,7 +31,6 @@
 open Newspeak
 
 type t = {
-  fnames: string list;
   globals: (string, ginfo) Hashtbl.t;
   init: blk;
   fundecs: (fid, funinfo) Hashtbl.t;
@@ -317,8 +316,6 @@ let dump_npko prog =
     dump_fundec n pbody;
     print_newline ()
   in
-    List.iter (fun x -> print_endline x) prog.fnames;
-
     print_usedglbs "Global used" prog.globals;
 
     print_endline "Global variables";

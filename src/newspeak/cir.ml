@@ -561,7 +561,7 @@ struct
 end
 module Set = Set.Make(Int)
 
-let normalize x =
+let hoist_variables x =
   let stack_height = ref 0 in
   let lbl_tbl = Hashtbl.create 20 in 
     (* maps each lbl to the variable that should be declared at this block *)
@@ -572,6 +572,7 @@ let normalize x =
     Hashtbl.add age_tbl !stack_height lbl;
     incr stack_height
   in
+
   let pop_lbl lbl =
     let decls = Hashtbl.find lbl_tbl lbl in
       decr stack_height;
@@ -579,6 +580,7 @@ let normalize x =
       Hashtbl.remove lbl_tbl lbl;
       decls
   in
+
   let register_decl lbl x =
     let decls = 
       try Hashtbl.find lbl_tbl lbl 
@@ -621,7 +623,7 @@ let normalize x =
 	  in
 	  let (tl, used_lbls') = set_scope_blk tl in
 	    (body@tl, Set.union used_lbls used_lbls')
-	      
+
       | (x, loc)::tl -> 
 	  let (x, used_lbls1) = set_scope_stmtkind x in
 	  let (tl, used_lbls2) = set_scope_blk tl in
@@ -656,10 +658,37 @@ let normalize x =
 	    ((e, body)::tl, Set.union used_lbls1 used_lbls2)
       | [] -> ([], Set.empty)
   in
-    
-  let x = normalize_blk x in
   let (body, _) = set_scope_blk x in
     body
+
+let contains_goto x = 
+  let rec contains_goto_blk x =
+    match x with
+	(x, _)::tl -> contains_goto_stmtkind x || contains_goto_blk tl
+      | [] -> false
+
+  and contains_goto_stmtkind x =
+    match x with
+	Block (body, _) | Loop body -> contains_goto_blk body
+      | Goto _ -> true
+      | Decl _ | Set _ | Exp _ | UserSpec _ | Guard _ -> false
+      | Select (body1, body2) ->
+	  contains_goto_blk body1 || contains_goto_blk body2
+      | Switch (_, choices, default) ->
+	  contains_goto_choices choices || contains_goto_blk default
+
+  and contains_goto_choices x =
+    match x with
+	(_, body)::tl ->
+	  contains_goto_blk body || contains_goto_choices tl
+      | [] -> false
+  in
+    contains_goto_blk x
+      
+let normalize x =
+  let x = normalize_blk x in
+    if (contains_goto x) then hoist_variables x
+    else x
 
 (* TODO: this should be probably put in firstpass *)
 let cast (e, t) t' =
@@ -670,11 +699,6 @@ let cast (e, t) t' =
 	Unop (Npkil.Cast (FunPtr, t'), AddrOf lv)
     | (_, Const (CInt i), Scalar (Int k))
 	when Newspeak.belongs i (Newspeak.domain_of_typ k) -> e
-(*
-    | (Scalar Int k, _, Scalar Int k') 
-	when Newspeak.contains 
-	  (Newspeak.domain_of_typ k') (Newspeak.domain_of_typ k) -> e
-*)
     | (Scalar (Int _), _, Scalar (Int k)) -> 
 	Unop (Npkil.Coerce (Newspeak.domain_of_typ k), e)
     | (Scalar t, _, Scalar t') -> Unop (Npkil.Cast (t, t'), e)

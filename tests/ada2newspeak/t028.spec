@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t028.adb
 void t028(void) {
   (t028.adb:2#6)^int32 x;
   (t028.adb:2#6)^x =(int32) 0;

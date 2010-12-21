@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t332.adb
 void t332(void) {
   (t332.adb:8#8)^int32 addr;
   (t332.adb:9#5)^int32 x;

@@ -24,8 +24,7 @@
 *)
 
 (* TODO: maybe simplify DoWith in Newspeak:
-   1) no action
-   2) no lbl (Goto n where n is the number of labeled blocks to cross before
+   1) no lbl (Goto n where n is the number of labeled blocks to cross before
    getting there)
 *)
 open Lowspeak

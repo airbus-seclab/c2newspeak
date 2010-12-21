@@ -31,12 +31,12 @@ LIBX=unix.cmxa str.cmxa nums.cmxa
 newspeak.FILES=\
 	eBigInt \
 	config temps newspeak lowspeak npkcontext npk2lpk \
-	npkil cir cir2npkil linker
+	npkil cir cir2npkil linker x2newspeak
 
 c2newspeak.FILES=\
         pp_syntax pp_parser pp_lexer \
         csyntax typedC synthack gnuc parser lexer \
-        goto_elimination \
+        gotoElimination \
         csyntax2TypedC typedC2Cir compiler \
 	params c2newspeak
 

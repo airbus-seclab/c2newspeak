@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-162.c
 void f(ptr t) {
   (162.c:27#2)^[t_ptr]32 =(int32) 1;
 }

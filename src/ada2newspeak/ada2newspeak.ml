@@ -54,8 +54,8 @@ let firstpass_translate fname norm_tree =
     Npkcontext.forget_loc ();
     prog
 
-let translate fname prog =
-  let tr_prog = Cir2npkil.translate Newspeak.ADA prog [fname] in
+let translate prog =
+  let tr_prog = Cir2npkil.translate Newspeak.ADA prog in
     Npkcontext.forget_loc ();
     tr_prog
 
@@ -77,7 +77,7 @@ let compile (fname: string): Npkil.t =
     let ast = parse base_name in
     let norm_tree = normalization fname ast in
     let prog = firstpass_translate fname norm_tree in
-    let tr_prog = translate fname prog in
+    let tr_prog = translate prog in
       if dir_name <> "." then begin
 	Npkcontext.print_debug ("Changing directory : " ^ current_dir);
 	Sys.chdir current_dir
@@ -93,40 +93,35 @@ let compile (fname: string): Npkil.t =
 
 let create_no name = (Filename.chop_extension name) ^ Params.npko_suffix
 
+let extract_no fname =
+  if Filename.check_suffix fname Params.npko_suffix then fname
+  else begin
+    let no = create_no fname in
+    let prog = compile fname in
+      Npkil.write no prog;
+      no
+  end
+    
+let execute () =
+    (* TODO: this code should be factored with c2newspeak!!! into x2newspeak *)
+    match !Npkcontext.input_files with
+        file::[]
+          when !Npkcontext.compile_only && (!Npkcontext.output_file <> "") ->
+	    let prog = compile file in
+	      Npkil.write !Npkcontext.output_file prog
+		
+      | files ->
+	  Normalize.init_bodies files;
+	  let nos  = List.map extract_no files in
+	  let bods = Normalize.bodies_to_add() in
+	  let bods_less_files = 
+	    List.filter (fun x -> not (List.mem x files)) bods 
+	  in
+	  let bodies_nos = List.map extract_no (List.rev bods_less_files) in 
+	    if not !Npkcontext.compile_only then begin
+	      Linker.link (List.append bodies_nos nos)
+	    end
+	      
 let _ =
-  try
-    Npkcontext.handle_cmdline_options
-      Params.version_string Params.comment_string;
-    let extract_no fname =
-      if Filename.check_suffix fname Params.npko_suffix then fname
-      else begin
-        let no = create_no fname in
-        let prog = compile fname in
-          Npkil.write no prog;
-          no
-      end
-    in
-
-      (* TODO: this code should be factored with c2newspeak!!! *)
-      match !Npkcontext.input_files with
-          file::[]
-            when !Npkcontext.compile_only && (!Npkcontext.output_file <> "") ->
-	      let prog = compile file in
-		Npkil.write !Npkcontext.output_file prog
-		  
-	| files ->
-	    Normalize.init_bodies files;
-	    let nos  = List.map extract_no files in
-	    let bods = Normalize.bodies_to_add() in
-	    let bods_less_files = 
-	      List.filter (fun x -> not (List.mem x files)) bods 
-	    in
-	    let bodies_nos = 
-	      List.map extract_no (List.rev bods_less_files)
-	    in 
-	      if not !Npkcontext.compile_only then begin
-		Linker.link (List.append bodies_nos nos)
-	      end
-
-  with Invalid_argument msg -> Npkcontext.exit_on_error msg
+  X2newspeak.process Params.version_string Params.comment_string execute
     

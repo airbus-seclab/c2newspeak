@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t211.adb
 void t211.f(void) {
 }
 

@@ -1,4 +1,3 @@
-009.c
 void main(void) {
   (009.c:28#6)^int4[10] t;
   (009.c:29#16)^uint1 i;

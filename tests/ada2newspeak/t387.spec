@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t387.adb
 void t387(void) {
   (t387.adb:2#9)^int32 pupu;
   (t387.adb:3#6)^int32 x;

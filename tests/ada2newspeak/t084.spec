@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t084.adb
 void t084(void) {
   (t084.adb:2#6)^int32 a;
   (t084.adb:6#6)^uint1 i;

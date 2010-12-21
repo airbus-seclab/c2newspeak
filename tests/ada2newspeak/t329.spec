@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t329.adb
 void t329(void) {
   (t329.adb:9#5)^float32[10] a;
   (t329.adb:11#7)^int32 i;

@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t351.adb
 void t351.main(void) {
   (t351.adb:14#9)^t351.p();
 }

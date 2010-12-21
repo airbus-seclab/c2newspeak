@@ -1,7 +1,6 @@
 Warning: 526.c:30#2: expression without post effects expected
 Newspeak output
 ---------------
-526.c
 void main(void) {
   (526.c:27#7)^ptr ptr;
   (526.c:28#6)^int32 i;

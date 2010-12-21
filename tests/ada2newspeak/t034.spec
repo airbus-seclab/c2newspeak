@@ -1,10 +1,9 @@
 Newspeak output
 ---------------
-t034.adb
 void t034.appelfonction(void) {
   (t034.adb:11#9)^int32 y;
   (t034.adb:13#10)^int32 tmp_cir!0;
-  (t034.adb:13#10)^tmp_cir!0 <- t034.f();
+  (t034.adb:13#10)^tmp_cir!0: int32 <- t034.f();
   (t034.adb:13#10)^y =(int32) tmp_cir!0_int32;
 }
 

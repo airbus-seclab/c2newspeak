@@ -1,10 +1,8 @@
 Newspeak output
 ---------------
-t399.adb
-t399a.adb
 void t399(void) {
   (t399.adb:5#5)^int32 x;
-  (t399.adb:9#11)^t399a.a(x_int32);
+  (t399.adb:9#11)^t399a.a(x_int32: int32);
 }
 
 void t399a.a(float32 x) {

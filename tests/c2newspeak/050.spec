@@ -5,7 +5,6 @@ Warning: 050.c:32#5: not enough initializers for array
 Warning: 050.c:30#5: extra initializer for array accepted
 Newspeak output
 ---------------
-050.c
 void main(void) {
 }
 

@@ -24,4 +24,4 @@
 *)
 
 (** [process file_name prog] *)
-val process: string -> Csyntax.t -> TypedC.t
+val process: (string * Csyntax.t) -> TypedC.t

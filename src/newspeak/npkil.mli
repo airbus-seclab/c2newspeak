@@ -32,7 +32,6 @@ open Newspeak
    By default, we accept extern as if they were declared but not defined 
 *)
 type t = {
-  fnames: string list;
   globals: (string, ginfo) Hashtbl.t;
   init: blk;
   fundecs: (fid, funinfo) Hashtbl.t;

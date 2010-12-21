@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-014.c
 void main(void) {
   (014.c:33#21)^uint64 x;
   (014.c:34#2)^x =(uint64) 9223372036854775807;

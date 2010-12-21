@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t346.adb
 void t346(void) {
   (t346.adb:9#5)^uint1[10] a;
   (t346.adb:10#8)^int32 addr;

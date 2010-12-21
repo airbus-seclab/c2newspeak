@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-333.c
 void main(void) {
   (333.c:33#6)^int32 y;
   (333.c:34#2)^y =(int32) x + 64_int32;

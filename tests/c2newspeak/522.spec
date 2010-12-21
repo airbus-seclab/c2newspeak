@@ -1,8 +1,7 @@
 Newspeak output
 ---------------
-522.c
 void main(void) {
-  (522.c:29#2)^f(focus40 &(cstr!1!522.c.main));
+  (522.c:29#2)^f(focus40 &(cstr!1!522.c.main): ptr);
 }
 
 int8[5] cstr!1!522.c.main;

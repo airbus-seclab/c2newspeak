@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-040.c
 void main(void) {
   (040.c:30#6)^int32 e;
   (040.c:31#15)^uint32 f;

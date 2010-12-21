@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t389.adb
 void t389(void) {
   (t389.adb:8#7)^{ int32[3][3] 0; }288 y;
   (t389.adb:12#7)^y + 256 =(int32) 1;

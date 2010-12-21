@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-278.c
 int32 g(void) {
   (278.c:28#6)^int32 x;
   (278.c:31#8)^{

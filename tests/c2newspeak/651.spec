@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-651.c
 void __DI__(void) {
 }
 

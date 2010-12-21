@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-351.c
 void main(void) {
   (351.c:35#2)^x =(int32) 1;
 }

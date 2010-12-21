@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t263.adb
 int32 t263.!op*(int32 left, int32 right) {
   (t263.adb:9#71)^!return =(int32) 2;
 }

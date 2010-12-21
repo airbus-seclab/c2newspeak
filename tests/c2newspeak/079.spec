@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-079.c
 void main(void) {
   (079.c:27#8)^ptr x;
   (079.c:28#2)^x =(ptr) focus48 &(cstr!1!079.c.Hello);

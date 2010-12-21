@@ -311,10 +311,8 @@ let process glb_tbl prog =
       try 
 	let s = Stubs.process f env.height s in
 	  (* TODO: factor with print_err!! *)
-	  Context.report_stub_used ("missing function: "^f
-				    ^", stub used, "
-				    ^"use option --use-stubs to "^
-				    "skip this message");
+	  Context.print_err_with_advice Context.UseStubs 
+	    ("missing function: "^f^", stub used");
 	  s
       with Not_found -> 
 	Context.print_err ("missing function: "^f

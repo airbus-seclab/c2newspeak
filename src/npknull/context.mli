@@ -23,20 +23,23 @@
   email: charles.hymans@penjili.org
 *)
 
-val set_verbose: unit -> unit
+type option =
+    Verbose
+  | UseStubs
+  | PrintGraph
 
-val set_graph: unit -> unit
+val string_of_option: option -> string
 
-val print_graph: string -> unit
-
-val print_verbose: string -> unit
-
-val report_stub_used: string -> unit
+val set_option: option -> unit -> unit
 
 val get_current_loc: unit -> string
 
 val set_current_loc: Newspeak.location -> unit
 
+val print_graph: string -> unit
+
+val print_verbose: string -> unit
+
 val print_err: string -> unit
 
-val set_use_stubs: unit -> unit
+val print_err_with_advice: option -> string -> unit

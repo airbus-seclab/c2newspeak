@@ -1,7 +1,6 @@
 Warning: 513.c:29#0: conditional expression
 Newspeak output
 ---------------
-513.c
 void main(void) {
   (513.c:29#2)^choose {
    -->

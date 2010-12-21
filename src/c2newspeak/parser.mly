@@ -74,7 +74,10 @@ let process_decls (build_sdecl, build_vdecl) (b, m) =
       
 let build_glbdecl (static, extern) d =
   let build_vdecl l (t, x, loc, init) = 
-    (GlbDecl (x, VDecl (t, static, extern, init)), loc)::l
+    let d = 
+      { t = t; is_static = static; is_extern = extern; initialization = init }
+    in
+    (GlbDecl (x, VDecl d), loc)::l
   in
   let loc = get_loc () in
   let build_sdecl x = (GlbDecl x, loc) in
@@ -94,7 +97,11 @@ let build_stmtdecl static extern d =
 (* TODO: think about cleaning this location thing up!!! *)
 (* for enum decls it seems the location is in double *)
   let build_vdecl l (t, x, loc, init) = 
-    (LocalDecl (x, VDecl (t, static, extern, init)), loc)::l 
+(* TODO: factor the various VDecl creations!! *)
+    let d = 
+      { t = t; is_static = static; is_extern = extern; initialization = init }
+    in
+      (LocalDecl (x, VDecl d), loc)::l 
   in
   let loc = get_loc () in
   let build_sdecl x = (LocalDecl x, loc) in
@@ -217,7 +224,7 @@ let report_asm tokens =
 %left     DOT ARROW
 %left     LPAREN LBRACKET
 
-%type <string list * Csyntax.t> parse
+%type <Csyntax.t> parse
 %start parse
 
 %type <Csyntax.assertion> assertion
@@ -232,7 +239,7 @@ try to remove multiple occurence of same pattern: factor as much as possible
 // TODO: simplify parser and link it to C standard sections!!!
 
 parse:
-  translation_unit EOF                      { (Synthack.get_fnames (), $1) }
+  translation_unit EOF                      { ($1) }
 ;;
 
 translation_unit:
@@ -593,9 +600,14 @@ expression:
 | LPAREN type_name RPAREN composite        { 
     let loc = get_loc () in
     let (blk, t) = build_type_blk loc $2 in
-    let vdecl = VDecl (t, false, false, Some (Sequence $4)) in
+    let d = 
+      { 
+	t = t; is_static = false; is_extern = false; 
+	initialization = Some (Sequence $4) 
+      } 
+    in
     let id = Temps.to_string (new_id ()) (Temps.Misc "parser") in
-    let decl = (LocalDecl (id, vdecl), loc) in
+    let decl = (LocalDecl (id, VDecl d), loc) in
     let e = (Exp (Var id), loc) in
       Npkcontext.report_accept_warning "Parser.cast_expression" 
 	"local composite creation" Npkcontext.DirtySyntax;
@@ -635,9 +647,14 @@ expression:
     let e = normalize_bexp $1 in
     let loc = get_loc () in
     let t = Csyntax.Typeof e in
-    let vdecl = VDecl (t, false, false, Some (Data e)) in
+    let d = 
+      {
+	t = t; is_static = false; is_extern = false;
+	initialization = Some (Data e)
+      }
+    in
     let id = Temps.to_string (new_id ()) (Temps.Misc "parser") in
-    let decl = (LocalDecl (id, vdecl), loc) in
+    let decl = (LocalDecl (id, VDecl d), loc) in
     let e' = Var id in
       BlkExp( [ decl; ( Exp (IfExp(e', e', $4)), loc ) ] )
   }

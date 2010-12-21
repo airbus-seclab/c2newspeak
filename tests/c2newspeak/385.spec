@@ -1,7 +1,6 @@
 Warning: 385.c:31#2: expression of type signed integer used as an array index accepted
 Newspeak output
 ---------------
-385.c
 void main(void) {
   (385.c:27#6)^int32 i;
   (385.c:28#6)^int32[2] t;

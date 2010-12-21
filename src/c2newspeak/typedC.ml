@@ -30,8 +30,12 @@
 *)
 module Nat = Newspeak.Nat
 
-type t = (string * glbinfo) list * (string * funinfo) list * assertion list
-
+type t = {
+  global_variables: (string * glbinfo) list;
+  function_declarations: (string * funinfo) list;
+  user_specifications: assertion list
+}
+(* TODO: put the location inside the decl?? *)
 and glbinfo = (decl * Newspeak.location)
 
 and funinfo = (ftyp * bool * blk * Newspeak.location)
@@ -44,11 +48,13 @@ and spec_token =
   | LvalToken of typ_exp
   | CstToken of Cir.cst
 
-and decl = (string * typ * is_static * is_extern * init option)
-  
-and is_extern = bool
-
-and is_static = bool
+and decl = {
+  name: string;
+  t: typ;
+  is_static: bool;
+  is_extern: bool;
+  initialization: init option
+}
 
 and compdef = (field_decl list * is_struct)
 

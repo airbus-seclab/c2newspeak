@@ -30,7 +30,7 @@ LIBX=unix.cmxa str.cmxa nums.cmxa
 
 newspeak.FILES=\
 	temps config eBigInt newspeak lowspeak npkcontext npk2lpk \
-	npkil cir cir2npkil linker
+	npkil cir cir2npkil linker x2newspeak
 
 ada2newspeak.FILES=  \
 	params 		   \

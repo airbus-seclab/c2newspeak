@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-193.c
 void main(void) {
   (193.c:29#2)^x =(ptr) y_ptr;
 }

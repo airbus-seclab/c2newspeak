@@ -48,7 +48,7 @@ let translate_cst c =
       CInt i -> N.CInt i
     | CFloat f -> N.CFloat f
 
-let translate src_lang prog fnames =
+let translate src_lang prog =
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
 
@@ -326,5 +326,5 @@ let translate src_lang prog fnames =
     Hashtbl.iter translate_glbdecl prog.globals;
     Hashtbl.iter translate_fundef prog.fundecs;
     Set.iter flag_glb !used_glbs;
-    { K.fnames = fnames; K.globals = glbdecls; K.init = init;
+    { K.globals = glbdecls; K.init = init;
       K.fundecs = fundefs; K.src_lang = src_lang }

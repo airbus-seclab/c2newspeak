@@ -42,8 +42,9 @@ let find_field f r =
     Npkcontext.report_error "Firstpass.translate_lv" 
       ("unknown field '"^f^"' in union or structure")
 
+(* TODO: remove the maximum of occurences of symbtbl *)
 
-let process fname globals =
+let process (fname, globals) =
   (* TODO: find a way to remove Symbtbl and use a standard Hashtbl here! 
      but first needs to put the whole typing phase before firstpass
   *)
@@ -56,15 +57,19 @@ let process fname globals =
   *)
   let static_cnt = ref 0 in
 
-  let get_static_name x =
-    let prefix = "!"^fname^"." in
-    let prefix = 
-      if !current_fun = "" then prefix else prefix^(!current_fun)^"."
-    in
-    let name = prefix^(string_of_int !static_cnt)^"."^x in
-      incr static_cnt;
-      name
+  let generate_global_name is_static x =
+    if is_static then begin
+      let prefix = "!"^fname^"." in
+      let prefix = 
+	if !current_fun = "" then prefix else prefix^(!current_fun)^"."
+      in
+      let counter = (string_of_int !static_cnt)^"." in
+      let name = prefix^counter^x in
+	incr static_cnt;
+	name
+    end else x
   in
+
   let complete_typ_with_init t init =
     let rec process (x, t) =
       match (x, t) with
@@ -84,17 +89,23 @@ let process fname globals =
 	| Some init -> process (init, t)
   in
     
+(* TODO: think about it, but I am not sure the distinction between Local and 
+   Global should be made in TypedC right away... *)
   let add_local (t, x) = Hashtbl.add symbtbl x (C.Local x, t) in
 
-  let remove_var x = Hashtbl.remove symbtbl x in
+  let remove_local x = Hashtbl.remove symbtbl x in
+
+  let replace_symbol_type x t =
+    let (i, _) = Hashtbl.find symbtbl x in
+      Hashtbl.replace symbtbl x (i, t)
+  in
 
 (* TODO: find a way to factor declare_global and add_local
    maybe necessary to complete_typ_with_init in both cases...
    maybe just needs a is_global bool as argument..
    need to check with examples!!!
 *)
-  let update_global x name t = 
-    Hashtbl.replace symbtbl x (C.Global name, t) in
+  let update_global x name t = Hashtbl.replace symbtbl x (C.Global name, t) in
 
   let add_formals (args_t, ret_t) =
     add_local (ret_t, Temps.return_value);
@@ -108,14 +119,15 @@ let process fname globals =
   in
 
   let remove_formals (args_t, _) =
-    remove_var Temps.return_value;
+    remove_local Temps.return_value;
 (* TODO: think about it, not nice to have this pattern match, since in
    a function declaration there are always arguments!! 
    None is not possible *)
     match args_t with
-	Some args_t -> List.iter (fun (_, x) -> remove_var x) args_t
+	Some args_t -> List.iter (fun (_, x) -> remove_local x) args_t
       | None -> ()
   in
+
   let find_symb x = 
     try Hashtbl.find symbtbl x
     with Not_found -> 
@@ -158,6 +170,7 @@ let process fname globals =
     let ret' = update ret in
       args', ret'
   in
+
   let update_struct_type s t =
     let new_type = find_compdef s in
     let rec update t = 
@@ -175,22 +188,24 @@ let process fname globals =
     in
       update t
   in
-  let update_vdecl s (x, ((n, t, static, extern, init), loc)) =
+
+  let update_vdecl s (x, (v, loc)) =
     let rec update t =
-      match t with 
-	  C.Comp (C.Unknown s') when s = s'       -> C.Comp (find_compdef s)
-	| C.Comp t                                -> C.Comp (update_struct_type s t)
-	| C.Ptr (C.Comp C.Unknown s') when s = s' -> C.Ptr (C.Comp (find_compdef s))
-	| C.Ptr (C.Comp t)                        -> C.Ptr (C.Comp (update_struct_type s t))
-	| _                                       -> t
+      match t with
+	  C.Comp (C.Unknown s') when s = s' -> C.Comp (find_compdef s)
+	| C.Comp t -> C.Comp (update_struct_type s t)
+	| C.Ptr (C.Comp C.Unknown s') when s = s' -> 
+	    C.Ptr (C.Comp (find_compdef s))
+	| C.Ptr (C.Comp t) -> C.Ptr (C.Comp (update_struct_type s t))
+	| _ -> t
     in 
-    let t' = update t in
-    let v = ((n, t', static, extern, init), loc) in 
-    let i, _ = Hashtbl.find symbtbl x in (* useless : can only be global *)
-      Hashtbl.replace symbtbl x (i, t');
-      (x, v)
+    let t' = update v.C.t in
+    let v = { v with C.t = t' } in
+      replace_symbol_type x t';
+      (x, (v, loc))
   in
 
+(* TODO: think about this, but it seems to be costly!! *)
   let update_local_vdecls s =
     let vars, pvars = Hashtbl.fold (fun
       x (e, t) (vars, pvars) ->
@@ -202,35 +217,29 @@ let process fname globals =
 	   | _ -> vars, pvars) symbtbl ([], [])
     in
     let t' = C.Comp (find_compdef s) in
-      List.iter (fun x ->
-		   Hashtbl.replace symbtbl x (C.Local x, t')
-		) vars;
-      List.iter (fun x ->
-		   Hashtbl.replace symbtbl x (C.Local x, C.Ptr t')) pvars
+      List.iter (fun x -> replace_symbol_type x t') vars;
+      List.iter (fun x -> replace_symbol_type x (C.Ptr t')) pvars
   in
+
   let update_funtyp f ft1 =
-    let (symb, t) = Hashtbl.find symbtbl f in
+    let (_, t) = Hashtbl.find symbtbl f in
     let ft2 = TypedC.ftyp_of_typ t in
     let ft = TypedC.min_ftyp ft1 ft2 in
-      Hashtbl.replace symbtbl f (symb, C.Fun ft)
+      replace_symbol_type f (C.Fun ft)
   in
 
-  let update_funsymb f static ft =
-    let f' = if static then "!"^fname^"."^f else f in begin
-	try update_funtyp f ft
-	with Not_found -> 
-	  Hashtbl.add symbtbl f (C.Global f', C.Fun ft)
-      end;
-      f'
-  in
-
-  let translate_proto_ftyp f static (args, ret) =
-    if args = None then begin
-      Npkcontext.report_warning "Csyntax2TypedC.check_proto_ftyp" 
-	("incomplete prototype for function "^f)
-    end;
-    let _ = update_funsymb f static (args, ret) in
-      ()
+  let update_funsymb f is_static ft =
+    try 
+      update_funtyp f ft;
+      let (symb, _) = Hashtbl.find symbtbl f in begin
+	  match symb with
+	      C.Global x -> x
+	    | _ -> f
+	end
+    with Not_found -> 
+      let f' = generate_global_name is_static f in 
+	update_global f f' (C.Fun ft);
+	f'
   in
 
   let refine_ftyp f (args_t, ret_t) actuals = 
@@ -490,37 +499,43 @@ let process fname globals =
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    ("unexpected initialization of function "^x)
       | _ -> 
-	  let ft = translate_ftyp ft in
-	    translate_proto_ftyp x is_static ft
+	  let (args, ret) = translate_ftyp ft in
+	    if args = None then begin
+	      Npkcontext.report_warning "Csyntax2TypedC.check_proto_ftyp" 
+		("incomplete prototype for function "^x)
+	    end;
+	    let _ = update_funsymb x is_static (args, ret) in
+	      ()
 
-  and translate_vdecl is_global loc x (t, is_static, is_extern, init) =
+  and translate_vdecl is_global loc x d =
     Npkcontext.set_loc loc;
-    match init with
-	Some _ when is_extern -> 
+    match d.initialization with
+	Some _ when d.is_extern -> 
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    "extern globals can not be initizalized"
-      | _ when is_static && is_extern -> 
+      | _ when d.is_static && d.is_extern -> 
 	  Npkcontext.report_error "Firstpass.translate_global"
 	    ("static variable can not be extern")
       | _ -> 
 	  (* TODO: think about it, simplify?? *)
-	  let t = translate_typ t in
-	  let name = if is_static then get_static_name x else x in
-	  let t = complete_typ_with_init t init in
-	    if is_global then update_global x name t
-	    else if is_static || is_extern
-	    then Hashtbl.add symbtbl x (C.Global name, t)
-	    else add_local (t, x);
+	  let t = translate_typ d.t in
+	  let t = complete_typ_with_init t d.initialization in
+	  let name = generate_global_name d.is_static x in
+	    if is_global then update_global x name t else add_local (t, x);
 	    let init =
-	      match init with
+	      match d.initialization with
 		  None -> None
 		| Some init -> Some (translate_init t init)
 	    in
-	      (name, t, is_static, is_extern, init)
+	      { 
+		C.name = name;
+		C.t = t;
+		C.is_static = d.is_static;
+		C.is_extern = d.is_extern;
+		C.initialization = init
+	      }
 
-  and translate_edecl x e =
-    let (e, t) = translate_exp e in
-      Hashtbl.add symbtbl x (e, t)
+  and translate_edecl x e = Hashtbl.add symbtbl x (translate_exp e)
 
   and translate_cdecl x (fields, is_struct) =
     let fields = List.map translate_field_decl fields in
@@ -624,26 +639,29 @@ let process fname globals =
 	  Npkcontext.set_loc loc;
 	  translate_edecl x d;
 	  let (tl, e) = translate_blk_exp tl in
-	    remove_var x;
+	    remove_local x;
 	    (tl, e)
 (* TODO: find a way to factor this case with the next one and maybe 
    global declarations!! *)
-      | (LocalDecl (x, VDecl (Fun ft, is_static, _, init)), loc)::tl -> 
-	  Npkcontext.set_loc loc;
-	  translate_fdecl x ft is_static init;
-	  Npkcontext.report_accept_warning "Firstpass.translate"
-	    "function declaration within block" Npkcontext.DirtySyntax;
-	  let (tl, e) = translate_blk_exp tl in
-	    remove_var x;
-	    (tl, e)
-	  
-
-      | (LocalDecl (x, VDecl d), loc)::tl -> 
-	  Npkcontext.set_loc loc;
-	  let decl = C.LocalDecl (x, translate_vdecl false loc x d) in
-	  let (tl, e) = translate_blk_exp tl in
-	    remove_var x;
-	    ((decl, loc)::tl, e)
+      | (LocalDecl (x, VDecl d), loc)::tl -> begin
+	    match d.t with
+		Fun ft -> 
+		  Npkcontext.set_loc loc;
+		  translate_fdecl x ft d.is_static d.initialization;
+		  Npkcontext.report_accept_warning "Firstpass.translate"
+		    "function declaration within block" Npkcontext.DirtySyntax;
+		  let (tl, e) = translate_blk_exp tl in
+		    remove_local x;
+		    (tl, e)
+	      | _ -> 
+		  Npkcontext.set_loc loc;
+		  let is_global = d.is_static || d.is_extern in
+		  let v = translate_vdecl is_global loc x d in
+		  let decl = C.LocalDecl (x, v) in
+		  let (tl, e) = translate_blk_exp tl in
+		    if not is_global then remove_local x;
+		    ((decl, loc)::tl, e)
+	  end
 	      
       | (x, loc)::tl -> 
 	  Npkcontext.set_loc loc;
@@ -739,7 +757,6 @@ let process fname globals =
     let glbdecls = ref [] in
     let fundecls = ref [] in
     let specs = ref [] in
-      
     
     let translate (x, loc) =
       Npkcontext.set_loc loc;
@@ -757,22 +774,24 @@ let process fname globals =
 		
 	| GlbDecl (x, CDecl d) -> 
 	    translate_cdecl x d;
+	    let update_function_argument f (symb, t) l =
+	      let t' = 
+		match t with
+		    TypedC.Fun ft -> TypedC.Fun (update_fdecl x ft)
+		  | _             -> t
+	      in
+		(f, (symb, t'))::l	      
+	    in
 	    (* updating the sig of fun whose one of the parameters is
 	       of the form C.Comp (Unknown ...) *)
-	    let fdecls = Hashtbl.fold (fun f (symb, t) l -> 
-					 let t' = 
-					   match t with
-					       TypedC.Fun ft -> TypedC.Fun (update_fdecl x ft)
-					     | _             -> t
-					 in
-					   (f, (symb, t'))::l) symbtbl [] 
-	    in 
-	      List.iter (fun (f, k) -> Hashtbl.replace symbtbl f k) (List.rev fdecls); 
+	    (* TODO: think about this, but this must be costly *)
+	    let fdecls = Hashtbl.fold update_function_argument symbtbl [] in
+	      List.iter (fun (f, k) -> Hashtbl.replace symbtbl f k) fdecls;
 	      (* updating the type of struct type whose one of the field
 		 is of the form Ptr (C.Comp (Unknown ...)) *)
 	      let comps = Hashtbl.fold (fun x' v l ->
 					  let v' = update_struct_type x v in
-					  if v' = v then l else (x', v')::l
+					    if v' = v then l else (x', v')::l
 				       ) comptbl []
 	      in
 		List.iter (fun (x, v) -> Hashtbl.replace comptbl x v) (List.rev comps);
@@ -783,11 +802,13 @@ let process fname globals =
 
 	| GlbDecl (x, EDecl d) -> translate_edecl x d
 
-	| GlbDecl (x, VDecl (Fun ft, is_static, _, init)) -> 
-	    translate_fdecl x ft is_static init
-
-	| GlbDecl (x, VDecl d) -> 
-	    glbdecls := (x, (translate_vdecl true loc x d, loc))::(!glbdecls)
+	| GlbDecl (x, VDecl d) -> begin
+	    match d.t with
+		Fun ft -> translate_fdecl x ft d.is_static d.initialization
+	      | _ -> 
+	    let v = translate_vdecl true loc x d in
+	      glbdecls := (x, (v, loc))::(!glbdecls)
+	  end
 	      
 	| GlbUserSpec x -> specs := (translate_assertion x)::!specs
     in
@@ -798,4 +819,8 @@ let process fname globals =
    
   let (glbdecls, fundecls, specs) = translate_globals globals in
   let fundecls = List.map translate_fundecl fundecls in
-    (glbdecls, fundecls, specs)
+    {
+      TypedC.global_variables = glbdecls;
+      TypedC.function_declarations = fundecls;
+      TypedC.user_specifications = specs;
+    }

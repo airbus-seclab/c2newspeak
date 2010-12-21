@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-005.c
 void main(void) {
   (005.c:35#7)^ptr x;
   (005.c:36#6)^int32[100] t;

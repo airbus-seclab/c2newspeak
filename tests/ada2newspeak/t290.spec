@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t290.adb
 void t290(void) {
   (t290.adb:7#5)^int32 x;
   (t290.adb:8#5)^int32 y;

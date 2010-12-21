@@ -1,9 +1,8 @@
 Newspeak output
 ---------------
-329.c
 void main(void) {
   (329.c:29#2)^int32 tmp_cir!0;
-  (329.c:29#2)^tmp_cir!0 <- f();
+  (329.c:29#2)^tmp_cir!0: int32 <- f();
   (329.c:29#2)^do {
     (329.c:29#2)^choose {
      -->

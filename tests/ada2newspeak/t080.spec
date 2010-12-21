@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t080.adb
 int32 t080.a(void) {
   (t080.adb:7#12)^!return =(int32) 5;
 }

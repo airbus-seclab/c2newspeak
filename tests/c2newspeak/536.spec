@@ -1,7 +1,6 @@
 Warning: 536.c:26#5: incomplete prototype for function h
 Newspeak output
 ---------------
-536.c
 void h(int32 x) {
 }
 

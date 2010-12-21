@@ -132,7 +132,7 @@ and check_exp i =
    Sets scope of variables so that no goto escapes a variable declaration
    block
 *)
-let translate fname (globals, fundecls, spec) =
+let translate fname prog =
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
   let init = ref [] in
@@ -402,7 +402,9 @@ let translate fname (globals, fundecls, spec) =
 (* TODO: it's strange to need fname here! 
    should maybe be factored with code in csyntax2TypedC
 *)
-    let name = Temps.to_string (new_id ()) (Temps.Cstr (fname, String.escaped str)) in
+    let name = 
+      Temps.to_string (new_id ()) (Temps.Cstr (fname, String.escaped str)) 
+    in
     let t = Array (char_typ, Some (exp_of_int ((String.length str) + 1))) in
       if not (Hashtbl.mem used_globals name) then begin
 	let loc = Npkcontext.get_loc () in
@@ -822,16 +824,16 @@ let translate fname (globals, fundecls, spec) =
 	    Npkcontext.report_error "Firstpass.translate_blk_exp" 
 	      "expression expected"
 
-  and translate_local_decl loc x (name, t, static, extern, init) =
-    if static || extern then begin
-      declare_global extern x name loc t init;
+  and translate_local_decl loc x d =
+    if d.is_static || d.is_extern then begin
+      declare_global d.is_extern x d.name loc d.t d.initialization;
       []
     end else begin
       (* TODO: see if more can be factored with translate_global_decl *) 
       let (init, t) = 
-	match init with
-	    None -> ([], t)
-	  | Some init -> translate_init t init
+	match d.initialization with
+	    None -> ([], d.t)
+	  | Some init -> translate_init d.t init
       in
       let v = C.Local x in
       let build_set (o, t, e) =
@@ -1248,12 +1250,12 @@ let translate fname (globals, fundecls, spec) =
 (* TODO: a tad hacky!! Think about it *)
 (* TODO: could be done in the parser *)
 (* TODO: should be done in csyntax2CoreC *)
-  let translate_global (x, ((name, t, _, extern, init), loc)) =
+  let translate_global (x, (d, loc)) =
     Npkcontext.set_loc loc;
     (* TODO:TODO:TODO: remove static?? *)
     (* TODO:TODO:TODO: think about name and x difference, shouldn't there be 
        only normalized names in typedC? *)
-    declare_global extern x name loc t init
+    declare_global d.is_extern x d.name loc d.t d.initialization
   in
 
   let add_glbdecl name (t, loc, storage) =
@@ -1271,9 +1273,11 @@ let translate fname (globals, fundecls, spec) =
    Or better: should do all typing first.
    Then compile.
 *)
-    init := List.map (translate_assertion (Newspeak.dummy_loc "TODO!")) spec;
-    List.iter translate_global globals;
-    List.iter translate_fundecl fundecls;
+    init := 
+      List.map (translate_assertion (Newspeak.dummy_loc "TODO!")) 
+	prog.user_specifications;
+    List.iter translate_global prog.global_variables;
+    List.iter translate_fundecl prog.function_declarations;
 (* TODO: optimization: could remove this phase if cir had a type 
    structure of name 
    and all the structures' type were in a hashtbl *)

@@ -13,7 +13,6 @@ void main() {
 }
 Newspeak output
 ---------------
-661.c
 void main(void) {
   (661.c:27#6)^int32 x;
   (661.c:28#2)^choose {

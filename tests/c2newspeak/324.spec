@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-324.c
 void main(void) {
   (324.c:30#2)^t =(int32) 1;
 }

@@ -106,7 +106,8 @@ TESTS = 000 001 002 003 004 005 006 007 008 009 \
 	780 781 782 783 784 785 786 787 788 789 \
 	790 791 792 793 794 795 796 797 798 799 \
 	800 801 802 803 804 805 806 807 808 809 \
-	810 811 812 813 814 815
+	810 811 812 813 814 815 816 817 818 819 \
+        820 821
 
 PREREQ=%.c
 CLEANFILES=$(addsuffix .cil.bak, $(TESTS))
@@ -180,11 +181,4 @@ include ../common.Makefile
 498: 499
 503: 539
 579: 712
-
-TESTS.CIL.SPEC=$(addsuffix .cil.spec, $(TESTS))
-
-.PHONY: $(TESTS.CIL.SPEC)
-
-$(TESTS.CIL.SPEC): %.cil.spec: $(PREREQ)
-	$(C2NEWSPEAK) --print-newspeak --use-cil `[ -e $*.in ] && cat $*.in` $*.c > $@ 2>&1; true
-	cat $@
+587: 821

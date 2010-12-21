@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t266.adb
 void t266.main(void) {
   (t266.adb:8#7)^int32 z;
   (t266.adb:10#8)^z =(int32) t266.x_int32;

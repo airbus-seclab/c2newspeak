@@ -1,8 +1,5 @@
 Newspeak output
 ---------------
-012-a.c
-012-b.c
-tmp.h
 void main(void) {
   (012-a.c:4#2)^!012-a.c.0.x =(int32) 0;
 }

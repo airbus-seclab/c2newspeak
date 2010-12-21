@@ -34,10 +34,15 @@ let stats = ref false
 let speclist = 
   [
     ("--stats", Arg.Set stats, "prints analysis stats");
-    ("--use-stubs", Arg.Unit Context.set_use_stubs, 
+    (Context.string_of_option Context.UseStubs, 
+     Arg.Unit (Context.set_option Context.UseStubs), 
      "skips warning messages when using stubs");
-    ("--graph", Arg.Unit Context.set_graph, "prints infos to display call graph during analysis");
-    ("--verbose", Arg.Unit Context.set_verbose, "prints more details")
+    (Context.string_of_option Context.PrintGraph, 
+     Arg.Unit (Context.set_option Context.PrintGraph), 
+     "prints infos to display call graph during analysis");
+    (Context.string_of_option Context.Verbose, 
+     Arg.Unit (Context.set_option Context.Verbose), 
+     "prints more details")
   ]
 
 let anon_fun file = 

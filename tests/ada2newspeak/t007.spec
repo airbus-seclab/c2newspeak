@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t007.adb
 void t007(int32 a) {
   (t007.adb:3#8)^int32 x;
   (t007.adb:3#8)^int32 y;

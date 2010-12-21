@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t420.adb
 void t420(void) {
   (t420.adb:9#9)^uint4 data;
   (t420.adb:10#9)^uint4 res;

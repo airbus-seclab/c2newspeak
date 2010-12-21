@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-230.c
 void main(void) {
   (230.c:27#7)^ptr ptr;
   (230.c:28#7)^ptr ptr2;

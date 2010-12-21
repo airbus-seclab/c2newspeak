@@ -167,8 +167,7 @@ let rec generate_stmt (sk, loc) =
       | Call (in_vars, (in_t, out_t), fn, out_vars) ->
 (* TODO: push this code up into previous phase *)
 	  let in_vars = generate_args in_vars in_t in
-	  let ft = generate_ftyp (in_t, out_t) in
-          let fn = generate_fn fn ft in
+          let fn = generate_fn fn in
 	  let out_vars = generate_rets out_vars out_t in
             N.Call (in_vars, fn, out_vars)
       | Goto lbl -> N.Goto lbl
@@ -209,10 +208,10 @@ and generate_token x =
 
 and generate_blk x = List.map generate_stmt x
     
-and generate_fn fn ft =
+and generate_fn fn =
   match fn with
     | FunId f -> N.FunId f
-    | FunDeref e -> N.FunDeref (generate_exp e, ft)
+    | FunDeref e -> N.FunDeref (generate_exp e)
 
 and generate_body body = List.map generate_stmt body
 
@@ -247,11 +246,8 @@ let generate_fundecs fundecs =
    program and then again a second time!!! reprogram Npkil.read and write *)
 let merge npkos =
   let glb_decls = Hashtbl.create 100 in
-  let fnames = ref StrSet.empty in
   let init = ref [] in
   let fundefs = ref [] in
-
-  let add_fname x = fnames := StrSet.add x !fnames in
 
   let add_fundef f body = fundefs := (f, body)::!fundefs in
 
@@ -306,7 +302,6 @@ let merge npkos =
   let merge npko =
     (* TODO: merge these two operations into one *)
     let prog = Npkil.read npko in
-      List.iter add_fname prog.fnames;
       Hashtbl.iter add_global prog.globals;
       init := prog.init@(!init);
       Hashtbl.iter add_fundef prog.fundecs;
@@ -321,13 +316,38 @@ let merge npkos =
               ()
           in
             List.iter check_merge tl;
-            (StrSet.elements !fnames, glb_decls, !fundefs, src_lang, !init)
+            (glb_decls, !fundefs, src_lang, !init)
+
+let reject_backward_gotos prog =
+  let defined_lbls = ref [] in
+
+  let rec reject_blk x = List.iter reject_stmt x
+
+  and reject_stmt (x, _) =
+    match x with
+	N.Decl (_, _, blk) | N.InfLoop blk -> reject_blk blk
+      | N.Select (blk1, blk2) -> 
+	  reject_blk blk1;
+	  reject_blk blk2
+      | N.DoWith (blk, lbl) -> 
+	  let backup = !defined_lbls in
+	    defined_lbls := lbl::!defined_lbls;
+	    reject_blk blk;
+	    defined_lbls := backup
+      | N.Goto lbl when not (List.mem lbl !defined_lbls) -> 
+	  Npkcontext.report_error "Linker.reject_backward_gotos" 
+	    "backward goto not accepted"
+      | _ -> ()
+  in
+
+    reject_blk prog.N.init;
+    Hashtbl.iter (fun _ fundec -> reject_blk fundec.N.body) prog.N.fundecs
 
 let link npkos =
   Npkcontext.forget_loc ();
     
   Npkcontext.print_debug "Linking files...";
-  let (filenames, glb_decls, fun_decls, src_lang, init) = merge npkos in
+  let (glb_decls, fun_decls, src_lang, init) = merge npkos in
     
     Npkcontext.print_debug "Globals...";
     Hashtbl.iter generate_global glb_decls;
@@ -338,7 +358,6 @@ let link npkos =
     let fundecs = generate_fundecs fun_decls in
         
     let prog = { 
-      N.fnames = filenames;
       N.globals = globals;
       N.init = init;
       N.fundecs = fundecs;
@@ -348,22 +367,23 @@ let link npkos =
     in
       
       Npkcontext.print_debug "File linked.";
+      reject_backward_gotos prog;
       let prog_simpl = 
         if !Npkcontext.no_opt then prog
         else Newspeak.simplify !Npkcontext.opt_checks prog
       in
-      Newspeak.write !Npkcontext.output_file prog_simpl;
-      if !Npkcontext.verb_newspeak then begin
-        print_endline "Newspeak output";
-        print_endline "---------------";
-        Newspeak.dump prog_simpl;
-        print_newline ()
-      end;
-      if !Npkcontext.verb_lowspeak then begin
-	print_endline "Lowspeak output";
-	print_endline "---------------";
-	Lowspeak.dump (Npk2lpk.translate prog_simpl);
-	print_newline ()
-      end
+	Newspeak.write !Npkcontext.output_file prog_simpl;
+	if !Npkcontext.verb_newspeak then begin
+          print_endline "Newspeak output";
+          print_endline "---------------";
+          Newspeak.dump prog_simpl;
+          print_newline ()
+	end;
+	if !Npkcontext.verb_lowspeak then begin
+	  print_endline "Lowspeak output";
+	  print_endline "---------------";
+	  Lowspeak.dump (Npk2lpk.translate prog_simpl);
+	  print_newline ()
+	end
 
 

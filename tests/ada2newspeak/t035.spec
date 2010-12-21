@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t035.adb
 int32 t035.chose(int32 a, uint2 b) {
   (t035.adb:9#11)^do {
     (t035.adb:12#8)^choose {

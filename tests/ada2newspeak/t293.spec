@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t293.adb
 int32 t293(int32 x) {
   (t293.adb:8#10)^uint1 tmp_ada_firstpass!0;
   (t293.adb:8#10)^choose {

@@ -1,7 +1,6 @@
 Warning: 771.c:10#0: goto statement accepted
 Newspeak output
 ---------------
-771.c
 void main(void) {
   (771.c:2#6)^uint32 goto!again;
   (771.c:2#6)^goto!again =(uint32) 0;

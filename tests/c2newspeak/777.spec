@@ -1,7 +1,6 @@
 Warning: 777.c:33#2: expression of type signed integer used as an array index accepted
 Newspeak output
 ---------------
-777.c
 void main(void) {
   (777.c:30#6)^int32 a;
   (777.c:31#7)^int8[20] tab;

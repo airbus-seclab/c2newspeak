@@ -172,9 +172,16 @@ let preprocessing lbls stmts =
       let decl lbl =
 	let lbl' = fresh_lbl lbl in
 	let init = Data zero in
-	let vdecl = 
-	  LocalDecl (lbl', VDecl (uint_typ, false, false, Some init))
+	let d = 
+	  {
+	    t = uint_typ;
+	    is_static = false;
+	    is_extern = false;
+	    initialization = Some init
+	  }
 	in
+	  (* TODO: try to factor VDecl creations *)
+	let vdecl = LocalDecl (lbl', VDecl d) in
 	  (vdecl, l)
       in
       let stmts' = cond_addition stmts in
@@ -310,9 +317,16 @@ let avoid_break_continue_capture stmts lwhile l g_offset vdecls =
       let init = Data zero in
       let after = ref [] in 
       let add (skind, var) =
-	let vdecl = 
-	  LocalDecl (var, VDecl (uint_typ, false, false, Some init))
+	(* TODO: factor VDecl creations *)
+	let d = 
+	  {
+	    t = uint_typ;
+	    is_static = false;
+	    is_extern = false;
+	    initialization = Some init
+	  }
 	in
+	let vdecl = LocalDecl (var, VDecl d) in
 	let set = Exp (Set (Var var, None, zero)) in
 	let if_blk = (set, lwhile)::[skind, lwhile] in
 	let if' = If (Var var, if_blk, []) in
@@ -359,25 +373,51 @@ let rec split_lbl stmts lbl =
 
 	  | _ -> let before, stmts' = split_lbl stmts' lbl in (stmt, l)::before, stmts'
 
+let rec extract_first_forward_goto lbl g_offset blk =
+  let rec extract stmts =
+    match stmts with
+	[] -> raise Not_found
+      | (stmt, l)::stmts -> 
+	  match stmt with
+	      If (_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
+		([], (stmt, l), stmts)
+	    | Block blk -> begin
+		try
+		  let (prefix, goto_stmt, suffix) = extract blk in 
+		    ((Block prefix, l)::[], goto_stmt, (Block suffix, l)::[])
+		with
+		    Not_found -> 
+		      let (prefix, goto_stmt, suffix) = extract stmts in
+			((stmt, l)::prefix, goto_stmt, suffix)
+	      end
+	    | _ -> 
+		let (prefix, goto_stmt, suffix) = extract stmts in 
+		  ((stmt, l)::prefix, goto_stmt, suffix)
+  in
+    extract blk
+
 let sibling_elimination stmts lbl g_offset vdecls =
   let rec direction stmts =
-  match stmts with
-      [] -> raise Not_found
-    | (stmt, _)::stmts ->
-	match stmt with
-	    Label lbl' when lbl = lbl' -> raise Lbl
-	  | If(_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> raise Gto 
-	  | Block blk -> begin
-	      try direction blk with Not_found -> direction stmts
-	    end
-	  | _ -> direction stmts
-in
+    match stmts with
+	[] -> raise Not_found
+      | (stmt, _)::stmts ->
+	  match stmt with
+	      Label lbl' when lbl = lbl' -> raise Lbl
+	    | If(_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> 
+		raise Gto 
+	    | Block blk -> begin
+		try direction blk with Not_found -> 
+		  direction stmts
+	      end
+	    | _ -> direction stmts
+  in
   let rec b_delete_goto stmts =
     match stmts with
 	[] -> raise Not_found
       | (stmt, l)::stmts ->
 	  match stmt with
-	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> e, [], [], stmts
+	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> 
+		e, [], [], stmts
 	    | Block blk -> begin
 		try
 		  let e, before, blk', after = b_delete_goto blk in
@@ -402,7 +442,9 @@ in
     try
       let e, before, blk', after = b_delete_goto ((stmt,l)::stmts) in
       let l' = try snd (List.hd (List.rev blk')) with Failure "hd" -> l in
-      let blk', after' = avoid_break_continue_capture blk' l l' g_offset vdecls in
+      let blk', after' = 
+	avoid_break_continue_capture blk' l l' g_offset vdecls 
+      in
 	before@((DoWhile (blk', e), l)::(after'@after))
     with
 	(* goto may have disappeared because of optimizations *)
@@ -419,107 +461,106 @@ in
 	    | _ -> (stmt, l)::(backward stmts)
   in
   
-  let rec f_delete_goto stmts =
-    match stmts with
-	[] -> raise Not_found
-      | (stmt, l)::stmts -> 
-	  match stmt with
-	      If(_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
-		stmts, (stmt, l)
-	    | Block blk -> begin
-		try
-		  let blk', stmt' = f_delete_goto blk in (Block blk', l)::stmts, stmt'
-		with
-		    Not_found -> 
-		      let stmts', stmt' = f_delete_goto stmts in (stmt, l)::stmts', stmt'
-	      end
-	    | _ -> let stmts', stmt' = f_delete_goto stmts in (stmt, l)::stmts', stmt'
-  in
-
   let rec forward stmts = 
     match stmts with
 	[] -> []
       | (stmt, l)::stmts ->
 	  match stmt with
-	      If(e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> 
+	      If (e, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> 
 		let before, after = split_lbl stmts lbl in
 		let decls, before = extract_decls before in
 		  if before = [] then decls@after
-		  else
-		    let if' = If(Unop(Not, e), before, []) in decls @ ((if', l)::after)
+		  else begin
+		    let if' = If (Unop(Not, e), before, []) in 
+		      decls @ ((if', l)::after)
+		  end
 	    | Block blk -> begin
 		try
-		  let blk', stmt = f_delete_goto blk in
+		  let (prefix, goto_stmt, blk') = 
+		    extract_first_forward_goto lbl g_offset blk 
+		  in
 		  let decls, blk' = extract_decls blk' in
 		  let stmts' = [Block blk', l] in
-		  let stmts' = stmt::(decls @ stmts' @ stmts) in
-		    forward stmts'
+		  let stmts' = goto_stmt::(decls @ stmts' @ stmts) in
+		    prefix @ (forward stmts')
 		with Not_found -> (stmt, l)::(forward stmts)
 	      end
 	    | _ -> (stmt, l)::(forward stmts)
-  
   in
-  let rec choose stmts =
-    match stmts with
-	[] -> [], false
-      | (stmt, l)::stmts ->
-	  match stmt with
-	      If(_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
-		forward ((stmt, l)::stmts), true
-	    | Label lbl' when lbl' = lbl -> 
-	      let stmts' = (stmt, l)::stmts in backward stmts', true
-	    | Block blk -> begin
-		  try direction blk with 
-		      Gto  -> forward ((stmt, l)::stmts), true 
-		    | Lbl -> backward ((stmt, l)::stmts), true
-		    | Not_found -> 
-			let blk', b' = choose blk in 
-			  if not b' then let stmts', b' = choose stmts in (stmt, l)::stmts', b'
-			  else (Block blk', l)::stmts, true
-	      end
-	    | If(e, if_blk, else_blk) -> 
-		let if_blk', b = choose if_blk in 
-		  if b then (If(e, if_blk', else_blk), l)::stmts, true
-		  else
-		    let else_blk', b' = choose else_blk in
-		      if b' then 
-			(If(e, if_blk, else_blk'), l)::stmts, true
-		      else
-			let stmts', b' = choose stmts in (stmt, l)::stmts', b'
 
-	    | For(blk1, e, blk2, blk3) ->
-		let blk2', b = choose blk2 in 
-		  if b then 
-		    (For(blk1, e, blk2', blk3), l)::stmts, true
-		  else 
-		    let stmts', b' = choose stmts in (stmt, l)::stmts', b'
+  let rec choose blk =
+    match blk with
+	[] -> ([], false)
+      | stmt::blk -> choose_stmt stmt blk
 
-	    | DoWhile(blk, e) ->
-		let blk', b = choose blk in 
-		  if b then 
-		    (DoWhile(blk', e), l)::stmts, true
-		  else 
-		    let stmts', b' = choose stmts in (stmt, l)::stmts', b'
-
-	    | CSwitch(e, cases, default) ->
-		let rec iter cases =
-		  match cases with
-		      [] -> [], false
-		    | (e, stmts, l)::cases -> 
-			let stmts', b = choose stmts in 
-			  if b then (e, stmts', l)::cases, true
-			  else
-			    let cases', b' = iter cases in (e, stmts', l)::cases', b'
-		in
-		let cases', b' = iter cases in
-		  if b' then (CSwitch(e, cases', default), l)::stmts, b'
-		  else
-		    let default', b' = choose default in 
-		      if b' then (CSwitch(e, cases, default'), l)::stmts, b' 
-		      else 
-			let stmts', b' = choose stmts in (stmt, l)::stmts', b'
-
-	    | _ -> let stmts', b' = choose stmts in (stmt, l)::stmts', b'
+  and choose_stmt (stmt, l) stmts =
+    match stmt with
+	If (_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset ->
+	  forward ((stmt, l)::stmts), true
+      | Label lbl' when lbl' = lbl -> 
+	  let stmts' = (stmt, l)::stmts in 
+	    backward stmts', true
+      | Block blk -> begin
+	  try direction blk with 
+	      Gto -> forward ((stmt, l)::stmts), true 
+	    | Lbl -> backward ((stmt, l)::stmts), true
+	    | Not_found -> 
+		let blk', b' = choose blk in 
+		  if not b' then begin
+		    let stmts', b' = choose stmts in 
+		      (stmt, l)::stmts', b'
+		  end else (Block blk', l)::stmts, true
+	end
+      | If (e, if_blk, else_blk) -> 
+	  let if_blk', b = choose if_blk in 
+	    if b then (If(e, if_blk', else_blk), l)::stmts, true
+	    else begin
+	      let else_blk', b' = choose else_blk in
+		if b' then (If (e, if_blk, else_blk'), l)::stmts, true
+		else begin
+		  let stmts', b' = choose stmts in 
+		    (stmt, l)::stmts', b'
+		end
+	    end
+      | For (blk1, e, blk2, blk3) ->
+	  let blk2', b = choose blk2 in 
+	    if b then (For (blk1, e, blk2', blk3), l)::stmts, true
+	    else begin
+	      let stmts', b' = choose stmts in 
+		(stmt, l)::stmts', b'
+	    end
+      | DoWhile (blk, e) ->
+	  let blk', b = choose blk in 
+	    if b then (DoWhile(blk', e), l)::stmts, true
+	    else begin
+	      let stmts', b' = choose stmts in 
+		(stmt, l)::stmts', b'
+	    end
+      | CSwitch (e, cases, default) ->
+	  let rec iter cases =
+	    match cases with
+		[] -> [], false
+	      | (e, stmts, l)::cases -> 
+		  let stmts', b = choose stmts in
+		    if b then (e, stmts', l)::cases, true
+		    else begin
+		      let cases', b' = iter cases in 
+			(e, stmts', l)::cases', b'
+		    end
+	  in
+	  let cases', b' = iter cases in
+	    if b' then (CSwitch(e, cases', default), l)::stmts, true
+	    else begin
+	      let default', b' = choose default in 
+		if b' then (CSwitch(e, cases, default'), l)::stmts, true
+		else begin
+		  let stmts', b' = choose stmts in
+		    (stmt, l)::stmts', b'
+		end
+	    end
+      | _ -> 
+	  let stmts', b' = choose stmts in 
+	    (stmt, l)::stmts', b'
   in
     fst (choose stmts) 
 
@@ -768,7 +809,15 @@ and dowhile_in lbl l e before cond blk g_offset g_loc =
 and cswitch_in lbl l e before cond cases default g_offset g_loc =
   let lbl' = Var (fresh_lbl lbl) in
   let tswitch = "switch."^(Newspeak.string_of_loc l)^"."^g_offset in
-  let declr = LocalDecl (tswitch, VDecl (uint_typ, false, false, None)) in
+  let d = 
+    { 
+      t = uint_typ;
+      is_static = false;
+      is_extern = false;
+      initialization = None
+    } 
+  in
+  let declr = LocalDecl (tswitch, VDecl d) in
   let tswitch = Var tswitch in
   let lb = try snd (List.hd before) with Failure "hd" -> l in
   let set = if cond_equal lbl' e then [] else [Exp (Set (lbl', None, e)), lb] in
@@ -1043,30 +1092,24 @@ let rec compute_level stmts lbl id =
 let elimination stmts lbl gotos vdecls =
   (* moves all gotos of the given label lbl. lo is the pair
      (level, offset) of the label statement *)
-  let stmts = ref stmts in	
+  let stmts = ref stmts in
   let move goto =
     let id, o = goto in
     let l_level, l = compute_level !stmts lbl id in
     let l = ref l in
       (* force goto and label to be directly related *)
-      if indirectly_related !stmts lbl id then
-	  stmts := outward !stmts lbl l id;
+      if indirectly_related !stmts lbl id 
+      then stmts := outward !stmts lbl l id;
       (* force goto and label to be siblings *)
       if directly_related !stmts lbl id then begin
-	if !l > l_level then begin
-	  stmts := outward !stmts lbl l id;
-	  stmts := sibling_elimination !stmts lbl id vdecls
-	end
-	else begin 
+	if !l > l_level then begin stmts := outward !stmts lbl l id
+	end else begin 
 	  let l_level = ref l_level in
-	    stmts := lifting_and_inward !stmts lbl l_level l id o vdecls;
-	    stmts := sibling_elimination !stmts lbl id vdecls
+	    stmts := lifting_and_inward !stmts lbl l_level l id o vdecls
 	end
-      end
-      else 
-	(* goto and label are sibling; eliminate goto and label *) 
-	stmts := sibling_elimination !stmts lbl id vdecls
-
+      end;
+      (* goto and label are sibling; eliminate goto and label *) 
+      stmts := sibling_elimination !stmts lbl id vdecls
   in
     List.iter move gotos;
     !stmts
@@ -1133,10 +1176,11 @@ let rec renaming_block_variables stmts =
 	| Sequence s -> Sequence (List.map (fun (s, i) -> (s, rinit i)) s)
     in
       match decl with
-	  VDecl (t, is, ie, init) -> begin 
-	    match init with 
+	  VDecl d -> begin 
+	    match d.initialization with 
 		None -> decl
-	      | Some init -> VDecl (t, is, ie, Some (rinit init))
+	      | Some init -> 
+		  VDecl { d with initialization = Some (rinit init) }
 	  end
 	| EDecl e -> EDecl (replace_exp e)
 	| _ -> decl
@@ -1162,10 +1206,9 @@ let rec renaming_block_variables stmts =
 	
   in
   let pop_block () = 
-    try
-      stack := List.tl !stack
-    with Failure "tl" -> invalid_arg "Goto_elimination.pop_block: the stack is empty"
-      
+    try stack := List.tl !stack
+    with Failure "tl" -> 
+      invalid_arg "Goto_elimination.pop_block: the stack is empty"
   in
   let rec explore stmts =
     match stmts with
@@ -1306,48 +1349,43 @@ let promoting_block_variables stmts =
   let decl, stmts' = promote stmts in decl @ stmts'
 
 let run prog =
-  let elimination lbls stmts vars =
+  let elimination lbls stmts =
+    let vars = ref [] in
     (* goto elimination *)
     let stmts = ref stmts in
-    let move lbl (g, _) = 
-      stmts := elimination !stmts lbl g vars
-    in
+    let move lbl (g, _) = stmts := elimination !stmts lbl g vars in
       Hashtbl.iter move lbls;
-      deleting_goto_ids !stmts
-      
+      (deleting_goto_ids !stmts, !vars)
   in
-  let in_fun_elimination lbls stmts =
+  let in_fun_elimination stmts =
+    let lbls = Hashtbl.create 30 in
     (* adding a fresh boolean variable to each label stmt *)
     (* computing offset and level for each pair of goto/label statement *)
     (* making all goto stmt conditional *)
     let vdecls', stmts' = preprocessing lbls stmts in
-      if vdecls' = [] then 
-	(* no goto found *) 
-	stmts'
-      else 
-	(* processing goto elimination *)
-	let vars = ref [] in
-	let stmts' = vdecls'@stmts' in
-	  (* replacing vars with the same name and making them to be
-	  at function scope *)
-	let stmts' = renaming_block_variables stmts' in
-	let stmts' = promoting_block_variables stmts' in
-	let stmts' = elimination lbls stmts' vars in
-	let _, l = List.hd vdecls' in
-	let vars' = List.map (fun vdecl -> (vdecl, l)) !vars in
-	  vars'@stmts'
+      match vdecls' with
+	  [] -> (* no goto found *) 
+	    stmts'
+	| (_, l)::_ -> 
+	    (* processing goto elimination *)
+	    let stmts' = vdecls'@stmts' in
+	      (* replacing vars with the same name and making them to be
+		 at function scope *)
+	    let stmts' = renaming_block_variables stmts' in
+	    let stmts' = promoting_block_variables stmts' in
+	    let (stmts', vars) = elimination lbls stmts' in
+	    let vars' = List.map (fun vdecl -> (vdecl, l)) vars in
+	      vars'@stmts'
   in
-  let lbls = Hashtbl.create 30 in
-  let rec run prog = 
-    match prog with
-	[] -> []
-      | (g, l)::prog -> 
-	  match g with
-	      FunctionDef (s, t, b, stmts) -> 
-		let stmts' = in_fun_elimination lbls stmts in
-		let g' = FunctionDef (s, t, b, stmts') in
-		  Hashtbl.clear lbls;
-		  (g', l)::(run prog)
-	    | _ -> (g, l)::(run prog)
-  in 
-    run prog
+  let process_function_definition (g, l) =
+    let g =
+      match g with
+	  FunctionDef (s, t, b, stmts) ->
+	    let stmts' = in_fun_elimination stmts in
+	      FunctionDef (s, t, b, stmts')
+	| _ -> g
+    in
+      (g, l)
+  in
+    List.map process_function_definition prog
+

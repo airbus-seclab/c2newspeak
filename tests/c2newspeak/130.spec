@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-130.c
 void f(void) {
   (130.c:30#2)^f();
 }

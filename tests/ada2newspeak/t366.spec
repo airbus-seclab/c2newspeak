@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t366.adb
 void t366(void) {
   (t366.adb:10#5)^uint1[10][20] x;
   (t366.adb:12#14)^x =(uint1) 1;

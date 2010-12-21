@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t208.adb
 void t208(void) {
   (t208.adb:7#7)^int32[5] tt;
   (t208.adb:8#7)^int32 z;

@@ -1,7 +1,6 @@
 Warning: 509.c:32#0: block within expression accepted
 Newspeak output
 ---------------
-509.c
 void main(void) {
   (509.c:27#6)^int32 y;
   (509.c:29#10)^int32 x;

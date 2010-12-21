@@ -1,7 +1,6 @@
 Warning: 623.c:34#0: goto statement accepted
 Newspeak output
 ---------------
-623.c
 void main(void) {
   (623.c:27#2)^uint32 goto!fail;
   (623.c:27#2)^goto!fail =(uint32) 0;

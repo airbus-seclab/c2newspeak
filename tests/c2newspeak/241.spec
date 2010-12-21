@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-241.c
 void f(void) {
   (241.c:27#6)^int32 x;
   (241.c:29#2)^do {

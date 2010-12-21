@@ -1,7 +1,6 @@
 Warning: 269.c:28#2: assignment within expression accepted
 Newspeak output
 ---------------
-269.c
 void main(void) {
   (269.c:27#6)^int32 x;
   (269.c:28#2)^do {

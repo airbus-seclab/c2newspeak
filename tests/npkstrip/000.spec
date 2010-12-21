@@ -1,4 +1,3 @@
-000.c
 void f(void) {
 }
 

@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t318.adb
 void t318(void) {
   (t318.adb:9#5)^int32 x;
   (t318.adb:10#5)^int32 y;

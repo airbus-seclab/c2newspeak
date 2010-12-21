@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t066.adb
 void t066(void) {
   (t066.adb:4#6)^int32 x;
   (t066.adb:4#6)^x =(int32) 5;

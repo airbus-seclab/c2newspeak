@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t232.adb
 void t232(void) {
   (t232.adb:7#7)^uint8 c;
   (t232.adb:11#7)^c =(uint8) 32;

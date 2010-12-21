@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-442.c
 void main(void) {
   (442.c:27#7)^int8[2] t;
   (442.c:27#7)^t =(int8) 39;

@@ -1,4 +1,3 @@
-006.c
 void main(void) {
 }
 

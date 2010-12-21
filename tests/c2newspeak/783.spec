@@ -8,7 +8,6 @@ Warning: 783.c:9#0: 'short unsigned' is not normalized: use 'unsigned short int'
 Warning: 783.c:10#0: 'short unsigned int' is not normalized: use 'unsigned short int' instead
 Newspeak output
 ---------------
-783.c
 void main(void) {
   (783.c:2#14)^int32 l1;
   (783.c:3#18)^int32 l2;

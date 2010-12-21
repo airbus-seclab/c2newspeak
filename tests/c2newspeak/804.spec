@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-804.c
 int32 main(void) {
   (804.c:16#7)^ptr p;
   (804.c:15#4)^{ int32 0; int32 32; int32 64; }96 t;

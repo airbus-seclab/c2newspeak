@@ -26,83 +26,88 @@
 open Newspeak
 open Csyntax
 
-let parse fname =
+let process lexer_name lexbuf =
+  Lexer.init lexer_name lexbuf;
+  Synthack.init_tbls ();
+  try Parser.parse Lexer.token lexbuf
+  with Parsing.Parse_error -> 
+    let src_file = "Compiler.parse" in
+    let lexeme = Lexing.lexeme lexbuf in
+    let msg = "syntax error: unexpected token: "^lexeme in
+    let advice = ", rewrite your code" in
+    let pos = Lexing.lexeme_start_p lexbuf in
+    let loc = 
+      (pos.Lexing.pos_fname, pos.Lexing.pos_lnum, 
+       pos.Lexing.pos_cnum-pos.Lexing.pos_bol) 
+    in
+      Npkcontext.set_loc loc;
+      if (not !Npkcontext.accept_gnuc)
+      then Npkcontext.report_accept_warning src_file msg Npkcontext.GnuC;
+      Npkcontext.report_error src_file (msg^advice)
+
+let parse_file fname =
   let cin = open_in fname in
   let lexbuf = Lexing.from_channel cin in
-    Lexer.init fname lexbuf;
-    Synthack.init_tbls ();
-    try
-      let (fnames, globals) = Parser.parse Lexer.token lexbuf in
-	close_in cin;
-	(fnames, globals)
-    with Parsing.Parse_error -> 
-      let src_file = "Compiler.parse" in
-      let lexeme = Lexing.lexeme lexbuf in
-      let msg = "syntax error: unexpected token: "^lexeme in
-      let advice = ", rewrite your code" in
-      let pos = Lexing.lexeme_start_p lexbuf in
-      let loc = 
-	(pos.Lexing.pos_fname, pos.Lexing.pos_lnum, 
-	 pos.Lexing.pos_cnum-pos.Lexing.pos_bol) 
-      in
-	Npkcontext.set_loc loc;
-	if (not !Npkcontext.accept_gnuc)
-	then Npkcontext.report_accept_warning src_file msg Npkcontext.GnuC;
-	Npkcontext.report_error src_file (msg^advice)
+  let prog = process fname lexbuf in
+    close_in cin;
+    prog
 
-(* TODO: try to do this using function parse ? factor code with previous 
-   function *)
 let append_gnu_symbols globals =
-  let lexbuf = Lexing.from_string Gnuc.builtins in
-    Lexer.init "__gnuc_builtin_symbols" lexbuf;
-    Synthack.init_tbls ();
-    try 
-      let (_, gnuc_symbols) = Parser.parse Lexer.token lexbuf in
-	gnuc_symbols@globals
-    with Parsing.Parse_error -> 
-      Npkcontext.report_error "Compiler.append_gnu_symbols" 
-	"unexpected error while parsing GNU C symbols"
+  if not !Npkcontext.accept_gnuc then globals
+  else begin
+    let lexbuf = Lexing.from_string Gnuc.builtins in
+    let gnuc_symbols = process "__gnuc_builtin_symbols" lexbuf in
+      gnuc_symbols@globals
+  end
 
-let compile fname =
+let parse fname = 
   Npkcontext.print_debug ("Parsing "^fname^"...");
-  let (src_fnames, prog) = parse fname in
+  let prog = parse_file fname in
     Npkcontext.forget_loc ();
     Npkcontext.print_size (Csyntax.size_of prog);
-    let prog = 
-      if !Npkcontext.accept_gnuc then append_gnu_symbols prog else prog
-    in
-    let src_fnames = if src_fnames = [] then fname::[] else src_fnames in
+    let prog = append_gnu_symbols prog in
       Npkcontext.forget_loc ();
       Npkcontext.print_debug "Parsing done.";
       if !Npkcontext.verb_ast then Csyntax.print prog;
-      let prog = 
-	if !Npkcontext.accept_goto then begin
-	  Npkcontext.print_debug "Running goto_elimination...";
-	  let g = Goto_elimination.run prog in
-	    Npkcontext.print_debug "Goto elimination done.";
-	    Npkcontext.print_size (Csyntax.size_of g);
-	    g
-	end else prog
-      in
-	Npkcontext.print_debug "Typing...";
-	let prog = Csyntax2TypedC.process fname prog in
-	  Npkcontext.print_debug "Running first pass...";
-	  let prog = TypedC2Cir.translate fname prog in
-	    Npkcontext.forget_loc ();
-	    Npkcontext.print_debug "First pass done.";
-	    Npkcontext.print_size (Cir.size_of prog);
-	    if !Npkcontext.verb_cir then Cir.print prog;
-	    Npkcontext.print_debug ("Translating "^fname^"...");
-	    let tr_prog = Cir2npkil.translate Newspeak.C prog src_fnames in
-	      Npkcontext.forget_loc ();
-	      Npkcontext.print_debug ("Translation done.");
-	      Npkcontext.forget_loc ();
-	      tr_prog
+      (fname, prog)
 
-let eval_exp x =
-  match x with
-      Cst (Cir.CInt n, _) -> n
-    | _ -> 
-	Npkcontext.report_error "Compiler.compile_config" 
-	  "constant address expected"
-  
+let remove_gotos (fname, prog) = 
+  if not !Npkcontext.accept_goto then (fname, prog)
+  else begin
+    Npkcontext.print_debug "Running goto elimination...";
+    let prog = GotoElimination.run prog in
+      Npkcontext.print_debug "Goto elimination done.";
+      Npkcontext.print_size (Csyntax.size_of prog);
+      (fname, prog)
+  end
+
+let add_types prog = 
+  Npkcontext.print_debug "Typing...";
+  Csyntax2TypedC.process prog
+
+let translate_typedC2cir fname prog =
+  Npkcontext.print_debug "Running first pass...";
+  let prog = TypedC2Cir.translate fname prog in
+    Npkcontext.forget_loc ();
+    Npkcontext.print_debug "First pass done.";
+    Npkcontext.print_size (Cir.size_of prog);
+    if !Npkcontext.verb_cir then Cir.print prog;
+    prog
+
+let translate_cir2npkil prog =
+  Npkcontext.print_debug ("Translating...");
+  let prog = Cir2npkil.translate Newspeak.C prog in
+    Npkcontext.forget_loc ();
+    Npkcontext.print_debug ("Translation done.");
+    prog
+
+let compile fname =
+  let prog = parse fname in
+  let prog = remove_gotos prog in
+  let prog = add_types prog in
+    (* TODO: should put fname inside prog instead of passing it as an 
+       argument here
+       or better => fname should not be needed in translate_typedC2cir!!
+    *)
+  let prog = translate_typedC2cir fname prog in
+    translate_cir2npkil prog

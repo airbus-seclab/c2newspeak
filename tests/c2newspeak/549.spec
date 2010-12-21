@@ -1,7 +1,6 @@
 Warning: 549.c:32#0: local composite creation accepted
 Newspeak output
 ---------------
-549.c
 void main(void) {
   (549.c:28#6)^int32 x;
   (549.c:29#15)^uint32 y;

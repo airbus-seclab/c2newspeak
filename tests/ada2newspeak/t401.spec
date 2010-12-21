@@ -1,8 +1,6 @@
 Warning: t402.ads:2#18: multiple definitions of global variable t402.c_float_zero, in file t402.ads variable t402.c_float_zero should probably be extern accepted
 Newspeak output
 ---------------
-t401.adb
-t403.adb
 void t401(void) {
   (t401.adb:3#6)^int32 x;
   (t401.adb:4#6)^uint1 b;

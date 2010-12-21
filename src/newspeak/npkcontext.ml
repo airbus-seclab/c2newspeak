@@ -151,8 +151,8 @@ let opt_of_flag err =
     | DirtySyntax -> "--reject-dirty-syntax"
     | PartialFunDecl -> "--reject-incomplete-fundecl"
     | MissingFunDecl -> "--reject-missing-fundecl"
-    | ForwardGoto -> "--reject-forward-goto"
-    | BackwardGoto -> "--reject-goto"
+    | ForwardGoto -> "--reject-goto"
+    | BackwardGoto -> "--reject-backward-goto"
     | StrictSyntax -> "--use-strict-syntax"
     | ExternGlobal -> "--reject-extern"
     | FlexArray -> "--reject-flexible-array"
@@ -203,10 +203,11 @@ let argslist = [
   (opt_of_flag MissingFunDecl, Arg.Clear (flag_of_error MissingFunDecl),
    "rejects call to function whose prototype is not declared");
 
-  (opt_of_flag ForwardGoto, Arg.Clear (flag_of_error ForwardGoto),
-   "rejects forward goto statements");
+  (opt_of_flag ForwardGoto, Arg.Unit clear_gotos,
+   "rejects goto statements");
 
-  (opt_of_flag BackwardGoto, Arg.Unit clear_gotos, "accepts goto statements ");
+  (opt_of_flag BackwardGoto, Arg.Clear  (flag_of_error BackwardGoto), 
+   "rejects backward goto statements ");
 
   (opt_of_flag TransparentUnion, Arg.Clear (flag_of_error TransparentUnion),
    "rejects transparent unions");
@@ -340,11 +341,6 @@ let print_size sz = print_debug ("Current size: "^(string_of_int sz))
 
 let report_error where msg = invalid_arg (string_of_error where msg)
 
-let exit_on_error msg =
-  prerr_endline ("Fatal error: "^msg);
-  exit 1
-
-
 let handle_cmdline_options version_string comment_string = 
   let usage_msg =
     version_string ^ "\nUsage: "^
@@ -353,13 +349,8 @@ let handle_cmdline_options version_string comment_string =
     
     Arg.parse argslist anon_fun usage_msg;
 
-(*    if !(flag_of_error MissingFunDecl) 
-    then (flag_of_error PartialFunDecl) := true;
-*)   
     if (not !(flag_of_error PartialFunDecl)) 
     then (flag_of_error MissingFunDecl) := false;
-
-
 
     if !version then begin
       print_endline version_string;
@@ -390,7 +381,9 @@ let report_ignore_warning loc msg err_typ =
     
 let report_accept_warning loc msg err_typ =
   if not !(flag_of_error err_typ) then begin
-    let advice = ", rewrite your code or remove option "^(opt_of_flag err_typ) in
+    let advice = 
+      ", rewrite your code or remove option "^(opt_of_flag err_typ) 
+    in
       report_error loc (msg^advice)
   end;
   report_warning loc (msg^" accepted")
@@ -402,30 +395,32 @@ let string_of_options () =
   let add s (c, v) =
     s ^ "<option name=\""^c^"\" val=\""^v^"\"></option>\n"
   in
-  let options = ref [("-o", !output_file)] 
+  let options = ref [("-o", !output_file)] in
+  let add_option flag =
+    if !(flag_of_error flag) then options := (opt_of_flag flag, "")::!options
   in
     if !compile_only then options := ("-c", "")::!options;
-    if !accept_dirty_cast then options := ("--accept-dirty-cast", "")::!options;
-    if !accept_dirty_syntax then options := ("--accept-dirty-syntax", "")::!options;
-    if !accept_partial_fdecl then options := ("--accept-incomplete-fundecl", "")::!options;
-    if !accept_missing_fdecl then options := ("--accept-missing-fundecl", "")::!options;
-    if !accept_forward_goto then options := ("--accept-forward-goto", "")::!options;
-    if !accept_goto then options := ("--accept-goto", "")::!options;
-    if !accept_transparent_union then options := ("--accept-transparent-union", "")::!options;
-    if !accept_extern then options := ("--accept-extern", "")::!options;
-    if !accept_mult_def then options := ("--accept-mult-def", "")::!options;
-    if !accept_signed_index then options := ("--accept-signed-index", "")::!options;
-    if !accept_gnuc then options := ("--accept-gnuc", "")::!options;
-    if !no_opt then options := ("--disable-opt", "")::!options;
-    if not !opt_checks then options := ("--disable-checks-opt", "")::!options;
+    add_option DirtyCast;
+    add_option DirtySyntax;
+    add_option PartialFunDecl;
+    add_option MissingFunDecl;
+    add_option ForwardGoto;
+    add_option BackwardGoto;
+    add_option TransparentUnion;
+    add_option ExternGlobal;
+    add_option MultipleDef;
+    add_option SignedIndex;
+    add_option GnuC;
+    add_option DisableOpt;
+    add_option DisableCheckOpt;
     if not !remove_temp then options := ("--disable-vars-elimination", "")::!options;
     if !remove_do_loops then options := ("--remove-do-loops", "")::!options;
-    if !ignores_pragmas then options := ("--ignore-pragma", "")::!options;
-    if !ignores_asm then options := ("--ignore-asm", "")::!options;
-    if !ignores_pack then options := ("--ignore-pack", "")::!options;
-    if !ignores_extern_fundef then options := ("--ignore-extern-definition", "")::!options;
-    if !ignores_volatile then options := ("--ignore-volatile", "")::!options;
-    if !use_strict_syntax then options := ("--use-strict-syntax", "")::!options;
+    add_option Pragma;
+    add_option Asm;
+    add_option Pack;
+    add_option ExternFunDef;
+    add_option Volatile;
+    add_option StrictSyntax;
     if !version then options := ("--version", "")::!options;
     if !verb_ast && !verb_debug && !verb_newspeak then options := ("-v", "")::!options;
     if !verb_debug then options := ("--debug", "")::!options;

@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t338.adb
 void t338(void) {
   (t338.adb:9#5)^uint1[10] a;
   (t338.adb:11#6)^a =(uint1) 1;

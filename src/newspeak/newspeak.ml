@@ -86,7 +86,6 @@ end
     function definitions and the size of pointers. *)
 
 type t = {
-  fnames: file list;
   globals: globals;
   init: blk;
   fundecs: (fid, fundec) Hashtbl.t; (** table of all declared functions *)
@@ -170,7 +169,7 @@ and field = offset * typ
 
 and funexp =
     FunId of fid
-  | FunDeref of (exp * ftyp)
+  | FunDeref of exp
 
 and unop =
     Belongs of bounds
@@ -430,17 +429,10 @@ and string_of_exp e =
 
     | UnOp (op, exp) -> (string_of_unop op)^" "^(string_of_exp exp)
 
-          
 let string_of_funexp f =
   match f with
       FunId fid -> fid
-    | FunDeref (exp, (args_t, [ret_t])) ->
-        "["^(string_of_exp exp)^"]("^
-          (seq ", " string_of_typ args_t)^") -> "^(string_of_typ ret_t)
-    | FunDeref (exp, ([], _)) ->
-        "["^(string_of_exp exp)^"]"
-    | FunDeref (exp, (args_t, _)) ->
-        "["^(string_of_exp exp)^"]("^(seq ", " string_of_typ args_t)^")"
+    | FunDeref exp -> "["^(string_of_exp exp)^"]"
 
 (* Actual dump *)
 let string_of_lbl l = "lbl"^(string_of_int l)
@@ -508,21 +500,21 @@ let string_of_blk offset x =
 
       | Goto l -> dump_line_at loc ("goto "^(string_of_lbl l)^";")
       | Call (args, fn, ret_vars) ->
-          begin
-	    let in_vars = List.map (fun (x, _) -> string_of_exp x) args in
-	    let out_vars = List.map (fun (x, _) -> string_of_lval x) ret_vars in
-            let ret_str = 
-	      match out_vars with
-		| [] -> ""
-		| r::[] -> r ^ " <- "
-		| _ -> (string_of_list (fun x -> x) out_vars) ^ " <- "
-            in
-	    let arg_str = string_of_list (fun x -> x) in_vars in
-            let result = 
-	      ret_str ^ (string_of_funexp fn) ^ arg_str ^ ";" 
-	    in
-              dump_line_at loc result
-          end
+	  let string_of_args (x, t) = string_of_exp x^": "^string_of_typ t in
+	  let string_of_rets (x, t) = string_of_lval x^": "^string_of_typ t in
+	  let args = List.map string_of_args args in
+	  let rets = List.map string_of_rets ret_vars in
+          let ret_str = 
+	    match rets with
+	      | [] -> ""
+	      | r::[] -> r ^ " <- "
+	      | _ -> (string_of_list (fun x -> x) rets) ^ " <- "
+          in
+	  let arg_str = string_of_list (fun x -> x) args in
+          let result = 
+	    ret_str ^ (string_of_funexp fn) ^ arg_str ^ ";" 
+	  in
+            dump_line_at loc result
       | Select (body1, body2) ->
           dump_line_at loc "choose {";
           dump_line " -->";
@@ -574,7 +566,6 @@ let dump_globals gdecls =
 
 (* Exported print functions *)
 let dump prog =
-  List.iter (fun x -> print_endline x) prog.fnames;
   (* TODO: Clean this mess... StringMap *)
   let funs = ref (StringMap.empty) in
   let collect_funbody name body =
@@ -811,9 +802,11 @@ let simplify_gotos blk =
   let used_lbls = ref LblSet.empty in
   let new_lbl () = incr current_lbl; !current_lbl in
   let find lbl = 
-    let lbl' = List.assoc lbl !stack in
-      used_lbls := LblSet.add lbl' !used_lbls;
-      lbl'
+    try
+      let lbl' = List.assoc lbl !stack in
+	used_lbls := LblSet.add lbl' !used_lbls;
+	lbl'
+    with Not_found -> lbl
   in
   let push lbl1 lbl2 = stack := (lbl1, lbl2)::(!stack) in
   let pop () = 
@@ -915,6 +908,7 @@ let simplify_gotos blk =
     let body = remove_final_goto lbl body in
       simplify_dowith loc (body, lbl)
   in
+
   let blk = simplify_blk blk in
     if not (LblSet.is_empty !used_lbls) 
     then invalid_arg "Newspeak.simplify_gotos: unexpected goto without label";
@@ -924,7 +918,7 @@ let rec simplify_stmt actions (x, loc) =
   let simplify_funexp actions f =
     match f with
       | FunId s -> FunId s
-      | FunDeref (e, t) -> FunDeref (simplify_exp actions e, t)
+      | FunDeref e -> FunDeref (simplify_exp actions e)
   in
   List.iter (fun a -> a#enter_stmtkind x) actions;
   let x =
@@ -1201,10 +1195,7 @@ and build_choice builder (cond, body) =
 and build_funexp builder fn =
   match fn with
       FunId f -> FunId f
-    | FunDeref (e, ft) ->
-        let e = build_exp builder e in
-        let ft = build_ftyp builder ft in
-          FunDeref (e, ft)
+    | FunDeref e -> FunDeref (build_exp builder e)
 
 and build_lval builder lv =
   let lv =
@@ -1381,9 +1372,7 @@ and visit_binop visitor op =
 let visit_funexp visitor x =
   let continue = visitor#process_funexp x in
     match x with
-        FunDeref (e, t) when continue -> 
-          visit_exp visitor e;
-          visit_ftyp visitor t
+        FunDeref e when continue -> visit_exp visitor e
       | _ -> ()
 
 let rec visit_blk visitor x = List.iter (visit_stmt visitor) x
@@ -1545,7 +1534,7 @@ and belongs_of_lval x =
 
 let belongs_of_funexp x =
   match x with
-      FunDeref (e, _) -> belongs_of_exp e
+      FunDeref e -> belongs_of_exp e
     | _ -> []
 
 let exp_of_int x = Const (CInt (Nat.of_int x))

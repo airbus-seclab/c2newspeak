@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-372.c
 void f(void) {
 }
 

@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t309.adb
 void t309(void) {
   (t309.adb:7#35)^int1 x1;
   (t309.adb:8#35)^int2 x2;

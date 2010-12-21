@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t414.adb
 void t414(void) {
   (t414.adb:10#6)^{ int32 0; }32[2] ci;
   (t414.adb:10#6)^ci =(int32) 5;

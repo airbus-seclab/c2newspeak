@@ -1,7 +1,6 @@
 Warning: 235.c:31#2: dirty cast from integer to pointer accepted
 Newspeak output
 ---------------
-235.c
 void main(void) {
   (235.c:27#6)^int32 x;
   (235.c:28#7)^ptr ptr;

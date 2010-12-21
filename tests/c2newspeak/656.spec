@@ -1,7 +1,6 @@
 Warning: 656.c:27#0: goto statement accepted
 Newspeak output
 ---------------
-656.c
 void main(void) {
   (656.c:26#6)^uint32 goto!lbl;
   (656.c:26#6)^goto!lbl =(uint32) 0;

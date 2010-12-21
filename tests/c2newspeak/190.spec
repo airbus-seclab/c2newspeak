@@ -1,7 +1,5 @@
 Newspeak output
 ---------------
-a.c
-b.c
 void g(void) {
   (a.c:2#6)^int32 x;
   (a.c:3#2)^x =(int32) 1;

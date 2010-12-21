@@ -1,13 +1,12 @@
 Newspeak output
 ---------------
-375.c
 void main(void) {
   (375.c:29#6)^int32 x;
   (375.c:29#9)^int32 y;
   (375.c:32#4)^int32 tmp_cir!0;
   (375.c:31#2)^do {
     (375.c:31#2)^while (1) {
-      (375.c:32#4)^tmp_cir!0 <- f();
+      (375.c:32#4)^tmp_cir!0: int32 <- f();
       (375.c:32#4)^choose {
        -->
         (375.c:32#4)^choose {

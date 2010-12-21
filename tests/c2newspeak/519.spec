@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-519.c
 void main(void) {
   (519.c:30#6)^int32 y;
   (519.c:29#6)^int32 x;
@@ -12,7 +11,7 @@ void main(void) {
      -->
       (519.c:31#2)^guard((x_int32 ==_int32 0));
     }
-    (519.c:32#2)^y <- f();
+    (519.c:32#2)^y: int32 <- f();
   } with lbl0:
 }
 

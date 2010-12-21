@@ -5,7 +5,6 @@ Warning: 722.c:29#2: assignment within expression accepted
 Warning: 722.c:31#2: assignment within expression accepted
 Newspeak output
 ---------------
-722.c
 void main(void) {
   (722.c:27#6)^int32 x;
   (722.c:28#6)^int32 y;

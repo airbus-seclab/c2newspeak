@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t337.adb
 void t337(void) {
   (t337.adb:9#7)^int32 i;
   (t337.adb:9#7)^i =(int32) 0;

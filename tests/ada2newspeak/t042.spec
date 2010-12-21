@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t042.adb
 void t042(void) {
   (t042.adb:6#6)^uint1 a;
   (t042.adb:9#7)^t042a.z =(uint1) 0;

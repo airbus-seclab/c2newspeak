@@ -27,7 +27,6 @@
 *)
 
 type t = {
-  fnames: Newspeak.file list;
   globals: Newspeak.globals;
   init: blk;
   fundecs: (Newspeak.fid, fundec) Hashtbl.t;

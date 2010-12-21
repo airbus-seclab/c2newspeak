@@ -9,7 +9,6 @@ Warning: 335.c:44#0: halting condition should be explicit
 Warning: 335.c:45#0: init statement expected
 Newspeak output
 ---------------
-335.c
 void main(void) {
   (335.c:37#6)^int32 i;
   (335.c:38#2)^do {

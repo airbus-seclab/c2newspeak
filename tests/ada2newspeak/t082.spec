@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t082.adb
 void t082.main(void) {
   (t082.adb:8#9)^uint2 x;
   (t082.adb:9#9)^uint2 y;

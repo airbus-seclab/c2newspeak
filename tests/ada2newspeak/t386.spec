@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t386.adb
 void t386(void) {
   (t386.adb:2#9)^int32 pupu;
   (t386.adb:3#6)^int32 x;

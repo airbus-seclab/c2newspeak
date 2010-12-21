@@ -2,8 +2,6 @@ Warning: 002-a.c:32#2: expression of type signed integer used as an array index 
 Warning: 002-a.c:34#2: expression of type signed integer used as an array index accepted
 Newspeak output
 ---------------
-002-a.c
-002-b.c
 void main(void) {
   (002-a.c:29#6)^int32 x;
   (002-a.c:30#6)^int32 i;

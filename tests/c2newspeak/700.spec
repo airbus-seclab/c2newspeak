@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-700.c
 void main(void) {
   (700.c:27#7)^int8[6] t;
   (700.c:27#7)^t =(int8) 104;

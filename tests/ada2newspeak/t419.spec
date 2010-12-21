@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t419.adb
 void t419(void) {
   (t419.adb:7#9)^uint4 data;
   (t419.adb:10#6)^uint4 z;

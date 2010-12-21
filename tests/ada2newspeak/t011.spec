@@ -1,6 +1,5 @@
 Newspeak output
 ---------------
-t011.adb
 void t011(void) {
   (t011.adb:6#6)^uint2 a;
   (t011.adb:7#6)^uint2 b;
