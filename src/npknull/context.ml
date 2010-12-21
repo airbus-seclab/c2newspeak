@@ -23,24 +23,26 @@
   email: charles.hymans@penjili.org
 *)
 
+type option =
+    Verbose
+  | UseStubs
+  | PrintGraph
+
+module OptionSet = Set.Make(struct type t = option let compare = compare end)
+
+let options = ref OptionSet.empty
+
+let option_is_set option = OptionSet.mem option !options
+
 let current_loc = ref (Newspeak.dummy_loc "initialization")
 
 let errors = ref StrSet.empty
 
-let verbose = ref false
-
-let use_stubs = ref false
-
 let warn_cnt = ref 0
 
-let graph = ref false
+let set_option option () = options := OptionSet.add option !options
 
-(* TODO: factor set_verbose and set_use_stubs *)
-let set_verbose () = verbose := true
-
-let set_use_stubs () = use_stubs := true
-
-let print_verbose msg = if !verbose then print_endline msg
+let print_verbose msg = if option_is_set Verbose then print_endline msg
   
 (* TODO: factor print_err and report_stub_used *)
 let print_err msg = 
@@ -50,12 +52,11 @@ let print_err msg =
       prerr_endline msg
     end
       
-let report_stub_used msg = if not !use_stubs then print_err msg
+let report_stub_used msg = if not (option_is_set UseStubs) then print_err msg
   
 let get_current_loc () = Newspeak.string_of_loc !current_loc
 
 let set_current_loc loc = current_loc := loc
 
-let set_graph () = graph := true
-
-let print_graph str = if !graph then print_endline ("[G] "^str)
+let print_graph str = 
+  if option_is_set PrintGraph then print_endline ("[G] "^str)

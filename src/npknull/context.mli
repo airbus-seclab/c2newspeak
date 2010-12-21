@@ -23,9 +23,12 @@
   email: charles.hymans@penjili.org
 *)
 
-val set_verbose: unit -> unit
+type option =
+    Verbose
+  | UseStubs
+  | PrintGraph
 
-val set_graph: unit -> unit
+val set_option: option -> unit -> unit
 
 val print_graph: string -> unit
 
@@ -38,5 +41,3 @@ val get_current_loc: unit -> string
 val set_current_loc: Newspeak.location -> unit
 
 val print_err: string -> unit
-
-val set_use_stubs: unit -> unit
