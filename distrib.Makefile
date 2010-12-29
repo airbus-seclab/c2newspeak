@@ -34,7 +34,7 @@ RM=rm -rf
 OCAMLDOC=ocamldoc
 
 #FILES
-EXE=c2newspeak npkstrip npkstats npk2bytesz \
+EXE=c2newspeak npkstrip npkstats \
     npkcheck npkbugfind npkdiff ada2newspeak npkpointer npkflow \
     npkfuns npktests npknull simpleai npksolver
 COMPONENTS=newspeak $(EXE)
