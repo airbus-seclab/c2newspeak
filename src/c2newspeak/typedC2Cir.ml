@@ -161,7 +161,8 @@ let translate fname prog =
       (ret_name, args_id)
   in
 
-  let update_global x name loc (t, storage) =
+  let update_global x name (t, storage) =
+    let loc = Npkcontext.get_loc () in
     let info =
       try 
 	let (prev_t, prev_loc, prev_storage) = Hashtbl.find used_globals name in
@@ -379,7 +380,7 @@ let translate fname prog =
     let t = translate 0 t x in
       (List.rev !res, t)
 
-  and translate_glb_init _ name t x =
+  and translate_glb_init name t x =
     match x with
 	None -> (t, false)
       | Some i -> 
@@ -400,10 +401,8 @@ let translate fname prog =
     *)
     let name = Temps.to_string 0 (Temps.Cstr (fname, String.escaped str)) in
     let t = Array (char_typ, Some (exp_of_int ((String.length str) + 1))) in
-      if not (Hashtbl.mem used_globals name) then begin
-	let loc = Npkcontext.get_loc () in
-	  declare_global false name name loc t (Some (Data (Str str, t)))
-      end;
+      if not (Hashtbl.mem used_globals name) 
+      then declare_global false name name t (Some (Data (Str str, t)));
       C.Global name
  
   and translate_lv x =
@@ -819,7 +818,7 @@ let translate fname prog =
 
   and translate_local_decl loc x d =
     if d.is_static || d.is_extern then begin
-      declare_global d.is_extern x d.name loc d.t d.initialization;
+      declare_global d.is_extern x d.name d.t d.initialization;
       []
     end else begin
       (* TODO: see if more can be factored with translate_global_decl *) 
@@ -1208,11 +1207,11 @@ let translate fname prog =
       | _ -> size_of t
 
 (* TODO: simplify code of global declaration!!! *)
-  and declare_global extern x name loc t init =
-    update_global x name loc (t, K.Extern);
-    let (t, init) = translate_glb_init loc name t init in
+  and declare_global extern x name t init =
+    update_global x name (t, K.Extern);
+    let (t, init) = translate_glb_init name t init in
     let init = if extern then K.Extern else K.Declared init in
-      update_global x name loc (t, init)
+      update_global x name (t, init)
   in
 
   let translate_fundecl (f, declaration) =
@@ -1251,7 +1250,7 @@ let translate fname prog =
     (* TODO:TODO:TODO: remove static?? *)
     (* TODO:TODO:TODO: think about name and x difference, shouldn't there be 
        only normalized names in typedC? *)
-    declare_global d.is_extern x d.name loc d.t d.initialization
+    declare_global d.is_extern x d.name d.t d.initialization
   in
 
   let add_glbdecl name (t, loc, storage) =
