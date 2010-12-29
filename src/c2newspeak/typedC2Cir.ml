@@ -519,7 +519,7 @@ let translate fname prog =
 		translate e
 	    with Invalid_argument _ -> 
 	      let loc = Npkcontext.get_loc () in
-	      let (x, decl, v) = gen_tmp loc t in
+	      let (x, decl, v) = gen_tmp t in
 	      let blk1 = 
 		(Exp (Set ((Local x, t), None, (e1, t)), t), loc)::[] 
 	      in
@@ -656,7 +656,7 @@ let translate fname prog =
 	    let loc = Npkcontext.get_loc () in
 	    let sz = if sz mod 8 = 0 then sz/8 else (sz/8)+1 in
 	    let t = Array (char_typ, Some (exp_of_int sz)) in
-	    let (_, decl, v) = gen_tmp loc t in
+	    let (_, decl, v) = gen_tmp t in
 	    let e = addr_of (v, t) in
 	    let init = init_va_args loc v args in
 	      ((C.BlkExp (decl::init, e, false))::[], (Va_arg, id)::[])
@@ -673,7 +673,8 @@ let translate fname prog =
     in
       translate_args args args_t
 
-  and gen_tmp loc t =
+  and gen_tmp t =
+    let loc = Npkcontext.get_loc () in
     let x = Temps.to_string !tmp_cnt (Temps.Misc "firstpass") in
     let t = translate_typ t in
     let decl = (C.Decl (t, x), loc) in
