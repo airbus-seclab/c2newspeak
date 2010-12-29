@@ -41,8 +41,7 @@ let anon_fun file =
 let usage_msg = exec_name^" [options] [-help|--help] file.npk"
 
 let process () = 
-  if !input = "" 
-  then invalid_arg ("no file specified. Try "^exec_name^" --help");
+  if !input = "" then StandardMain.report_missing_file ();
   
   let prog = Newspeak.read !input in
   let simple = Filter.process prog in

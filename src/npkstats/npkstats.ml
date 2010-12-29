@@ -352,7 +352,7 @@ let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file.npk"
 
 let process () =
   if !input = "" 
-  then invalid_arg ("no file specified. Try "^Sys.argv.(0)^" --help");
+  then StandardMain.report_missing_file ();
   
   let prog = Npk2lpk.translate (Newspeak.read !input) in
   let collector = new collector prog.ptr_sz !fun_to_count in

@@ -40,8 +40,7 @@ let anon_fun file =
 let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file.npk"
 
 let process () =
-  if !input = "" 
-  then invalid_arg ("no file specified. Try "^Sys.argv.(0)^" --help");
+  if !input = "" then StandardMain.report_missing_file ();
   
   let prog = Npk2lpk.translate (Newspeak.read !input) in
   let (vars, prog) = Build.translate prog in
