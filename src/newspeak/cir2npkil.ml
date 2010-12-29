@@ -301,14 +301,14 @@ let translate src_lang prog =
       Hashtbl.add glbdecls x (t, loc, init, false)
   in
 
-  let translate_fundef f (ret_id, args_id, (args, t), body) =
+(* TODO: remove unused argument from cir *)
+  let translate_fundef f (_, args_id, ft, body) =
 (* TODO: remove normalize!! *)
     let body = Cir.normalize body in
     let body = translate_blk body in
-    let ft = translate_ftyp (args, t) in
+    let ft = translate_ftyp ft in
     let fundec = 
       {
-	K.ret_identifiers = ret_id::[];
 	K.arg_identifiers = args_id;
 	K.function_type = ft;
 	K.body = body;

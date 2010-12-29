@@ -49,7 +49,6 @@ and initialized = bool
 
 and fundec =  {
   arg_identifiers: string list;
-  ret_identifiers: string list;
   function_type: ftyp;
   body: blk;
 }
