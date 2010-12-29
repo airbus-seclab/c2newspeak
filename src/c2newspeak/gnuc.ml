@@ -23,8 +23,9 @@
   email: charles.hymans@penjili.org
 *)
 
-open Parser
 
+open Parser
+(* TODO : token_tbl redundant with parser => try to remove *)
 let token_tbl = Hashtbl.create 50
 
 let builtin_names = 

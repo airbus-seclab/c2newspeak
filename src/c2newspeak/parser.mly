@@ -1033,7 +1033,7 @@ attribute_name:
       | "__pure__" | "pure" | "__gnu_inline__"
       | "__deprecated__" | "deprecated" | "__malloc__" 
       | "__warn_unused_result__" | "__unused__" | "unused" 
-      | "__artificial__" -> ()
+      | "__artificial__" | "__cold__" | "cold" -> ()
       | "dllimport" -> 
 	  Npkcontext.report_warning "Parser.attribute" 
 	    "ignoring attribute dllimport"
