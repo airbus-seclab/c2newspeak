@@ -1,7 +1,7 @@
 Warning: 428.c:29#0: packed attribute ignored
 Newspeak output
 ---------------
-void main(void) {
+void (428.c:32#5)^main(void) {
   (428.c:33#2)^x =(int8) 1;
   (428.c:34#2)^x + 32 =(int32) 2;
 }

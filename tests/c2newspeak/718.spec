@@ -1,9 +1,9 @@
 Newspeak output
 ---------------
-void f(void) {
+void (718.c:30#5)^f(void) {
 }
 
-void g(fptr f) {
+void (718.c:27#5)^g(fptr f) {
 }
 
 

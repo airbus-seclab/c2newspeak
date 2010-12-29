@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (450.c:26#5)^main(void) {
   (450.c:27#2)^choose {
    -->
     (450.c:27#2)^guard(! (focus16 &(cstr!1!450.c.-) ==_ptr nil));

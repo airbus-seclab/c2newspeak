@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void f(void) {
+void (396.c:26#5)^f(void) {
   (396.c:30#2)^!396.c.f.0.x =(int32) coerce[-2147483648,2147483647] (!396.c.f.0.x_int32 + 1);
 }
 

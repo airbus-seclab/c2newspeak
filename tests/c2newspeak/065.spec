@@ -1,11 +1,11 @@
 Warning: 065.c:32#2: the order of execution of side-effects in expressions not specified, picking a random one, be careful
 Newspeak output
 ---------------
-int32 f(int32 a) {
+int32 (065.c:26#4)^f(int32 a) {
   (065.c:27#2)^!return =(int32) a_int32;
 }
 
-void main(void) {
+void (065.c:30#5)^main(void) {
   (065.c:31#6)^int32 x;
   (065.c:32#2)^int32 tmp_cir!0;
   (065.c:32#2)^tmp_cir!0: int32 <- f(2: int32);

@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (502.c:32#5)^main(void) {
   (502.c:33#2)^choose {
    -->
     (502.c:33#2)^guard(! (a_int32 ==_int32 0));

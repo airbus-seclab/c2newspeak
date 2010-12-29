@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-ptr f(void) {
+ptr (nctmf2.c:6#5)^f(void) {
   (nctmf2.c:8#1)^!return =(ptr) !011-b.c.0.TmD_ptr;
 }
 

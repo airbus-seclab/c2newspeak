@@ -4,7 +4,7 @@ Warning: 298.c:28#34: unknown identifier random, maybe a function without protot
 Warning: 298.c:28#34: unknown identifier assertion, maybe a function without prototype accepted
 Newspeak output
 ---------------
-void main(void) {
+void (298.c:30#5)^main(void) {
 }
 
 int32 x;

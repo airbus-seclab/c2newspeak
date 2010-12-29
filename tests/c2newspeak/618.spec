@@ -1,7 +1,7 @@
 Warning: 618.c:32#0: goto statement accepted
 Newspeak output
 ---------------
-void main(void) {
+void (618.c:26#5)^main(void) {
   (618.c:27#4)^uint32 continue.618.c:31#13.0;
   (618.c:27#4)^continue.618.c:31#13.0 =(uint32) 0;
   (618.c:27#4)^{

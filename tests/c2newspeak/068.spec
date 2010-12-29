@@ -1,10 +1,10 @@
 Newspeak output
 ---------------
-int32 f(void) {
+int32 (068.c:26#4)^f(void) {
   (068.c:27#2)^!return =(int32) 1;
 }
 
-void main(void) {
+void (068.c:30#5)^main(void) {
   (068.c:31#6)^int32 x;
   (068.c:32#2)^int32 tmp_cir!0;
   (068.c:32#2)^do {

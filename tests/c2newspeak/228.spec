@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (228.c:32#5)^main(void) {
 }
 
 

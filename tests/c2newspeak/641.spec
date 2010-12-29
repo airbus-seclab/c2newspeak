@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void __format_arg__(void) {
+void (641.c:26#5)^__format_arg__(void) {
 }
 
 

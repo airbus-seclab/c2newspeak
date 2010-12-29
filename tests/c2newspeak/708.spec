@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void f(void) {
+void (708.c:28#5)^f(void) {
 }
 
 fptr x;

@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (114.c:30#5)^main(void) {
   (114.c:31#6)^int32 x;
   (114.c:32#12)^ptr ptr;
   (114.c:33#2)^x =(int32) [ptr_ptr]32_int32;

@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void __mode__(void) {
+void (649.c:26#5)^__mode__(void) {
 }
 
 

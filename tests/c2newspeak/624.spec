@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void alias(void) {
+void (624.c:26#5)^alias(void) {
 }
 
 

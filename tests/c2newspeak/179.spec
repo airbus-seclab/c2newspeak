@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (179.c:303#5)^main(void) {
 }
 
 { uint3 0; uint1 3; uint8 4; uint32 32; uint32 64; uint32 96; }128 s0;

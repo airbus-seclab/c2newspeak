@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (070.c:50#5)^main(void) {
 }
 
 int8[6] cstr!1!070.c.Hello;

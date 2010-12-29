@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void __pure__(void) {
+void (634.c:26#5)^__pure__(void) {
 }
 
 

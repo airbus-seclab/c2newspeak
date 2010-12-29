@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (677.c:30#5)^main(void) {
   (677.c:31#2)^int32 tmp_cir!0;
   (677.c:31#2)^tmp_cir!0: int32 <- f();
   (677.c:31#2)^choose {

@@ -13,7 +13,7 @@ movl %%ecx, %0
 ' '=r' 'eax' 'ecx' ignored
 Newspeak output
 ---------------
-void main(void) {
+void (769.c:26#5)^main(void) {
   (769.c:28#5)^int32 result;
 }
 

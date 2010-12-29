@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (700.c:26#5)^main(void) {
   (700.c:27#7)^int8[6] t;
   (700.c:27#7)^t =(int8) 104;
   (700.c:27#7)^t + 8 =(int8) 101;

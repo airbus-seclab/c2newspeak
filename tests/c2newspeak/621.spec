@@ -2,7 +2,7 @@ Warning: 621.c:30#0: goto statement accepted
 Warning: 621.c:31#0: goto statement accepted
 Newspeak output
 ---------------
-void main(void) {
+void (621.c:26#5)^main(void) {
   (621.c:27#4)^uint32 break.621.c:29#13.0;
   (621.c:27#4)^break.621.c:29#13.0 =(uint32) 0;
   (621.c:27#4)^{

@@ -1,7 +1,7 @@
 Warning: 151.c:30#2: dirty cast fptr -> ptr accepted
 Newspeak output
 ---------------
-void main(void) {
+void (151.c:28#5)^main(void) {
   (151.c:29#7)^ptr ptr;
   (151.c:30#2)^ptr =(ptr) (ptr <= fptr) &_{(int32) -> int32}(f);
 }

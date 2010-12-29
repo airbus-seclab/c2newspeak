@@ -1,10 +1,10 @@
 Newspeak output
 ---------------
-void f(void) {
+void (000-b.c:27#5)^f(void) {
   (000-b.c:28#2)^[y_ptr]8 =(int8) 1;
 }
 
-void main(void) {
+void (000-a.c:27#5)^main(void) {
   (000-a.c:28#2)^[x_ptr]8 =(int8) 0;
 }
 

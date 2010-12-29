@@ -5,7 +5,7 @@ Warning: 050.c:32#5: not enough initializers for array
 Warning: 050.c:30#5: extra initializer for array accepted
 Newspeak output
 ---------------
-void main(void) {
+void (050.c:40#5)^main(void) {
 }
 
 int8[3] a1;

@@ -3,7 +3,7 @@ Warning: 525.c:29#0: block within expression accepted
 Warning: 525.c:29#28: the order of execution of side-effects in expressions not specified, picking a random one, be careful
 Newspeak output
 ---------------
-void main(void) {
+void (525.c:26#5)^main(void) {
   (525.c:27#6)^int32 x;
   (525.c:28#6)^int32 y;
   (525.c:29#2)^choose {

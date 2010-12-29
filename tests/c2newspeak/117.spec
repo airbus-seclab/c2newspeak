@@ -2,7 +2,7 @@ Warning: 117.c:27#7: not enough initializers for array
 Warning: 117.c:28#7: not enough initializers for array
 Newspeak output
 ---------------
-void main(void) {
+void (117.c:26#5)^main(void) {
   (117.c:27#7)^int8[23] t;
   (117.c:27#7)^t =(int8) 72;
   (117.c:27#7)^t + 8 =(int8) 101;

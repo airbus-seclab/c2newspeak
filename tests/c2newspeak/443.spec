@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (443.c:32#5)^main(void) {
   (443.c:33#2)^b1 =(int8) 97;
 }
 

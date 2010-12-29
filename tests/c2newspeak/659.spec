@@ -8,7 +8,7 @@ void main() {
 }
 Newspeak output
 ---------------
-void main(void) {
+void (659.c:26#5)^main(void) {
   (659.c:27#6)^int32 x;
 }
 

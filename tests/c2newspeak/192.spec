@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (test53-a.c:2#5)^main(void) {
   (test53-a.c:3#7)^int8 x;
   (test53-a.c:4#2)^x =(int8) [ptr_ptr]8_int8;
 }

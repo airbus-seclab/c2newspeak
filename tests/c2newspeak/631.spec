@@ -1,9 +1,9 @@
 Newspeak output
 ---------------
-void __noreturn__(void) {
+void (631.c:29#5)^__noreturn__(void) {
 }
 
-void noreturn(void) {
+void (631.c:26#5)^noreturn(void) {
 }
 
 

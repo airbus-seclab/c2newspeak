@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (510.c:32#5)^main(void) {
 }
 
 int32[3] x;

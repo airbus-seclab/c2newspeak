@@ -7,7 +7,7 @@ void main() {
 }
 Newspeak output
 ---------------
-void main(void) {
+void (658.c:26#5)^main(void) {
 }
 
 

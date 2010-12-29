@@ -1,9 +1,9 @@
 Newspeak output
 ---------------
-void f(void) {
+void (372.c:26#5)^f(void) {
 }
 
-void main(void) {
+void (372.c:30#5)^main(void) {
   (372.c:31#6)^int32 a;
   (372.c:31#9)^int32 b;
   (372.c:32#2)^choose {

@@ -1,7 +1,7 @@
 Warning: 311.c:30#0: init statement expected
 Newspeak output
 ---------------
-void main(void) {
+void (311.c:26#5)^main(void) {
   (311.c:27#6)^int32 i;
   (311.c:28#2)^i =(int32) 0;
   (311.c:29#2)^do {

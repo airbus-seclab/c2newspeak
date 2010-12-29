@@ -1,7 +1,7 @@
 Warning: 209.c:29#2: the order of execution of side-effects in expressions not specified, picking a random one, be careful
 Newspeak output
 ---------------
-void main(void) {
+void (209.c:26#5)^main(void) {
   (209.c:27#6)^int32 x;
   (209.c:27#9)^int32 y;
   (209.c:27#12)^int32 z;

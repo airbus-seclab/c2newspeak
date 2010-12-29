@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (772.c:28#5)^main(void) {
   (772.c:29#2)^f(focus40 &(cstr!1!772.c.main): ptr);
 }
 

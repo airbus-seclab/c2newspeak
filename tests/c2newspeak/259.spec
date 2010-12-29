@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (259.c:29#5)^main(void) {
   (259.c:30#2)^t11 =(ptr) nil;
 }
 

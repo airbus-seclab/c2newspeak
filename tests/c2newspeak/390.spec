@@ -1,10 +1,10 @@
 Warning: 390.c:31#0: unnecessary semicolon accepted
 Newspeak output
 ---------------
-void f(void) {
+void (390.c:26#5)^f(void) {
 }
 
-void main(void) {
+void (390.c:29#5)^main(void) {
 }
 
 

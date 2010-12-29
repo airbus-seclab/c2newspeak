@@ -1,7 +1,7 @@
 Warning: 511.c:30#0: comma terminated initializer
 Newspeak output
 ---------------
-void main(void) {
+void (511.c:32#5)^main(void) {
 }
 
 int32[3] x;

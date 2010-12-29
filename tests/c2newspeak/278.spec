@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-int32 g(void) {
+int32 (278.c:27#4)^g(void) {
   (278.c:28#6)^int32 x;
   (278.c:31#8)^{
     int32 y;
