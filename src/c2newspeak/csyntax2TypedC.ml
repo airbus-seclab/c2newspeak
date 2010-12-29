@@ -741,7 +741,9 @@ let process (fname, globals) =
       | _ -> Npkcontext.report_error "Csyntax2TypedC" "case not implemented yet"
   in
 
-  let translate_fundecl (f, f', ft, static, body, loc) =
+  (* TODO: remove the static field if not necessary! *)
+  (* TODO: should do a grep on all _ to see if they shouldn't be removed *)
+  let translate_fundecl (f, f', ft, _, body, loc) =
     Npkcontext.set_loc loc;
     current_fun := f;
     add_formals ft;
@@ -751,7 +753,6 @@ let process (fname, globals) =
 	C.function_type = ft;
 	C.body = body;
 	C.position = loc;
-	C.static = static;
       } 
     in
       remove_formals ft;

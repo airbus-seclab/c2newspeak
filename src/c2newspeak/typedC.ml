@@ -42,8 +42,6 @@ and fundec = {
   function_type: ftyp;
   body: blk;
   position: Newspeak.location;
-  (* TODO: remove is_static if not necessary *)
-  static: bool;
 }
 
 and assertion = spec_token list
