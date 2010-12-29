@@ -1029,7 +1029,7 @@ attribute_name:
   IDENTIFIER                               { 
     begin match $1 with
 	"aligned" | "__aligned__" | "__cdecl__" | "noreturn" | "__noreturn__"
-      | "__always_inline__" | "__nothrow__" | "__pure__" | "__gnu_inline__"
+      | "__always_inline__" | "always_inline"  | "__nothrow__" | "__pure__" | "__gnu_inline__"
       | "__deprecated__" | "deprecated" | "__malloc__" 
       | "__warn_unused_result__" | "__unused__" | "unused" 
       | "__artificial__" -> ()
