@@ -312,6 +312,7 @@ let translate src_lang prog =
 	K.arg_identifiers = declaration.arg_identifiers;
 	K.function_type = ft;
 	K.body = body;
+	K.position = declaration.position;
       }
     in
       Hashtbl.add fundefs f fundec
