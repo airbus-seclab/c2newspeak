@@ -1,1 +1,1 @@
-initialization: Fatal error: Solver.process: missing main function
+Fatal error: Solver.process: missing main function

@@ -80,25 +80,23 @@ let diff postfix x1 x2 =
   in
     diff x1 x2
 
+let process () =
+  let prog1 = Newspeak.read !input1 in
+  let prog2 = Newspeak.read !input2 in
+  let glbs1 = hashtbl_to_list prog1.globals in
+  let glbs1 = List.map filter_global glbs1 in
+  let glbs1 = List.sort compare_key glbs1 in
+  let glbs2 = hashtbl_to_list prog2.globals in
+  let glbs2 = List.map filter_global glbs2 in
+  let glbs2 = List.sort compare_key glbs2 in
+  let fundecs1 = hashtbl_to_list prog1.fundecs in
+  let fundecs1 = List.map remove_location fundecs1 in
+  let fundecs1 = List.sort compare_key fundecs1 in
+  let fundecs2 = hashtbl_to_list prog2.fundecs in
+  let fundecs2 = List.map remove_location fundecs2 in
+  let fundecs2 = List.sort compare_key fundecs2 in
+    diff "" glbs1 glbs2;
+    diff "()" fundecs1 fundecs2
+
 let _ = 
-  try 
-    Arg.parse speclist anon_fun usage_msg;
-    let prog1 = Newspeak.read !input1 in
-    let prog2 = Newspeak.read !input2 in
-    let glbs1 = hashtbl_to_list prog1.globals in
-    let glbs1 = List.map filter_global glbs1 in
-    let glbs1 = List.sort compare_key glbs1 in
-    let glbs2 = hashtbl_to_list prog2.globals in
-    let glbs2 = List.map filter_global glbs2 in
-    let glbs2 = List.sort compare_key glbs2 in
-    let fundecs1 = hashtbl_to_list prog1.fundecs in
-    let fundecs1 = List.map remove_location fundecs1 in
-    let fundecs1 = List.sort compare_key fundecs1 in
-    let fundecs2 = hashtbl_to_list prog2.fundecs in
-    let fundecs2 = List.map remove_location fundecs2 in
-    let fundecs2 = List.sort compare_key fundecs2 in
-      diff "" glbs1 glbs2;
-      diff "()" fundecs1 fundecs2
-  with Invalid_argument s ->
-    print_endline ("Fatal error: "^s);
-    exit 0
+  StandardMain.launch speclist anon_fun usage_msg process
