@@ -217,9 +217,9 @@ and generate_body body = List.map generate_stmt body
 
 let generate_fundecs fundecs =
   let funspecs = Hashtbl.create 100 in
-  let add_fundec (name, fundec) =
-    let body = generate_body fundec.body in
-    let ftyp = generate_ftyp fundec.function_type in
+  let add_fundec (name, declaration) =
+    let body = generate_body declaration.body in
+    let ftyp = generate_ftyp declaration.function_type in
     let ret_t = 
       match snd ftyp with
 	  [] -> []
@@ -234,8 +234,9 @@ let generate_fundecs fundecs =
       Hashtbl.add funspecs name
         {
           N.rets = ret_t;
-          N.args = List.combine fundec.arg_identifiers (fst ftyp);
+          N.args = List.combine declaration.arg_identifiers (fst ftyp);
           N.body = body;
+	  N.position = declaration.position;
         };
       Npkcontext.print_debug ("Function linked: "^name)
   in

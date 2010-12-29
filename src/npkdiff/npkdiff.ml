@@ -54,6 +54,9 @@ let hashtbl_to_list tbl =
 
 let compare_key (x, _) (y, _) = compare x y
 
+let remove_location (k, declaration) = 
+  (k, (declaration.args, declaration.rets, declaration.body))
+
 let diff postfix x1 x2 =
   let rec diff x1 x2 = 
     match (x1, x2) with
@@ -89,8 +92,10 @@ let _ =
     let glbs2 = List.map filter_global glbs2 in
     let glbs2 = List.sort compare_key glbs2 in
     let fundecs1 = hashtbl_to_list prog1.fundecs in
+    let fundecs1 = List.map remove_location fundecs1 in
     let fundecs1 = List.sort compare_key fundecs1 in
     let fundecs2 = hashtbl_to_list prog2.fundecs in
+    let fundecs2 = List.map remove_location fundecs2 in
     let fundecs2 = List.sort compare_key fundecs2 in
       diff "" glbs1 glbs2;
       diff "()" fundecs1 fundecs2
