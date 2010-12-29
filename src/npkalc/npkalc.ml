@@ -1,38 +1,54 @@
+let command_table = Hashtbl.create 10
+
+let print_info message = print_endline ("  "^message)
+
 let input = ref ""
 
+(* TODO: add options --file and -f to have the commands read from a file *)
 let speclist = []
 
 let anon_fun filename = input := filename
 
 let usage_msg = ""
 
-let create_command_table () =
-  let commands = Hashtbl.create 10 in
-    Hashtbl.add commands "help" (fun () -> print_endline "");
-    Hashtbl.add commands "exit" (fun () -> raise Exit);
-    commands
+let execute_help _ =
+  print_info "List of available commands:";
+  Hashtbl.iter (fun command _ -> print_info ("- "^command)) command_table 
 
+let execute_exit _ = raise Exit
+
+let execute_call _ = ()
+
+let fill_command_table () =
+  Hashtbl.add command_table "help" execute_help;
+  Hashtbl.add command_table "exit" execute_exit;
+  Hashtbl.add command_table "call" execute_call
 
 let process () = 
   if !input = "" then StandardMain.report_missing_file ();
 
-  let commands = create_command_table () in
-  
-  print_endline "  Welcome to the Newspeak calculator.";
-  print_endline "  Type help for a list of commands.";
+  fill_command_table ();
+
+  print_info "  Welcome to the Newspeak calculator.";
+  print_info "  Type help for a list of commands.";
   
   try
     while true do
       print_string "$ ";
-      let input = read_line () in
-	try 
-	  let execute = Hashtbl.find commands input in
-	    execute ()
-	with Not_found -> ()
+      let line = read_line () in
+      let line = Str.split (Str.regexp "[ \t]+") line in
+	match line with
+	    command::arguments -> begin
+	      try 
+		let execute = Hashtbl.find command_table command in
+		  execute arguments
+	      with Not_found -> ()
+	    end
+	  | [] -> ()
     done
   with Exit -> 
-    print_endline "Thank you for using the Newspeak calculator.";
-    print_endline "Have a nice day..."
+    print_info "Thank you for using the Newspeak calculator.";
+    print_info "Have a nice day..."
 
 let _ =
   StandardMain.launch speclist anon_fun usage_msg process
