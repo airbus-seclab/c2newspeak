@@ -19,6 +19,8 @@ let execute_exit _ = raise Exit
 
 let execute_call _ = ()
 
+(* TODO: add command where global which shows all places where a global is 
+   being used *)
 let fill_command_table () =
   Hashtbl.add command_table "help" execute_help;
   Hashtbl.add command_table "exit" execute_exit;
@@ -27,28 +29,32 @@ let fill_command_table () =
 let process () = 
   if !input = "" then StandardMain.report_missing_file ();
 
-  fill_command_table ();
+  print_info "Welcome to the Newspeak calculator.";
+  print_info ("Reading Newspeak file "^(!input)^"...");
+  let _ = Newspeak.read !input in
 
-  print_info "  Welcome to the Newspeak calculator.";
-  print_info "  Type help for a list of commands.";
-  
-  try
-    while true do
-      print_string "$ ";
-      let line = read_line () in
-      let line = Str.split (Str.regexp "[ \t]+") line in
-	match line with
-	    command::arguments -> begin
-	      try 
-		let execute = Hashtbl.find command_table command in
-		  execute arguments
-	      with Not_found -> ()
-	    end
-	  | [] -> ()
-    done
-  with Exit -> 
-    print_info "Thank you for using the Newspeak calculator.";
-    print_info "Have a nice day..."
-
+    fill_command_table ();
+    
+    print_info "Type help for a list of commands.";
+    
+    try
+      while true do
+	print_string "$ ";
+	let line = read_line () in
+	let line = Str.split (Str.regexp "[ \t]+") line in
+	  match line with
+	      command::arguments -> begin
+		try 
+		  let execute = Hashtbl.find command_table command in
+		    execute arguments
+		with Not_found -> ()
+	      end
+	    | [] -> ()
+      done
+    with Exit -> 
+      print_info "Thank you for using the Newspeak calculator.";
+      print_info "Have a nice day..."
+	
 let _ =
   StandardMain.launch speclist anon_fun usage_msg process
+    
