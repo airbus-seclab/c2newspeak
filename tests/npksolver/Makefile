@@ -25,8 +25,7 @@
 #
 
 COMMAND=$(C2NEWSPEAK) --reject-missing-fundecl \
-											`[ -e $*.in ] && cat $*.in` \
-											-o $*.npk $*.c; \
+	`[ -e $*.in ] && cat $*.in` -o $*.npk $*.c > /dev/null 2>&1; \
 	 $(NPKSOLVER) $*.npk
 PREREQ=%.c $(NPKSOLVER)
 DIFF=diff -u $*.spec $*.bak
