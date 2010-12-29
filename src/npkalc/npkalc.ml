@@ -35,12 +35,17 @@ let print_info message = print_endline ("  "^message)
 
 let input = ref ""
 
-(* TODO: add options --file and -f to have the commands read from a file *)
-let speclist = []
+let config_file = ref ""
+
+let set_config_file x = config_file := x
+
+let speclist = 
+  [("--file", Arg.String set_config_file, "");
+   ("-f", Arg.String set_config_file, "input from file")]
 
 let anon_fun filename = input := filename
 
-let usage_msg = ""
+let usage_msg = "npkalc options <file.npk>"
 
 let add_call f g =
   try
@@ -85,10 +90,10 @@ let print_path p =
     match p with
       | [] -> ()
       | f::tl -> 
-	  print_info f;
+	  print_info (margin^f);
 	  print_path (margin^"  ") tl
   in
-    print_path "  " p
+    print_path "" p
 
 let build_paths_from f =
   let rec build f =
@@ -102,7 +107,7 @@ let build_paths_from f =
   in
     build f
 
-let execute_exit _ = raise Exit
+let execute_exit _ = raise End_of_file
 
 let execute_call arguments = 
   match arguments with
@@ -131,6 +136,19 @@ let process () =
     fill_command_table ();
     
     print_info "Type help for a list of commands.";
+
+    let read_line =
+      if !config_file = "" then read_line
+      else begin
+	let input_channel = open_in !config_file in
+	let read_line () = 
+	  let line = input_line input_channel in
+	    print_endline line;
+	    line
+	in
+	  read_line
+      end
+    in
     
     try
       while true do
@@ -146,7 +164,7 @@ let process () =
 	      end
 	    | [] -> ()
       done
-    with Exit -> 
+    with End_of_file -> 
       print_info "Thank you for using the Newspeak calculator.";
       print_info "Have a nice day..."
 	

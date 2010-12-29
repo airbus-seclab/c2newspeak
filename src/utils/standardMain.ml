@@ -24,6 +24,7 @@
 *)
 
 let report_missing_file () =
+(* TODO: rather than giving this advice => should directly dump help *)
   invalid_arg ("no file specified. Try "^Sys.argv.(0)^" --help")
 
 let launch speclist anon_fun usage_msg f =
