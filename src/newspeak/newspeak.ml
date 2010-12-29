@@ -97,6 +97,7 @@ and fundec = {
   args : (string * typ) list;
   rets : (string * typ) list;
   body : blk;
+(*  position: location;         (** position of the start of the function *)*)
 }
 
 and globals = (string, gdecl) Hashtbl.t
@@ -1066,6 +1067,7 @@ and build_fundec builder fd =
     { args = args_t;
       rets = ret_t;
       body = build_blk builder fd.body;
+(*      position = fd.position;*)
     }
 
 and build_typ builder t =

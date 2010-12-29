@@ -234,9 +234,9 @@ let generate_fundecs fundecs =
       Hashtbl.add funspecs name
         {
           N.rets = ret_t;
-          N.args = List.combine args (fst ftyp) ;
-          N.body = body ;
-        } ;
+          N.args = List.combine args (fst ftyp);
+          N.body = body;
+        };
       Npkcontext.print_debug ("Function linked: "^name)
   in
     List.iter add_fundec fundecs;
@@ -245,6 +245,7 @@ let generate_fundecs fundecs =
 (* TODO: optimization, this is probably not efficient to read the whole
    program and then again a second time!!! reprogram Npkil.read and write *)
 let merge npkos =
+  let src_lang = ref N.C in
   let glb_decls = Hashtbl.create 100 in
   let init = ref [] in
   let fundefs = ref [] in
@@ -305,18 +306,12 @@ let merge npkos =
       Hashtbl.iter add_global prog.globals;
       init := prog.init@(!init);
       Hashtbl.iter add_fundef prog.fundecs;
-      prog.src_lang
+      src_lang := prog.src_lang
   in
-    match npkos with
-        [] -> Npkcontext.report_error "Linker.merge" "empty file list"
-      | hd::tl -> 
-          let src_lang = merge hd in
-          let check_merge x = 
-            let _ = merge x in
-              ()
-          in
-            List.iter check_merge tl;
-            (glb_decls, !fundefs, src_lang, !init)
+    if (npkos = []) 
+    then Npkcontext.report_error "Linker.merge" "empty file list";
+    List.iter merge npkos;
+    (glb_decls, !fundefs, !src_lang, !init)
 
 let reject_backward_gotos prog =
   let defined_lbls = ref [] in
