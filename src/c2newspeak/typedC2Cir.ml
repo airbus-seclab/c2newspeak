@@ -1211,12 +1211,11 @@ let translate fname prog =
       | Bitfield (k, _) -> align_of (Int k)
       | _ -> size_of t
 
-(* TODO: use this function at all points where translate_glb_init is called
-   + simplify code of global declaration!!! *)
+(* TODO: simplify code of global declaration!!! *)
   and declare_global extern x name loc t init =
-    update_global x name loc (t, Npkil.Extern);
+    update_global x name loc (t, K.Extern);
     let (t, init) = translate_glb_init loc name t init in
-    let init = if extern then Npkil.Extern else Npkil.Declared init in
+    let init = if extern then K.Extern else K.Declared init in
       update_global x name loc (t, init)
   in
 
