@@ -33,7 +33,7 @@ open Newspeak
 type t = {
   globals: (string, ginfo) Hashtbl.t;
   init: blk;
-  fundecs: (fid, funinfo) Hashtbl.t;
+  fundecs: (fid, fundec) Hashtbl.t;
   src_lang: src_lang
 }
 
@@ -47,7 +47,7 @@ and storage =
 
 and initialized = bool
 
-and funinfo = (string list * string list * ftyp * blk)
+and fundec = (string list * string list * ftyp * blk)
 
 and stmtkind =
     Set of (lval * exp * typ)
