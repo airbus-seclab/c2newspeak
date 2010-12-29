@@ -306,7 +306,15 @@ let translate src_lang prog =
     let body = Cir.normalize body in
     let body = translate_blk body in
     let ft = translate_ftyp (args, t) in
-      Hashtbl.add fundefs f (ret_id::[], args_id, ft, body)
+    let fundec = 
+      {
+	K.ret_identifiers = ret_id::[];
+	K.arg_identifiers = args_id;
+	K.function_type = ft;
+	K.body = body;
+      }
+    in
+      Hashtbl.add fundefs f fundec
   in
 
   let flag_glb x = 
@@ -314,8 +322,8 @@ let translate src_lang prog =
       let (t, loc, init, _) = Hashtbl.find glbdecls x in
  	Hashtbl.replace glbdecls x (t, loc, init, true)
     with Not_found -> 
-      Npkcontext.report_error "Cir2npkil.flag_glb" ("illegal use of " ^ x ^ " (undefined type)" )
-      
+      Npkcontext.report_error "Cir2npkil.flag_glb" 
+	("illegal use of " ^ x ^ " (undefined type)")
   in
 (* TODO: remove normalize!!! *) 
 (* TODO: this phase is stack memory intensive!! not nice!!! *)

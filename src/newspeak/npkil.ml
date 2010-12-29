@@ -47,7 +47,12 @@ and storage =
 
 and initialized = bool
 
-and fundec = (string list * string list * ftyp * blk)
+and fundec =  {
+  arg_identifiers: string list;
+  ret_identifiers: string list;
+  function_type: ftyp;
+  body: blk;
+}
 
 and stmtkind =
     Set of (lval * exp * typ)
@@ -312,8 +317,8 @@ let dump_npko prog =
       print_endline (str^";")
   in
 
-  let print_fundef n (_, _, _, pbody) =
-    dump_fundec n pbody;
+  let print_fundef n fundec =
+    dump_fundec n fundec.body;
     print_newline ()
   in
     print_usedglbs "Global used" prog.globals;

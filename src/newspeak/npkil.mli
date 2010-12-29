@@ -58,7 +58,12 @@ and storage =
 and initialized = bool
 
 (* TODO: code cleanup, remove everything unecessary for link *)
-and fundec = (string list * string list * ftyp * blk)
+and fundec = {
+  arg_identifiers: string list;
+  ret_identifiers: string list;
+  function_type: ftyp;
+  body: blk;
+}
 
 and typ = 
     Scalar of Newspeak.scalar_t
