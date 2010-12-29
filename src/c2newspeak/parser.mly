@@ -1056,7 +1056,7 @@ attribute_name:
       Npkcontext.report_warning "Parser.attribute" 
       ("ignoring attribute alias")
     end 
-    else if ($1 <> "__warning__") && ($1 <> "__error__") && ($1 <> "__section__")
+    else if ($1 <> "__warning__") && ($1 <> "__error__") && ($1 <> "__section__") && ($1 <> "section")
     then raise Parsing.Parse_error;
     []
   }
