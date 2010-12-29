@@ -1029,10 +1029,12 @@ attribute_name:
   IDENTIFIER                               { 
     begin match $1 with
 	"aligned" | "__aligned__" | "__cdecl__" | "noreturn" | "__noreturn__"
-      | "__always_inline__" | "__nothrow__" | "__pure__" | "__gnu_inline__"
+      | "__always_inline__" | "always_inline"  | "__nothrow__" 
+      | "__pure__" | "pure" | "__gnu_inline__"
       | "__deprecated__" | "deprecated" | "__malloc__" 
-      | "__warn_unused_result__" | "__unused__" | "unused" 
-      | "__artificial__" -> ()
+      | "__warn_unused_result__" | "warn_unused_result"
+      | "__unused__" | "unused" 
+      | "__artificial__" | "__cold__" | "cold" -> ()
       | "dllimport" -> 
 	  Npkcontext.report_warning "Parser.attribute" 
 	    "ignoring attribute dllimport"
@@ -1053,7 +1055,8 @@ attribute_name:
     if ($1 = "alias") then begin
       Npkcontext.report_warning "Parser.attribute" 
       ("ignoring attribute alias")
-    end else if ($1 <> "__warning__") && ($1 <> "__error__")
+    end 
+    else if ($1 <> "__warning__") && ($1 <> "__error__") && ($1 <> "__section__") && ($1 <> "section")
     then raise Parsing.Parse_error;
     []
   }
