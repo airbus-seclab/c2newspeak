@@ -938,7 +938,7 @@ type_specifier:
 | ENUM IDENTIFIER                        { Enum None }
 | ENUM IDENTIFIER 
   LBRACE enum_list RBRACE                { Enum (Some $4) }
-
+| TYPEOF LPAREN type_specifier RPAREN    { $3 }
 | TYPEOF LPAREN IDENTIFIER RPAREN        { Typeof $3 }
 | VA_LIST                                { Va_arg }
 ;;
