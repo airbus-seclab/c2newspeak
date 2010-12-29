@@ -121,6 +121,13 @@ and check_exp i =
     | C.BlkExp (_, e, _) -> check_exp e    
     | _ -> ()
 
+let build_initialization_set v scalars =
+  let loc = Npkcontext.get_loc () in
+  let build_set (o, t, e) =
+    let lv = C.Shift (v, C.exp_of_int o) in
+      (C.Set (lv, t, e), loc)
+  in
+    List.map build_set scalars
 
 (*
    Sets scope of variables so that no goto escapes a variable declaration
@@ -371,20 +378,14 @@ let translate fname prog =
     in
     let t = translate 0 t x in
       (List.rev !res, t)
-  
-  and translate_glb_init loc name t x =
+
+  and translate_glb_init _ name t x =
     match x with
 	None -> (t, false)
       | Some i -> 
 	  let (i, t) = translate_init t i in
-	  let v = C.Global name in
-(* TODO: factor this with the translation of the local variable init too! *)
-	  let translate_scalar (o, t, e) = 
-	    let lv = C.Shift (v, C.exp_of_int o) in
-	      init := (C.Set (lv, t, e), loc)::!init
-	  in
-	    (* TODO: try to avoid this List.rev! *)
-	    List.iter translate_scalar (List.rev i);
+	  let i = build_initialization_set (C.Global name) i in
+	    init := i@(!init);
 	    (t, true)
 
 (* TODO: maybe should put this code in csyntax2CoreC??? *)
@@ -827,16 +828,11 @@ let translate fname prog =
 	    None -> ([], d.t)
 	  | Some init -> translate_init d.t init
       in
-      let v = C.Local x in
-      let build_set (o, t, e) =
-	let lv = C.Shift (v, C.exp_of_int o) in
-	  (C.Set (lv, t, e), loc)
-      in
-      let init = List.map build_set init in
+      let init = build_initialization_set (C.Local x) init in
       let t' = translate_typ t in
 	check_array_type_length t';
-      let decl = (C.Decl (t', x), loc) in
-	decl::init
+	let decl = (C.Decl (t', x), loc) in
+	  decl::init
     end
 
   (* type and translate blk *)
