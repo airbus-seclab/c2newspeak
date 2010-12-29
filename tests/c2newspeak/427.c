@@ -24,3 +24,4 @@
 */
 
 extern int f(void) __attribute__ ((__warn_unused_result__));
+extern int g(void) __attribute__ ((warn_unused_result));
