@@ -43,12 +43,6 @@ module Nat = Newspeak.Nat
    TODO: should remove Cir
 *)
 
-let new_id =
-  let c = ref 0 in
-  fun _ ->
-    incr c;
-    !c
-
 let ret_lbl = 0
 let cnt_lbl = 1
 let brk_lbl = 2
@@ -395,12 +389,15 @@ let translate fname prog =
 
 (* TODO: maybe should put this code in csyntax2CoreC??? *)
   and add_glb_cstr str =
-(* TODO: it's strange to need fname here! 
-   should maybe be factored with code in csyntax2TypedC
-*)
-    let name = 
-      Temps.to_string (new_id ()) (Temps.Cstr (fname, String.escaped str)) 
-    in
+    (* TODO: fname is required here, otherwise when linking two different 
+       files with the same constant string, there will be a clash of names
+       
+       maybe in order to avoid this problem
+       => should think about keeping the strings in Cir?
+       => or should accept multiple occurences of the same variable in the link
+       phase when they are the same? (does not feel right to me)
+    *)
+    let name = Temps.to_string 0 (Temps.Cstr (fname, String.escaped str)) in
     let t = Array (char_typ, Some (exp_of_int ((String.length str) + 1))) in
       if not (Hashtbl.mem used_globals name) then begin
 	let loc = Npkcontext.get_loc () in
@@ -412,7 +409,6 @@ let translate fname prog =
     match x with
 	Local x -> C.Local x
       | Global x -> C.Global x
-
       | Field ((lv, t), f) -> 
 	  let lv = translate_lv lv in
 	  let (r, _, _) = translate_comp (TypedC.comp_of_typ t) in
