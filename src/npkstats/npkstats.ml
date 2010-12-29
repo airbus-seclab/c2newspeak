@@ -114,26 +114,6 @@ let string_of_counters counters b =
   in
     out, xml
 
-
-(*
-let collect filter funstats =
-  let stats = ref [] in
-  let get_data _ counters = stats := (filter counters)::(!stats) in
-    Hashtbl.iter get_data funstats;
-    List.sort compare !stats
-
-let plot f stats fname =
-    let cout = open_out fname in
-    let x = ref 0 in
-    let y = ref 0 in
-    let dump v = 
-      f x y v;
-      output_string cout ((string_of_int !x)^", "^(string_of_int !y)^"\n")
-    in
-      List.iter dump stats;
-      close_out cout
-*)
-
 class collector ptr_sz fun_to_count =
 object (this)
   inherit Lowspeak.visitor
@@ -222,23 +202,6 @@ object (this)
     this#incr_bytes ((N.size_of ptr_sz t) / 8);
     true
 
-(*
-  method gen filter fname =
-    let stats = collect filter funstats in
-    let f x y v = x := !x + 1; y := v in
-      plot f stats fname
-
-  method gen_sz filter fname =
-    let filter counters = 
-      let v = filter counters in
-      let density = (float_of_int v) /. (float_of_int counters.instrs) in
-        (density, counters.instrs, v)
-    in
-    let stats = collect filter funstats in
-    let f x y (_, sz, n) = x := !x + sz; y := !y + n in
-      plot f stats fname
-*)
-
   method gen_graphs fname =
     let cout = open_out (fname^".csv") in
     let cnt = ref 0 in
@@ -324,12 +287,14 @@ object (this)
         fun (out, xml) e ->
           let o, x = to_string e in
             out^o, xml^x) (out, "") l in
-      let out = out ^ "Number of occurences of a given pair (array type, size):\n" in
+      let out = 
+	out ^ "Number of occurences of a given pair (array type, size):\n" 
+      in
         List.fold_left (
           fun (out, xml) e ->
             let o, x = array_to_string e in
               out^o, xml^x) (out, xml) ltab
-       in 
+    in
     let s1 = "Number of global variables" in
     let n1 = string_of_int globals in
     let s2 = "Total size of global variables (bytes)" in
@@ -385,51 +350,51 @@ let anon_fun file =
 
 let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file.npk"
 
-let _ = 
-  try
-    Arg.parse speclist anon_fun usage_msg;
-    if !input = "" 
-    then invalid_arg ("no file specified. Try "^Sys.argv.(0)^" --help");
-
-    let prog = Npk2lpk.translate (Newspeak.read !input) in
-    let collector = new collector prog.ptr_sz !fun_to_count in
-    let max_stats = Maxcount.count !debug prog in
-      Lowspeak.visit (collector :> Lowspeak.visitor) prog;
-      let cout = 
-        if !xout <> "" then begin
-          let dtd = "<!-- <!DOCTYPE npkstats [\n" ^
-            "<! ELEMENT npkstats (stats global void array) ?>\n" ^ 
-            "<! ELEMENT stats ?>\n" ^
-            "<! ELEMENT global ?>\n" ^
-            "<! ATTLIST stats type (#PCDATA) #REQUIRED "^
-            "class (#PCDATA) #REQUIRED "^
-            "val (#PCDATA) #REQUIRED ?>\n" ^
-            "<! ATTLIST global type (#PCDATA) #REQUIRED "^
-            "nb (#PCDATA #REQUIRED ?>\n" ^
-            "<! ATTLIST array type (#PCDATA) #REQUIRED "^
-            "nb (#PCDATA #REQUIRED ?>\n" ^
-            "<! ATTLIST void class (#PCDATA) #REQUIRED "^
-            "val (#PCDATA) #REQUIRED >\n" ^
-            "]> -->\n" in
-          let header = "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n" in
-          let cout = open_out_gen [Open_wronly;Open_binary;Open_creat] 0o644 !xout in
-            output_string cout (header^dtd^"<npkstats>\n");
-            Some cout
-        end
-        else None
-      in
-        print_endline (collector#to_string !verbose cout);
-        Maxcount.print max_stats cout;
-        begin
-          match cout with 
-              None -> ()
-            | Some cout ->
-                  output_string cout "</npkstats>\n";
-                  close_out cout
-        end;
+let process () =
+  if !input = "" 
+  then StandardMain.report_missing_file ();
+  
+  let prog = Npk2lpk.translate (Newspeak.read !input) in
+  let collector = new collector prog.ptr_sz !fun_to_count in
+  let max_stats = Maxcount.count !debug prog in
+    Lowspeak.visit (collector :> Lowspeak.visitor) prog;
+    let cout = 
+      if !xout <> "" then begin
+        let dtd = "<!-- <!DOCTYPE npkstats [\n" ^
+          "<! ELEMENT npkstats (stats global void array) ?>\n" ^ 
+          "<! ELEMENT stats ?>\n" ^
+          "<! ELEMENT global ?>\n" ^
+          "<! ATTLIST stats type (#PCDATA) #REQUIRED "^
+          "class (#PCDATA) #REQUIRED "^
+          "val (#PCDATA) #REQUIRED ?>\n" ^
+          "<! ATTLIST global type (#PCDATA) #REQUIRED "^
+          "nb (#PCDATA #REQUIRED ?>\n" ^
+          "<! ATTLIST array type (#PCDATA) #REQUIRED "^
+          "nb (#PCDATA #REQUIRED ?>\n" ^
+          "<! ATTLIST void class (#PCDATA) #REQUIRED "^
+          "val (#PCDATA) #REQUIRED >\n" ^
+          "]> -->\n" in
+        let header = "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n" in
+        let cout = 
+	  open_out_gen [Open_wronly;Open_binary;Open_creat] 0o644 !xout 
+	in
+          output_string cout (header^dtd^"<npkstats>\n");
+          Some cout
+      end
+      else None
+    in
+      print_endline (collector#to_string !verbose cout);
+      Maxcount.print max_stats cout;
+      begin
+        match cout with 
+            None -> ()
+          | Some cout ->
+              output_string cout "</npkstats>\n";
+              close_out cout
+      end;
       if !graphs then collector#gen_graphs !output;
       if !funstats then Funstats.collect prog
-  with Invalid_argument s -> 
-    print_endline ("Fatal error: "^s);
-    exit 0
+
+let _ = 
+  StandardMain.launch speclist anon_fun usage_msg process
       

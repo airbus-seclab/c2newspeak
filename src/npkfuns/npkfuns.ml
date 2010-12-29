@@ -42,20 +42,13 @@ let anon_fun file =
 
 let usage_msg = exec_name^" [options] [-help|--help] file.npk"
 
-let _ =
-  try
-    Arg.parse speclist anon_fun usage_msg;
-    if !input = "" 
-    then invalid_arg ("no file specified. Try "^exec_name^" --help");
+let process () =
+    if !input = "" then StandardMain.report_missing_file ();
 
     let prog = Npk2lpk.translate (Newspeak.read !input) in
     let glbs = GlbCollect.process false prog in
       if !stats then GlbCollect.print_stats glbs
       else GlbCollect.print glbs
-(*
-    let funs = FunCollect.process prog in
-      FunCollect.print funs
-*)
-  with Invalid_argument s -> 
-    print_endline ("Fatal error: "^s);
-    exit 0
+
+let _ =
+  StandardMain.launch speclist anon_fun usage_msg process

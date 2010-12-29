@@ -51,17 +51,13 @@ let anon_fun file =
 
 let usage_msg = exec_name^" [options] [-help|--help] file.npk"
 
+let process () = 
+  if !input = "" then StandardMain.report_missing_file ();
+  
+  let prog = Npk2lpk.translate (Newspeak.read !input) in
+  let glb_tbl = GlbCollect.process true prog in
+  let results = Solver.process glb_tbl prog in
+    if !stats then Stats.print prog results
+
 let _ =
-  try
-    Arg.parse speclist anon_fun usage_msg;
-    if !input = "" 
-    then invalid_arg ("no file specified. Try "^exec_name^" --help");
-
-    let prog = Npk2lpk.translate (Newspeak.read !input) in
-    let glb_tbl = GlbCollect.process true prog in
-    let results = Solver.process glb_tbl prog in
-      if !stats then Stats.print prog results
-
-  with Invalid_argument s -> 
-    Context.print_err ("Fatal error: "^s);
-    exit 0
+  StandardMain.launch speclist anon_fun usage_msg process

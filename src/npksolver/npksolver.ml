@@ -129,4 +129,5 @@ let main args =
   Options.parse_cmdline ops handle_file args
 
 let _ =
+(* TODO: try to use StandardMain instead of adhoc argument treatment *)
   main Sys.argv

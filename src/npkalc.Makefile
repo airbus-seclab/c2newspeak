@@ -25,8 +25,8 @@
 #
 
 TARGET=npkalc
-DIRS=newspeak/ npkalc/
-FILES=npkalc/npkalc
+DIRS=newspeak/ utils/ npkalc/
+FILES=utils/standardMain npkalc/npkalc
 LIBX=nums.cmxa str.cmxa
 
 include common.Makefile

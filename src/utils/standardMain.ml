@@ -1,8 +1,8 @@
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2009  Charles Hymans
- 
+  Copyright (C) 2007  Charles Hymans, Olivier Levillain
+  
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
@@ -23,25 +23,13 @@
   email: charles.hymans@penjili.org
 *)
 
-let input = ref ""
+let report_missing_file () =
+  invalid_arg ("no file specified. Try "^Sys.argv.(0)^" --help")
 
-let usage_msg = "npkflow [options] [-help|--help] file.npk"
-
-let speclist = 
-  [
-  ]
-
-let anon_fun file =
-  if !input <> "" 
-  then invalid_arg "You can only analyse one newspeak file at a time";
-  input := file
-
-let process () =
-  if !input = "" then StandardMain.report_missing_file ();
-  
-  let prog = Npk2lpk.translate (Newspeak.read !input) in
-  let eqs = Factory.build prog in
-    Solver.run eqs
-
-let _ = 
-  StandardMain.launch speclist anon_fun usage_msg process
+let launch speclist anon_fun usage_msg f =
+  try 
+    Arg.parse speclist anon_fun usage_msg;
+    f()
+  with Invalid_argument s -> 
+    print_endline ("Fatal error: "^s);
+    exit 0

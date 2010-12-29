@@ -25,8 +25,9 @@
 #
 
 TARGET=npkflow
-DIRS=newspeak/ npkflow/
-FILES=version newspeak/temps newspeak/config newspeak/eBigInt newspeak/newspeak newspeak/lowspeak \
+DIRS=newspeak/ utils/ npkflow/
+FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
+      newspeak/newspeak newspeak/lowspeak utils/standardMain \
       newspeak/npkcontext newspeak/npk2lpk \
       npkflow/equations npkflow/var npkflow/factory \
       npkflow/ptrDom \
