@@ -746,9 +746,17 @@ let process (fname, globals) =
     current_fun := f;
     add_formals ft;
     let body = translate_blk body in
+    let declaration = 
+      {
+	C.function_type = ft;
+	C.body = body;
+	C.position = loc;
+	C.static = static;
+      } 
+    in
       remove_formals ft;
       current_fun := "";
-      (f', (ft, static, body, loc))
+      (f', declaration)
   in
 
   

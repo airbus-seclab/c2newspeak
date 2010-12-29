@@ -1235,19 +1235,19 @@ let translate fname prog =
       update_global x name loc (t, init)
   in
 
-  let translate_fundecl (f, (ft, _, body, loc)) =
-    Npkcontext.set_loc loc;
+  let translate_fundecl (f, declaration) =
+    Npkcontext.set_loc declaration.position;
     current_fun := f;
     let ft = 
-      match ft with
+      match declaration.function_type with
 	  (Some args_t, ret_t) -> (args_t, ret_t)
 	| (None, _) -> 
 	    Npkcontext.report_error "Firstpass.translate_global" 
 	      "unreachable code"
     in
     let formalids = add_formals ft in
-    let body = translate_blk body in
-    let body = (C.Block (body, Some ret_lbl), loc)::[] in
+    let body = translate_blk declaration.body in
+    let body = (C.Block (body, Some ret_lbl), declaration.position)::[] in
       add_fundef f formalids body (translate_ftyp ft);
       current_fun := "";
       Hashtbl.clear lbl_tbl;
