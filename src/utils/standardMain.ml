@@ -23,6 +23,9 @@
   email: charles.hymans@penjili.org
 *)
 
+let report_missing_file () =
+  invalid_arg ("no file specified. Try "^Sys.argv.(0)^" --help")
+
 let launch speclist anon_fun usage_msg f =
   try 
     Arg.parse speclist anon_fun usage_msg;

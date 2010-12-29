@@ -30,3 +30,5 @@ open Arg
    launch *)
 val launch: 
   (key * spec * doc) list -> anon_fun -> usage_msg -> (unit -> unit) -> unit
+
+val report_missing_file: unit -> unit
