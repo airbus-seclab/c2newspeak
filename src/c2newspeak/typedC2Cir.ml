@@ -180,17 +180,6 @@ let translate fname prog =
       Hashtbl.replace used_globals name info
   in
 
-  let add_fundef f (_, args) body t = 
-    let declaration = 
-      {
-	C.arg_identifiers = args;
-	C.function_type = t;
-	C.body = body;
-      }
-    in
-      Hashtbl.replace fundefs f declaration
-  in
-
   let translate_lbl lbl =
     try Hashtbl.find lbl_tbl lbl
     with Not_found -> 
@@ -1245,10 +1234,19 @@ let translate fname prog =
 	    Npkcontext.report_error "Firstpass.translate_global" 
 	      "unreachable code"
     in
-    let formalids = add_formals ft in
+    let (_, args) = add_formals ft in
     let body = translate_blk declaration.body in
     let body = (C.Block (body, Some ret_lbl), declaration.position)::[] in
-      add_fundef f formalids body (translate_ftyp ft);
+    let ftyp = translate_ftyp ft in
+    let declaration = 
+      {
+	C.arg_identifiers = args;
+	C.function_type = ftyp;
+	C.body = body;
+	C.position = declaration.position;
+      }
+    in
+      Hashtbl.replace fundefs f declaration;
       current_fun := "";
       Hashtbl.clear lbl_tbl;
       lbl_cnt := default_lbl

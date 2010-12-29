@@ -171,7 +171,7 @@ let translate compil_unit =
       | Power , C.Scalar(N.Int _) -> begin
 	  match c2 with
 	      C.Const (C.CInt n) when
-		(compare (Newspeak.Nat.to_int n) 2 = 0) -> 
+		(compare (Nat.to_int n) 2 = 0) -> 
 		  C.Binop(N.MultI, c1, c1)
 	    | _ -> Npkcontext.report_error 
 		"Firstpass.translate_binop"
@@ -181,7 +181,7 @@ let translate compil_unit =
       | Power , C.Scalar(N.Float sz) -> begin
 	  match c2 with
 	      C.Const (C.CInt n) when
-		(compare (Newspeak.Nat.to_int n) 2 = 0) -> 
+		(compare (Nat.to_int n) 2 = 0) -> 
 		  C.Binop(N.MultF sz, c1, c1)
 	    | _ -> Npkcontext.report_error 
 		"Firstpass.translate_binop"
@@ -242,13 +242,13 @@ let translate compil_unit =
 		(* FIXME rebase and check exp *)
 		let base = T.extract_base ty in
 		let exp' = T.check_exp ty exp in
-		let rebased_exp = if (base = Newspeak.Nat.zero) then exp'
+		let rebased_exp = if (base = Nat.zero) then exp'
 		else C.Binop ( N.MinusI
 				 , exp'
 				   , (translate_nat base)
 			     )
 		in
-		  if old_off = translate_nat (Newspeak.Nat.zero) then rebased_exp
+		  if old_off = translate_nat (Nat.zero) then rebased_exp
 		  else
 		    C.Binop ( N.PlusI
 				, rebased_exp
@@ -258,7 +258,7 @@ let translate compil_unit =
 					   )
 			    )
 	    ) 
-	      (translate_nat Newspeak.Nat.zero) tyexl 
+	      (translate_nat Nat.zero) tyexl 
 	    in
             let offset = C.Binop( N.MultI
                                     , exp_offset
@@ -444,7 +444,9 @@ let translate compil_unit =
       {
 	C.arg_identifiers = args_ids;
 	C.function_type = ftyp;
-	C.body = body
+	C.body = body;
+	(* TODO: put the position of the function start *)
+	C.position = N.unknown_loc
       }
     in
       Hashtbl.replace fun_decls (translate_name (mangle_sname subprogspec.name))

@@ -58,6 +58,7 @@ and fundec = {
   arg_identifiers: string list;
   function_type: ftyp;
   body: blk;
+  position: location;
 }
 
 and typ =
