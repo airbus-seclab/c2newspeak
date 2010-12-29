@@ -76,9 +76,27 @@ let execute_help _ =
   print_info "List of available commands:";
   Hashtbl.iter (fun command _ -> print_info ("- "^command)) command_table 
 
+type call_tree = Tree of (string * call_tree list)
+    
+let print_tree t =
+  let rec print_tree margin t =
+    match t with
+	Tree (f, subtrees) ->
+	  print_info f;
+	  List.iter (print_tree (margin^"  ")) subtrees
+  in
+    print_tree "" t
+
+let build_call_tree_from f = Tree (f, [])
+
 let execute_exit _ = raise Exit
 
-let execute_call _ = ()
+let execute_call arguments = 
+  match arguments with
+      f::_ ->
+	let call_tree = build_call_tree_from f in
+	  print_tree call_tree
+    | _ -> ()
 
 (* TODO: add command where global which shows all places where a global is 
    being used *)
