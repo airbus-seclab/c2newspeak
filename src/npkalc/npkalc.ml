@@ -48,6 +48,10 @@ let add_call f g =
       Hashtbl.replace callgraph g (Set.add f callers)
   with Not_found -> Hashtbl.add callgraph g (Set.singleton f)
 
+let get_callers f =
+  try Set.elements (Hashtbl.find callgraph f)
+  with Not_found -> []
+
 let compute_call_graph prog =
   let current_function = ref "" in
 
@@ -76,26 +80,35 @@ let execute_help _ =
   print_info "List of available commands:";
   Hashtbl.iter (fun command _ -> print_info ("- "^command)) command_table 
 
-type call_tree = Tree of (string * call_tree list)
-    
-let print_tree t =
-  let rec print_tree margin t =
-    match t with
-	Tree (f, subtrees) ->
+let print_path p =
+  let rec print_path margin p =
+    match p with
+      | [] -> ()
+      | f::tl -> 
 	  print_info f;
-	  List.iter (print_tree (margin^"  ")) subtrees
+	  print_path (margin^"  ") tl
   in
-    print_tree "" t
+    print_path "  " p
 
-let build_call_tree_from f = Tree (f, [])
+let build_paths_from f =
+  let rec build f =
+    let callers = get_callers f in
+      if callers = [] then [f::[]]
+      else begin
+	let build_one_path g = List.map (fun p -> f::p) (build g) in
+	let paths = List.map build_one_path callers in
+	  List.flatten paths
+      end
+  in
+    build f
 
 let execute_exit _ = raise Exit
 
 let execute_call arguments = 
   match arguments with
-      f::_ ->
-	let call_tree = build_call_tree_from f in
-	  print_tree call_tree
+      f::_ -> 
+	let paths = build_paths_from f in
+	  List.iter print_path paths
     | _ -> ()
 
 (* TODO: add command where global which shows all places where a global is 
