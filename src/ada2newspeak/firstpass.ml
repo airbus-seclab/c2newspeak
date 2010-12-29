@@ -429,7 +429,7 @@ let translate compil_unit =
 		   ) ([],[]) decl_part
       
   and add_funbody subprogspec block loc =
-    let (ret_id, args_ids) = add_params subprogspec in
+    let (_, args_ids) = add_params subprogspec in
     let ftyp = translate_sub_program_spec subprogspec in
     let body = translate_block block in
     let mangle_sname = function
@@ -440,8 +440,15 @@ let translate compil_unit =
                       "chain of selected names is too deep"
     in
     let body = (C.Block (body, Some Params.ret_lbl), loc)::[] in
+    let declaration = 
+      {
+	C.arg_identifiers = args_ids;
+	C.function_type = ftyp;
+	C.body = body
+      }
+    in
       Hashtbl.replace fun_decls (translate_name (mangle_sname subprogspec.name))
-                      (ret_id, args_ids, ftyp, body);
+        declaration
   in
 
   let add_global loc tr_typ i x =

@@ -166,12 +166,12 @@ let translate fname prog =
 	let (prev_t, prev_loc, prev_storage) = Hashtbl.find used_globals name in
 	let t = TypedC.min_typ t prev_t in
 	  match (prev_storage, storage) with
-	      (Npkil.Extern, _)  
-	    | (Npkil.Declared false, Npkil.Declared _) -> (t, loc, storage)
-	    | (Npkil.Declared _, Npkil.Extern) 
-	    | (Npkil.Declared _, Npkil.Declared false) -> 
+	      (K.Extern, _)  
+	    | (K.Declared false, K.Declared _) -> (t, loc, storage)
+	    | (K.Declared _, K.Extern) 
+	    | (K.Declared _, K.Declared false) -> 
 		(t, prev_loc, prev_storage)
-	    | (Npkil.Declared true, Npkil.Declared true) -> 
+	    | (K.Declared true, K.Declared true) -> 
 		Npkcontext.report_error "Firstpass.update_global"
 		  ("global variable "^x^" initialized twice")
       with Not_found -> (t, loc, storage)
@@ -180,8 +180,15 @@ let translate fname prog =
       Hashtbl.replace used_globals name info
   in
 
-  let add_fundef f (ret, args) body t = 
-    Hashtbl.replace fundefs f (ret, args, t, body) 
+  let add_fundef f (_, args) body t = 
+    let declaration = 
+      {
+	C.arg_identifiers = args;
+	C.function_type = t;
+	C.body = body;
+      }
+    in
+      Hashtbl.replace fundefs f declaration
   in
 
   let translate_lbl lbl =

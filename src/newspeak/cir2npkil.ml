@@ -302,14 +302,14 @@ let translate src_lang prog =
   in
 
 (* TODO: remove unused argument from cir *)
-  let translate_fundef f (_, args_id, ft, body) =
+  let translate_fundef f declaration =
 (* TODO: remove normalize!! *)
-    let body = Cir.normalize body in
+    let body = Cir.normalize declaration.body in
     let body = translate_blk body in
-    let ft = translate_ftyp ft in
+    let ft = translate_ftyp declaration.function_type in
     let fundec = 
       {
-	K.arg_identifiers = args_id;
+	K.arg_identifiers = declaration.arg_identifiers;
 	K.function_type = ft;
 	K.body = body;
       }

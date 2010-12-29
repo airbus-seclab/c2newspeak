@@ -39,7 +39,7 @@ let fresh_id () =
 type t = {
   globals: (string, ginfo) Hashtbl.t;
   init: blk;
-  fundecs: (string, funinfo) Hashtbl.t;
+  fundecs: (string, fundec) Hashtbl.t;
 }
 
 and assertion = token list
@@ -54,8 +54,11 @@ and ginfo = typ * location * Npkil.storage
 
 and field = (string * (int * typ))
 
-(* TODO: remove location, unused! *)
-and funinfo = (string * string list * ftyp * blk)
+and fundec = {
+  arg_identifiers: string list;
+  function_type: ftyp;
+  body: blk;
+}
 
 and typ =
     | Void
@@ -210,9 +213,9 @@ let string_of_lv = string_of_lv ""
 
 let string_of_blk = string_of_blk ""
 
-let print_fundec f (_, _, _, body) =
+let print_fundec f declaration =
   print_endline (f^" {");
-  print_endline (string_of_blk body);
+  print_endline (string_of_blk declaration.body);
   print_endline "}"
 
 let print prog = Hashtbl.iter print_fundec prog.fundecs
@@ -822,7 +825,7 @@ and size_of_stmt (x, _) =
 
 and size_of_case (_, body) = size_of_blk body
 
-let size_of_fundef (_, _, _, body) = size_of_blk body
+let size_of_fundef declaration = size_of_blk declaration.body
 
 let size_of prog =
   let res = ref 0 in
