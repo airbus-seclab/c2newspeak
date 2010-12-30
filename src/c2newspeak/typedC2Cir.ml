@@ -740,11 +740,11 @@ let translate fname prog =
 
   and translate_scalar_typ t =
     match t with
-      | Int k -> N.Int k
-      | Float n -> N.Float n	
-      | Ptr (Fun _) -> N.FunPtr
-      | Ptr _ -> N.Ptr
-      | Va_arg -> N.Ptr
+      | Int k 		      -> N.Int k
+      | Float n 	      -> N.Float n	
+      | Ptr (Fun _) 	      -> N.FunPtr
+      | Ptr _ 		      -> N.Ptr
+      | Va_arg 		      -> N.Ptr
       | Bitfield ((s, n), sz) -> 
 	  let sz = translate_exp false (sz, int_typ) in
 	  let sz = Nat.to_int (C.eval_exp sz) in
@@ -753,7 +753,7 @@ let translate fname prog =
 		"width of bitfield exceeds its type"
 	    end;
 	    N.Int (s, sz)
-      | _ -> 
+      | _ 		      -> 
 	  Npkcontext.report_error "Firstpass.translate_scalar_typ" 
 	    "scalar type expected"
 
@@ -939,12 +939,6 @@ let translate fname prog =
 (* TODO: why is it necessary to have a block construction with None? *)
       | Block body -> (C.Block (translate_blk body, None), loc)::[]
 
-      | DoWhile (body, e) when !Npkcontext.remove_do_loops ->
-	  (* carefull: this transformation duplicates code and has an 
-	     exponential behavior in the imbrication depths of do loops *)
-	  let loop = For (body, e, body, []) in 
-	    translate_stmt (loop, loc)
-
       | DoWhile (body, e) -> 
 	  let body = translate_blk body in
 	  let guard = translate_stmt (If (e, [], (Break, loc)::[]), loc) in
@@ -961,13 +955,13 @@ let translate fname prog =
 	    (C.Block (init::loop::[], Some brk_lbl), loc)::[]
 
       | CSwitch (e, choices, default) -> 
-	  let e = translate_exp false e in
+	  let e 		 = translate_exp false e in
 	  let (last_lbl, switch) = translate_switch choices in
-	  let default_action = (C.Goto default_lbl, loc)::[] in
-	  let switch = (C.Switch (e, switch, default_action), loc)::[] in
-	  let body = translate_cases (last_lbl, switch) choices in
-	  let default = translate_blk default in
-	  let body = (C.Block (body, Some default_lbl), loc)::default in
+	  let default_action 	 = (C.Goto default_lbl, loc)::[] in
+	  let switch 		 = (C.Switch (e, switch, default_action), loc)::[] in
+	  let body 		 = translate_cases (last_lbl, switch) choices in
+	  let default 		 = translate_blk default in
+	  let body 		 = (C.Block (body, Some default_lbl), loc)::default in
 	    (C.Block (body, Some brk_lbl), loc)::[]
 
       | UserSpec x -> (translate_assertion loc x)::[]
@@ -979,13 +973,13 @@ let translate fname prog =
 
   and translate_token x =
     match x with
-	SymbolToken x -> C.SymbolToken x
-      | IdentToken x -> C.IdentToken x
+	SymbolToken x 	  -> C.SymbolToken x
+      | IdentToken x 	  -> C.IdentToken x
       | LvalToken (lv, t) -> 
 	  let lv = translate_lv lv in
 	  let t = translate_typ t in
 	    C.LvalToken (lv, t)
-      | CstToken c -> C.CstToken c
+      | CstToken c 	  -> C.CstToken c
 
 (* TODO: think about this: simplify *)
   and translate_if loc (e, blk1, blk2) =
