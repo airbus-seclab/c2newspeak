@@ -66,11 +66,8 @@ let standard_token str =
   else IDENTIFIER str
 
 let token_of_ident str = 
-(* TODO: put in Gnuc? and think about architecture *)
-  if !Npkcontext.accept_gnuc then begin
-    try Gnuc.find_token str
-    with Not_found -> standard_token str
-  end else standard_token str
+  try Gnuc.find_token str
+  with Not_found -> standard_token str
 
 let trim_newline str = 
   let i = 
