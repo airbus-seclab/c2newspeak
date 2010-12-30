@@ -158,13 +158,21 @@ let process (fname, globals) =
     let rec update t =
       match t with 
 	  C.Comp (C.Unknown s') when s = s' -> C.Comp (find_compdef s)
-	| C.Comp (C.Known (l, is_struct)) -> C.Comp (C.Known (List.map (fun (s, t) -> (s, update t)) l, is_struct))
+	| C.Comp (C.Known (l, is_struct))   -> C.Comp (C.Known (List.map (fun (s, t) -> (s, update t)) l, is_struct))
 	| C.Ptr t'                          -> C.Ptr (update t')
+	| C.Fun (args, ret) 		    ->
+	    let ret' = update ret in
+	    let args' = 
+	      match args with 
+		  None -> None 
+		| Some l -> Some (List.map (fun (t, x) -> update t, x) l)
+	    in 
+	      C.Fun(args', ret')
 	| _                                 -> t
     in
     let args' = 
       match args with 
-	  Some args -> Some (List.map (fun (t, x) ->update t, x) args)
+	  Some args -> Some (List.map (fun (t, x) -> update t, x) args)
 	| None -> None
     in
     let ret' = update ret in
@@ -194,9 +202,15 @@ let process (fname, globals) =
       match t with
 	  C.Comp (C.Unknown s') when s = s' -> C.Comp (find_compdef s)
 	| C.Comp t -> C.Comp (update_struct_type s t)
-	| C.Ptr (C.Comp C.Unknown s') when s = s' -> 
-	    C.Ptr (C.Comp (find_compdef s))
-	| C.Ptr (C.Comp t) -> C.Ptr (C.Comp (update_struct_type s t))
+	| C.Ptr t' -> C.Ptr (update t')
+	| C.Fun (args, ret) 		    ->
+	    let ret' = update ret in
+	    let args' = 
+	      match args with 
+		  None -> None 
+		| Some l -> Some (List.map (fun (t, x) -> update t, x) l)
+	    in 
+	      C.Fun(args', ret')
 	| _ -> t
     in 
     let t' = update v.C.t in
@@ -207,14 +221,17 @@ let process (fname, globals) =
 
 (* TODO: think about this, but it seems to be costly!! *)
   let update_local_vdecls s =
-    let vars, pvars = Hashtbl.fold (fun
-      x (e, t) (vars, pvars) ->
-	 match e, t with 
-	     C.Local _, C.Comp (C.Unknown s') when s = s' -> 
-	       x::vars, pvars
-	   | C.Local _, C.Ptr (C.Comp (C.Unknown s')) when s = s' -> 
-	       vars, x::pvars
-	   | _ -> vars, pvars) symbtbl ([], [])
+    let vars, pvars = 
+      Hashtbl.fold (fun
+		      x (e, t) (vars, pvars) ->
+			match e, t with 
+			    C.Local _, C.Comp (C.Unknown s') when s = s' 	  -> 
+			      x::vars, pvars
+			  | C.Local _, C.Ptr (C.Comp (C.Unknown s')) when s = s' -> 
+			      vars, x::pvars
+			  | _ 							  -> 
+			      vars, pvars	   
+		   ) symbtbl ([], [])
     in
     let t' = C.Comp (find_compdef s) in
       List.iter (fun x -> replace_symbol_type x t') vars;
@@ -223,8 +240,8 @@ let process (fname, globals) =
 
   let update_funtyp f ft1 =
     let (_, t) = Hashtbl.find symbtbl f in
-    let ft2 = TypedC.ftyp_of_typ t in
-    let ft = TypedC.min_ftyp ft1 ft2 in
+    let ft2    = TypedC.ftyp_of_typ t in
+    let ft     = TypedC.min_ftyp ft1 ft2 in
       replace_symbol_type f (C.Fun ft)
   in
 
