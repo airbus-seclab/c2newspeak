@@ -25,8 +25,6 @@
 
 open Arg
 
-val report_missing_file: unit -> unit
-
 (* TODO: should put this together with report_error! *)
 (* TODO: find ways to standardize more/factor between applications which use
    launch *)

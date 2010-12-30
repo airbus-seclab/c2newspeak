@@ -26,10 +26,6 @@
 let report_error error_message =
   invalid_arg error_message
 
-let report_missing_file () =
-  (* TODO: rather than giving this advice => should directly dump help *)
-  report_error ("no file specified. Try "^Sys.argv.(0)^" --help")
-
 let launch speclist anon_fun usage_msg f =
   try 
     Arg.parse speclist anon_fun usage_msg;
@@ -46,7 +42,9 @@ let launch_process_with_npk_argument name speclist process =
     input := file
   in
   let process () = 
-    if !input = "" then report_missing_file ();
+    if !input = "" 
+  (* TODO: rather than giving this advice => should directly dump help *)
+    then report_error ("no file specified. Try "^Sys.argv.(0)^" --help");
     process !input
   in
     launch speclist anon_fun usage_msg process
