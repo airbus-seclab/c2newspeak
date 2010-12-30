@@ -49,8 +49,6 @@ let translate_cst c =
     | CFloat f -> N.CFloat f
 
 let translate src_lang prog =
-(* TODO: remove cstr_init *)
-  let cstr_init = ref [] in
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
 
@@ -90,47 +88,7 @@ let translate src_lang prog =
     in
       (args, ret)
   in
-(* TODO: remove
-  (* TODO: put in cir *)
-  let exp_of_char c = Const (Cir.CInt (Nat.of_int (Char.code c))) in
 
-  let add_glb_cstr str =
-    let loc = Npkcontext.get_loc () in
-    let name = 
-(* TODO: String.escaped should be done by the Temps.to_string *)
-      Temps.to_string 0 (Temps.Cstr (fname, String.escaped str)) 
-    in
-      if not (Hashtbl.mem glbdecls name) then begin
-	(* TODO: put in npkil? *)
-	let char_typ = Scalar (N.Int (N.Signed, Config.size_of_char)) in
-	let len = String.length str in	  
-	let t = K.Array (translate_typ char_typ, Some (len + 1)) in
-	let declaration = 
-	  {
-	    K.global_type = t;
-	    K.storage = K.Declared true;
-	    K.is_used = true;
-	    K.global_position = Npkcontext.get_loc ();
-	  }
-	in
-	  Hashtbl.add glbdecls name declaration;
-(* TODO: think about it, this code is redundant with initialization in
-   typedC2Cir *)
-	  let offset = ref 0 in
-	  let size = size_of_typ char_typ in
-	    for i = 0 to len - 1 do
-	      let e = exp_of_char str.[i] in
-	      let lv = Shift (Global name, exp_of_int !offset) in
-		cstr_init := (Set (lv, char_typ, e), loc)::!cstr_init;
-		offset := !offset + size
-	    done;
-	    let lv = Shift (Global name, exp_of_int !offset) in
-	      cstr_init := 
-		(Set (lv, char_typ, exp_of_char '\x00'), loc)::!cstr_init
-      end;
-      K.Global name
-  in
-*)
   let rec translate_lv lv =
     match lv with
 	Local id -> K.Local id
@@ -139,7 +97,7 @@ let translate src_lang prog =
 	  used_glbs := Set.add x !used_glbs;
 	  K.Global x
 
-      | Str x -> K.Str x (* TODO: remove add_glb_cstr x *)
+      | Str x -> K.Str x
 
       | Shift (lv, o) ->
 	  let lv = translate_lv lv in
@@ -305,7 +263,6 @@ let translate src_lang prog =
 	| None -> args
     in
     let (in_vars, out_vars, ft) = translate_args args in
-(*    let ft = translate_ftyp (args_t, ret_t) in *)
     let fn = translate_fn fn in
       K.Call (in_vars, ft, fn, out_vars)
 
@@ -388,7 +345,5 @@ let translate src_lang prog =
     Hashtbl.iter translate_glbdecl prog.globals;
     Hashtbl.iter translate_fundef prog.fundecs;
     Set.iter flag_glb !used_glbs;
-    let cstr_init = Cir.normalize (List.rev !cstr_init) in
-    let cstr_init = translate_blk cstr_init in
-      { K.globals = glbdecls; K.init = cstr_init@init;
+    { K.globals = glbdecls; K.init = init;
       K.fundecs = fundefs; K.src_lang = src_lang }
