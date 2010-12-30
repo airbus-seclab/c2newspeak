@@ -120,8 +120,9 @@ let integer_constant =
   | (oct_integer | hex_integer | integer) length? sign?
 
 let float = 
-  ((digit+ | digit+ '.' digit+ | '.' digit+ | digit+ '.') (('e'|'E') '-'? digit+)? as value)
-  ("F"|"l"|"L" as suffix)?
+  ((digit+ | digit+ '.' digit+ | '.' digit+ | digit+ '.') 
+     (('e'|'E') '-'? digit+)? as value)
+    ("F"|"l"|"L" as suffix)?
 let identifier = letter (letter|digit)*
 let wide_string = 'L''"' [^'"']* '"'
 
@@ -176,11 +177,11 @@ rule token = parse
 
 (* values *)
   | integer_constant    { INTEGER (prefix, value, sign, length) }
+  | float               { FLOATCST (value, suffix) }
   | "'" ((('\\'_)|[^'\\''\''])+ as c)
     "'"                 { CHARACTER (character (Lexing.from_string c)) }
   | wide_character      { Npkcontext.report_error "Lexer.token" 
 			    "wide characters not supported" }
-  | float               { FLOATCST (value, suffix) }
   | '"' ((('\\'_)|[^'\\''"'])* as str)
     '"'                 { 
       let lexbuf = Lexing.from_string str in
@@ -262,13 +263,11 @@ rule token = parse
 
 
 and comment = parse
-
   | "*/"                { token lexbuf }
   | new_line            { cnt_line lexbuf; comment lexbuf }
   | _                   { comment lexbuf }
 
 and npk_spec = parse
-(* TODO: try to factor code more *)
   | integer_constant    { INTEGER (prefix, value, sign, length) }
   | float               { FLOATCST (value, suffix) }
   | identifier          { IDENTIFIER (Lexing.lexeme lexbuf) }
