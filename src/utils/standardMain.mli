@@ -25,10 +25,13 @@
 
 open Arg
 
+val report_missing_file: unit -> unit
+
 (* TODO: should put this together with report_error! *)
 (* TODO: find ways to standardize more/factor between applications which use
    launch *)
 val launch: 
   (key * spec * doc) list -> anon_fun -> usage_msg -> (unit -> unit) -> unit
 
-val report_missing_file: unit -> unit
+val launch_process_with_npk_argument: 
+  string -> (key * spec * doc) list -> (string -> unit) -> unit

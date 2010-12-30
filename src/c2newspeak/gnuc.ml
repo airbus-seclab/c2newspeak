@@ -99,6 +99,7 @@ let _ =
 
 
 let find_token str =
+  if not !Npkcontext.accept_gnuc then raise Not_found;
   Hashtbl.find token_tbl str
 
 let is_gnuc_token str = Hashtbl.mem token_tbl str

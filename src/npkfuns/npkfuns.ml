@@ -25,10 +25,6 @@
 (* TODO: factor launcher and error treatment for the several newspeak 
    utilities *)
 
-let exec_name = "npkfuns"
-
-let input = ref ""
-
 let stats = ref false
 
 let speclist = 
@@ -36,19 +32,11 @@ let speclist =
     ("--stats", Arg.Set stats, "prints stats instead of function signatures")
   ]
 
-let anon_fun file = 
-  if !input <> "" then invalid_arg "you can only analyse one file at a time";
-  input := file
-
-let usage_msg = exec_name^" [options] [-help|--help] file.npk"
-
-let process () =
-    if !input = "" then StandardMain.report_missing_file ();
-
-    let prog = Npk2lpk.translate (Newspeak.read !input) in
+let process input =
+    let prog = Npk2lpk.translate (Newspeak.read input) in
     let glbs = GlbCollect.process false prog in
       if !stats then GlbCollect.print_stats glbs
       else GlbCollect.print glbs
 
 let _ =
-  StandardMain.launch speclist anon_fun usage_msg process
+  StandardMain.launch_process_with_npk_argument "npkfuns" speclist process

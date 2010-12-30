@@ -34,3 +34,16 @@ let launch speclist anon_fun usage_msg f =
   with Invalid_argument s -> 
     print_endline ("Fatal error: "^s);
     exit 0
+
+let launch_process_with_npk_argument name speclist process =
+  let usage_msg = name^" [options] [-help|--help] file.npk" in
+  let input = ref "" in
+  let anon_fun file = 
+    if !input <> "" then invalid_arg "you can only analyse one file at a time";
+    input := file
+  in
+  let process () = 
+    if !input = "" then report_missing_file ();
+    process !input
+  in
+    launch speclist anon_fun usage_msg process
