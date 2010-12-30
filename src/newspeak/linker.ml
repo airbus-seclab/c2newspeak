@@ -244,6 +244,42 @@ let generate_fundecs fundecs =
     List.iter add_fundec fundecs;
     funspecs      
 
+let merge_types name prev_t t =
+  try
+    if (Npkil.is_mp_typ t prev_t) then t else prev_t
+  with Npkil.Uncomparable -> 
+    (* TODO: add the respective locations *)
+    Npkcontext.report_error "Npklink.update_glob_link"
+      ("different types for "^name^": '"
+       ^(Npkil.string_of_typ prev_t)^"' and '"
+       ^(Npkil.string_of_typ t)^"'")
+
+
+let merge_storages name prev_loc prev_storage storage =
+  match (storage, prev_storage) with
+      (Extern, Declared _) -> prev_storage
+    | (Declared _, Extern) -> storage
+    | (Extern, Extern) -> prev_storage
+    | (Declared true, Declared true) -> 
+        Npkcontext.report_error "Npklink.update_glob_link" 
+          ("multiple declaration of "^name)
+    | _ ->
+	let loc = Npkcontext.get_loc () in
+        let info = 
+          if prev_loc = loc then begin
+            let (file, _, _) = loc in
+              ", in file "^file^" variable "
+              ^name^" should probably be extern"
+            end else begin
+              " (previous definition: "
+              ^(Newspeak.string_of_loc prev_loc)^")"
+            end
+        in
+          Npkcontext.report_accept_warning "Npklink.update_glob_link"
+            ("multiple definitions of global variable "^name^info) 
+            Npkcontext.MultipleDef;             
+          prev_storage
+
 (* TODO: optimization, this is probably not efficient to read the whole
    program and then again a second time!!! reprogram Npkil.read and write *)
 let merge npkos =
@@ -255,53 +291,19 @@ let merge npkos =
   let add_fundef f body = fundefs := (f, body)::!fundefs in
 
   let add_global name declaration =
-    (* TODO: is the set_loc necessary here ? *)
     Npkcontext.set_loc declaration.global_position;
     try
-      (* TODO: cleanup code *)
       let previous_declaration = Hashtbl.find glb_decls name in
-      let prev_t = previous_declaration.global_type in
+      let t = 
+	merge_types name previous_declaration.global_type 
+	  declaration.global_type 
+      in
       let prev_loc = previous_declaration.global_position in
-      let prev_storage = previous_declaration.storage in
-      let prev_used = previous_declaration.is_used in
-
-      let t = declaration.global_type in
-      let t =
-        try
-          if (Npkil.is_mp_typ t prev_t) then t else prev_t
-        with Npkil.Uncomparable -> 
-          (* TODO: add the respective locations *)
-          Npkcontext.report_error "Npklink.update_glob_link"
-            ("different types for "^name^": '"
-             ^(Npkil.string_of_typ prev_t)^"' and '"
-             ^(Npkil.string_of_typ declaration.global_type)^"'")
-      in
-      let used = declaration.is_used || prev_used in
       let storage = 
-        match (declaration.storage, prev_storage) with
-            (Extern, Declared _) -> prev_storage
-          | (Declared _, Extern) -> declaration.storage
-          | (Extern, Extern) -> prev_storage
-          | (Declared true, Declared true) -> 
-              Npkcontext.report_error "Npklink.update_glob_link" 
-                ("multiple declaration of "^name)
-          | _ ->
-	      let loc = declaration.global_position in
-              let info = 
-                if prev_loc = loc then begin
-                  let (file, _, _) = loc in
-                    ", in file "^file^" variable "
-                    ^name^" should probably be extern"
-                end else begin
-                  " (previous definition: "
-                  ^(Newspeak.string_of_loc prev_loc)^")"
-                end
-              in
-                Npkcontext.report_accept_warning "Npklink.update_glob_link"
-                  ("multiple definitions of global variable "^name^info) 
-                  Npkcontext.MultipleDef;             
-                prev_storage
+	merge_storages name prev_loc 
+	  previous_declaration.storage declaration.storage
       in
+      let used = declaration.is_used || previous_declaration.is_used in
       let declaration = 
 	{
 	  global_type = t;
