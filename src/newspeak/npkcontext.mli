@@ -61,10 +61,6 @@ type error =
 
 (** {1 Comand line options } *)
 
-(** if true do loops are transformed into while loops by unrolling their
-    body once. *)
-val remove_do_loops: bool ref
-
 val accept_gnuc : bool ref
 
 (** When remove_temp is set, only used variables are kept in newspeak
