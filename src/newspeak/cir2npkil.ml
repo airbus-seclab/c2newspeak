@@ -88,7 +88,24 @@ let translate src_lang prog =
     in
       (args, ret)
   in
-
+(* TODO:
+  let add_glb_cstr str =
+    let name = 
+(* TODO: String.escaped should be done by the Temps.to_string *)
+      Temps.to_string 0 (Temps.Cstr ("TODO: put fname", String.escaped str)) 
+    in
+    let _ = Array (char_typ, Some ((String.length str) + 1)) in
+      if not (Hashtbl.mem glbdecls name) then begin
+	Hashtbl.add glbdecls 
+	print_endline "toto";
+      end
+(*
+      if not (Hashtbl.mem used_globals name) 
+      then declare_global false name name t (Some (Data (Str str, t)));
+*)
+      K.Global name
+  in
+*)
   let rec translate_lv lv =
     match lv with
 	Local id -> K.Local id
@@ -96,6 +113,8 @@ let translate src_lang prog =
       | Global x -> 
 	  used_glbs := Set.add x !used_glbs;
 	  K.Global x
+
+      | Str _ -> invalid_arg "not implemented yet, TODO" (*add_glb_cstr x*)
 
       | Shift (lv, o) ->
 	  let lv = translate_lv lv in
@@ -298,7 +317,15 @@ let translate src_lang prog =
   let translate_glbdecl x (t, loc, init) =
     Npkcontext.set_loc loc;
     let t = translate_typ t in 
-      Hashtbl.add glbdecls x (t, loc, init, false)
+    let declaration = 
+      {
+	K.global_type = t;
+	K.global_position = loc;
+	K.storage = init;
+	K.is_used = false;
+      }
+    in
+      Hashtbl.add glbdecls x declaration
   in
 
 (* TODO: remove unused argument from cir *)
@@ -320,8 +347,9 @@ let translate src_lang prog =
 
   let flag_glb x = 
     try  
-      let (t, loc, init, _) = Hashtbl.find glbdecls x in
- 	Hashtbl.replace glbdecls x (t, loc, init, true)
+      let declaration = Hashtbl.find glbdecls x in
+      let declaration = { declaration with K.is_used = true; } in
+ 	Hashtbl.replace glbdecls x declaration
     with Not_found -> 
       Npkcontext.report_error "Cir2npkil.flag_glb" 
 	("illegal use of " ^ x ^ " (undefined type)")

@@ -35,18 +35,27 @@ let print_info message = print_endline ("  "^message)
 
 let input = ref ""
 
-(* TODO: add options --file and -f to have the commands read from a file *)
-let speclist = []
+let config_file = ref ""
+
+let set_config_file x = config_file := x
+
+let speclist = 
+  [("--file", Arg.String set_config_file, "");
+   ("-f", Arg.String set_config_file, "input from file")]
 
 let anon_fun filename = input := filename
 
-let usage_msg = ""
+let usage_msg = "npkalc options <file.npk>"
 
 let add_call f g =
   try
     let callers = Hashtbl.find callgraph g in
       Hashtbl.replace callgraph g (Set.add f callers)
   with Not_found -> Hashtbl.add callgraph g (Set.singleton f)
+
+let get_callers f =
+  try Set.elements (Hashtbl.find callgraph f)
+  with Not_found -> []
 
 let compute_call_graph prog =
   let current_function = ref "" in
@@ -76,26 +85,35 @@ let execute_help _ =
   print_info "List of available commands:";
   Hashtbl.iter (fun command _ -> print_info ("- "^command)) command_table 
 
-type call_tree = Tree of (string * call_tree list)
-    
-let print_tree t =
-  let rec print_tree margin t =
-    match t with
-	Tree (f, subtrees) ->
-	  print_info f;
-	  List.iter (print_tree (margin^"  ")) subtrees
+let print_path p =
+  let rec print_path margin p =
+    match p with
+      | [] -> ()
+      | f::tl -> 
+	  print_info (margin^f);
+	  print_path (margin^"  ") tl
   in
-    print_tree "" t
+    print_path "" p
 
-let build_call_tree_from f = Tree (f, [])
+let build_paths_from f =
+  let rec build f =
+    let callers = get_callers f in
+      if callers = [] then [f::[]]
+      else begin
+	let build_one_path g = List.map (fun p -> f::p) (build g) in
+	let paths = List.map build_one_path callers in
+	  List.flatten paths
+      end
+  in
+    build f
 
-let execute_exit _ = raise Exit
+let execute_exit _ = raise End_of_file
 
 let execute_call arguments = 
   match arguments with
-      f::_ ->
-	let call_tree = build_call_tree_from f in
-	  print_tree call_tree
+      f::_ -> 
+	let paths = build_paths_from f in
+	  List.iter print_path paths
     | _ -> ()
 
 (* TODO: add command where global which shows all places where a global is 
@@ -118,6 +136,19 @@ let process () =
     fill_command_table ();
     
     print_info "Type help for a list of commands.";
+
+    let read_line =
+      if !config_file = "" then read_line
+      else begin
+	let input_channel = open_in !config_file in
+	let read_line () = 
+	  let line = input_line input_channel in
+	    print_endline line;
+	    line
+	in
+	  read_line
+      end
+    in
     
     try
       while true do
@@ -133,7 +164,7 @@ let process () =
 	      end
 	    | [] -> ()
       done
-    with Exit -> 
+    with End_of_file -> 
       print_info "Thank you for using the Newspeak calculator.";
       print_info "Have a nice day..."
 	

@@ -94,6 +94,7 @@ and lv =
    having some optimization get
    rid of unnecessary temporary variable??? If better *)
     | BlkLv of (blk * lv * bool)
+    | Str of string
 
 and exp =
     | Const of cst

@@ -129,19 +129,20 @@ and generate_tmp_nat x =
     | Mult (v, n) -> 
         let i = generate_tmp_nat v in
           Nat.mul_int n i
-
-let generate_global name (t, loc, storage, used) =
-  Npkcontext.set_loc loc;
-  if used || (not !Npkcontext.remove_temp) then begin
-    let t = generate_typ t in
-      Hashtbl.add globals name (t, loc);
-      match storage with
-          Extern -> 
-            Npkcontext.report_accept_warning "Link.generate_global" 
-              ("extern global variable "^name) Npkcontext.ExternGlobal
-        | _ -> ()
-  end;
-  Npkcontext.print_debug ("Global linked: "^name)
+	    
+let generate_global name declaration =
+  let loc = declaration.global_position in
+    Npkcontext.set_loc loc;
+    if declaration.is_used || (not !Npkcontext.remove_temp) then begin
+      let t = generate_typ declaration.global_type in
+	Hashtbl.add globals name (t, loc);
+	match declaration.storage with
+            Extern -> 
+              Npkcontext.report_accept_warning "Link.generate_global" 
+		("extern global variable "^name) Npkcontext.ExternGlobal
+          | _ -> ()
+    end;
+    Npkcontext.print_debug ("Global linked: "^name)
 
 let translate_set (lv, e, t) =
   match (t, e) with
@@ -243,6 +244,42 @@ let generate_fundecs fundecs =
     List.iter add_fundec fundecs;
     funspecs      
 
+let merge_types name prev_t t =
+  try
+    if (Npkil.is_mp_typ t prev_t) then t else prev_t
+  with Npkil.Uncomparable -> 
+    (* TODO: add the respective locations *)
+    Npkcontext.report_error "Npklink.update_glob_link"
+      ("different types for "^name^": '"
+       ^(Npkil.string_of_typ prev_t)^"' and '"
+       ^(Npkil.string_of_typ t)^"'")
+
+
+let merge_storages name prev_loc prev_storage storage =
+  match (storage, prev_storage) with
+      (Extern, Declared _) -> prev_storage
+    | (Declared _, Extern) -> storage
+    | (Extern, Extern) -> prev_storage
+    | (Declared true, Declared true) -> 
+        Npkcontext.report_error "Npklink.update_glob_link" 
+          ("multiple declaration of "^name)
+    | _ ->
+	let loc = Npkcontext.get_loc () in
+        let info = 
+          if prev_loc = loc then begin
+            let (file, _, _) = loc in
+              ", in file "^file^" variable "
+              ^name^" should probably be extern"
+            end else begin
+              " (previous definition: "
+              ^(Newspeak.string_of_loc prev_loc)^")"
+            end
+        in
+          Npkcontext.report_accept_warning "Npklink.update_glob_link"
+            ("multiple definitions of global variable "^name^info) 
+            Npkcontext.MultipleDef;             
+          prev_storage
+
 (* TODO: optimization, this is probably not efficient to read the whole
    program and then again a second time!!! reprogram Npkil.read and write *)
 let merge npkos =
@@ -253,52 +290,31 @@ let merge npkos =
 
   let add_fundef f body = fundefs := (f, body)::!fundefs in
 
-  let add_global name (t, loc, storage, used) =
-    Npkcontext.set_loc loc;
+  let add_global name declaration =
+    Npkcontext.set_loc declaration.global_position;
     try
-      let (prev_t, prev_loc, prev_storage, prev_used) = 
-        Hashtbl.find glb_decls name 
+      let previous_declaration = Hashtbl.find glb_decls name in
+      let t = 
+	merge_types name previous_declaration.global_type 
+	  declaration.global_type 
       in
-        
-      let t =
-        try
-          if (Npkil.is_mp_typ t prev_t) then t
-          else prev_t
-        with Npkil.Uncomparable -> 
-          (* TODO: add the respective locations *)
-          Npkcontext.report_error "Npklink.update_glob_link"
-            ("different types for "^name^": '"
-             ^(Npkil.string_of_typ prev_t)^"' and '"
-             ^(Npkil.string_of_typ t)^"'")
-      in
-      let used = used || prev_used in
+      let prev_loc = previous_declaration.global_position in
       let storage = 
-        match (storage, prev_storage) with
-            (Extern, Declared _) -> prev_storage
-          | (Declared _, Extern) -> storage
-          | (Extern, Extern) -> prev_storage
-          | (Declared true, Declared true) -> 
-              Npkcontext.report_error "Npklink.update_glob_link" 
-                ("multiple declaration of "^name)
-          | _ ->
-              let info = 
-                if prev_loc = loc then begin
-                  let (file, _, _) = loc in
-                    ", in file "^file^" variable "
-                    ^name^" should probably be extern"
-                end else begin
-                  " (previous definition: "
-                  ^(Newspeak.string_of_loc prev_loc)^")"
-                end
-              in
-                Npkcontext.report_accept_warning "Npklink.update_glob_link"
-                  ("multiple definitions of global variable "^name^info) 
-                  Npkcontext.MultipleDef;             
-                prev_storage
+	merge_storages name prev_loc 
+	  previous_declaration.storage declaration.storage
       in
-        Hashtbl.replace glb_decls name (t, prev_loc, storage, used)
+      let used = declaration.is_used || previous_declaration.is_used in
+      let declaration = 
+	{
+	  global_type = t;
+	  global_position = prev_loc;
+	  storage = storage;
+	  is_used = used;
+	}
+      in
+        Hashtbl.replace glb_decls name declaration
           
-    with Not_found -> Hashtbl.add glb_decls name (t, loc, storage, used)
+    with Not_found -> Hashtbl.add glb_decls name declaration
   in
 
   let merge npko =
