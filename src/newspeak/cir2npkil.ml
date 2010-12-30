@@ -48,8 +48,7 @@ let translate_cst c =
       CInt i -> N.CInt i
     | CFloat f -> N.CFloat f
 
-(* TODO: remove fname *)
-let translate _fname src_lang prog =
+let translate src_lang prog =
 (* TODO: remove cstr_init *)
   let cstr_init = ref [] in
   let glbdecls = Hashtbl.create 100 in

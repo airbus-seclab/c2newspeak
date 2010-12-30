@@ -54,8 +54,8 @@ let firstpass_translate fname norm_tree =
     Npkcontext.forget_loc ();
     prog
 
-let translate fname prog =
-  let tr_prog = Cir2npkil.translate fname Newspeak.ADA prog in
+let translate prog =
+  let tr_prog = Cir2npkil.translate Newspeak.ADA prog in
     Npkcontext.forget_loc ();
     tr_prog
 
@@ -77,7 +77,7 @@ let compile (fname: string): Npkil.t =
     let ast = parse base_name in
     let norm_tree = normalization fname ast in
     let prog = firstpass_translate fname norm_tree in
-    let tr_prog = translate fname prog in
+    let tr_prog = translate prog in
       if dir_name <> "." then begin
 	Npkcontext.print_debug ("Changing directory : " ^ current_dir);
 	Sys.chdir current_dir

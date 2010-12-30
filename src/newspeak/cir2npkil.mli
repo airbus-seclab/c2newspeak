@@ -23,4 +23,4 @@
   email: charles.hymans@penjili.org
 *)
 
-val translate: string -> Newspeak.src_lang -> Cir.t -> Npkil.t
+val translate: Newspeak.src_lang -> Cir.t -> Npkil.t
