@@ -42,6 +42,7 @@ module N = Newspeak
 (* Association table global -> Newspeak.typ *)
 let globals = Hashtbl.create 100
 let funspecs = Hashtbl.create 100
+let cstr_init = ref []
 
 let scalar_of_typ t =
   match t with
@@ -81,7 +82,44 @@ and generate_lv lv =
     | Deref (e, sz) -> N.Deref (generate_exp e, sz)
     | Shift (lv', e) -> N.Shift (generate_lv lv', generate_exp e)
     | Local v -> N.Local v
-        
+    | Str str -> add_glb_cstr str
+ 
+(* TODO: put in newspeak? *)
+and exp_of_char c = N.Const (N.CInt (Nat.of_int (Char.code c)))
+(* TODO: put in newspeak? *)
+and exp_of_int x = N.Const (N.CInt (Nat.of_int x))
+
+and add_glb_cstr str =
+  let (fname, _, _) = Npkcontext.get_loc () in
+  let name =
+    (* TODO: String.escaped should be done by the Temps.to_string *)
+(* TODO: remove fname *)
+    Temps.to_string 0 (Temps.Cstr (fname, String.escaped str)) 
+  in
+    if not (Hashtbl.mem globals name) then begin
+      let loc = Npkcontext.get_loc () in
+      (* TODO: put in newspeak? *)
+      let char_typ = N.Int (N.Signed, Config.size_of_char) in
+      let len = String.length str in	  
+      let t = N.Array (N.Scalar char_typ, len + 1) in
+	Hashtbl.add globals name (t, loc);
+	(* TODO: think about it, this code is redundant with initialization in
+	   typedC2Cir *)
+	let offset = ref 0 in
+	let size = Config.size_of_char in
+	  for i = 0 to len - 1 do
+	    let e = exp_of_char str.[i] in
+(* TODO: factor creation of lv *)
+	    let lv = N.Shift (N.Global name, exp_of_int !offset) in
+	      cstr_init := (N.Set (lv, e, char_typ), loc)::!cstr_init;
+	      offset := !offset + size
+	  done;
+	  let lv = N.Shift (N.Global name, exp_of_int !offset) in
+	    cstr_init := 
+	      (N.Set (lv, exp_of_char '\x00', char_typ), loc)::!cstr_init
+    end;
+    N.Global name
+    
 and generate_exp e =
   match e with
     | Lval (lv, t) -> N.Lval (generate_lv lv, generate_typ t)
@@ -156,6 +194,7 @@ let translate_set (lv, e, t) =
           "translate_set not implemented yet"
 
 let rec generate_stmt (sk, loc) =
+  Npkcontext.set_loc loc;
   let new_sk = 
     match sk with
         Set (lv, e, t) -> translate_set (lv, e, t)
@@ -239,6 +278,7 @@ let generate_fundecs fundecs =
           N.body = body;
 	  N.position = declaration.position;
         };
+      Npkcontext.forget_loc ();
       Npkcontext.print_debug ("Function linked: "^name)
   in
     List.iter add_fundec fundecs;
@@ -368,6 +408,8 @@ let link npkos =
     Npkcontext.print_debug "Functions...";
     let init = generate_blk init in
     let fundecs = generate_fundecs fun_decls in
+(* TODO: think about it: a bit inefficient *)
+    let init = (List.rev !cstr_init)@init in
         
     let prog = { 
       N.globals = globals;

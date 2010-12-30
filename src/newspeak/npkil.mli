@@ -104,6 +104,7 @@ and lval =
   | Global of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
+  | Str of string
 
 and exp =
     Const of cst

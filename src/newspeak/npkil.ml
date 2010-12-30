@@ -94,6 +94,7 @@ and lval =
   | Global of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
+  | Str of string
 
 and exp =
     Const of cst
@@ -207,6 +208,7 @@ let rec string_of_lval lv =
     | Global name -> "Global("^name^")"
     | Deref (e, sz) -> "["^(string_of_exp e)^"]"^(string_of_size_t sz)
     | Shift (lv, sh) -> (string_of_lval lv)^" + "^(string_of_exp sh)
+    | Str str -> str
 
 and string_of_exp e =
   match e with

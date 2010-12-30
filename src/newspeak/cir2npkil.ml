@@ -49,7 +49,8 @@ let translate_cst c =
     | CFloat f -> N.CFloat f
 
 (* TODO: remove fname *)
-let translate fname src_lang prog =
+let translate _fname src_lang prog =
+(* TODO: remove cstr_init *)
   let cstr_init = ref [] in
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
@@ -90,7 +91,7 @@ let translate fname src_lang prog =
     in
       (args, ret)
   in
-
+(* TODO: remove
   (* TODO: put in cir *)
   let exp_of_char c = Const (Cir.CInt (Nat.of_int (Char.code c))) in
 
@@ -130,7 +131,7 @@ let translate fname src_lang prog =
       end;
       K.Global name
   in
-
+*)
   let rec translate_lv lv =
     match lv with
 	Local id -> K.Local id
@@ -139,7 +140,7 @@ let translate fname src_lang prog =
 	  used_glbs := Set.add x !used_glbs;
 	  K.Global x
 
-      | Str x -> add_glb_cstr x
+      | Str x -> K.Str x (* TODO: remove add_glb_cstr x *)
 
       | Shift (lv, o) ->
 	  let lv = translate_lv lv in
