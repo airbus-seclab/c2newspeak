@@ -25,7 +25,7 @@
 #
 
 TARGET=npksolver
-DIRS=newspeak/ npksolver/
+DIRS=utils/ newspeak/ npksolver/
 npksolver.FILES= \
 		pmap resultmap yaml \
 		options utils alarm prog pcomp \
@@ -35,9 +35,10 @@ npksolver.FILES= \
 		pair \
 		box cfg mkcfg \
 		fixpoint tap test npksolver
-                  
-FILES=version newspeak/temps newspeak/config newspeak/eBigInt newspeak/newspeak newspeak/lowspeak \
-      newspeak/npkcontext newspeak/npk2lpk \
+
+FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
+      newspeak/newspeak newspeak/lowspeak \
+      utils/standardApplication newspeak/npkcontext newspeak/npk2lpk \
       $(addprefix npksolver/,$(npksolver.FILES))
 LIBX=nums.cmxa str.cmxa
 

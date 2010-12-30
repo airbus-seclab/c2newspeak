@@ -25,7 +25,9 @@
 
 open Arg
 
-(* TODO: should put this together with report_error! *)
+(* TODO: should move some code of npkcontext into here? *)
+val report_error: string -> 'a
+
 (* TODO: find ways to standardize more/factor between applications which use
    launch *)
 val launch: 

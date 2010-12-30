@@ -28,7 +28,7 @@ TARGET=c2newspeak
 DIRS=utils/ newspeak/ c2newspeak/
 LIBX=unix.cmxa str.cmxa nums.cmxa
 
-newspeak.FILES=\
+newspeak.FILES= \
 	eBigInt \
 	config temps newspeak lowspeak npkcontext npk2lpk \
 	npkil cir cir2npkil linker x2newspeak
@@ -40,7 +40,7 @@ c2newspeak.FILES=\
         csyntax2TypedC typedC2Cir compiler \
 	params c2newspeak
 
-FILES=version utils/listUtils \
+FILES=version utils/listUtils utils/standardApplication \
       $(addprefix newspeak/, $(newspeak.FILES)) \
       $(addprefix c2newspeak/, $(c2newspeak.FILES))
 

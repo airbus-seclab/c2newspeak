@@ -49,7 +49,7 @@ ada2newspeak.FILES=  \
 	firstpass          \
 	ada2newspeak
 
-FILES=version utils/listUtils utils/tree \
+FILES=version utils/listUtils utils/tree utils/standardApplication \
       $(addprefix newspeak/, $(newspeak.FILES)) \
       $(addprefix ada2newspeak/, $(ada2newspeak.FILES))
 
