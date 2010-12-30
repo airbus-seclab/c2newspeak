@@ -132,7 +132,7 @@ let build_initialization_set v scalars =
    Sets scope of variables so that no goto escapes a variable declaration
    block
 *)
-let translate _ prog =
+let translate prog =
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
   let init = ref [] in

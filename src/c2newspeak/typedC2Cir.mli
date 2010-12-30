@@ -23,5 +23,4 @@
   email: charles.hymans@penjili.org
 *)
 
-(* TODO: try to remove the fname (string from translate??) *)
-val translate: string -> TypedC.t -> Cir.t
+val translate: TypedC.t -> Cir.t
