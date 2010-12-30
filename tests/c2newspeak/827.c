@@ -1,5 +1,5 @@
 struct s;
-typedef int (*fp_t)(struct *s);
+typedef int (*fp_t)(struct s*);
 
 void f(fp_t x);
 

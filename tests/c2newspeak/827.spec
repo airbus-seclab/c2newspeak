@@ -1,1 +1,6 @@
-Fatal error: 827.c:2#27: syntax error: unexpected token: *, rewrite your code
+Newspeak output
+---------------
+void (827.c:10#5)^f(fptr v) {
+}
+
+
