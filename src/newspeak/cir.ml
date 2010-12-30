@@ -106,7 +106,7 @@ and lv =
    having some optimization get
    rid of unnecessary temporary variable??? If better *)
     | BlkLv of (blk *  lv * bool)
-(*    | Str of string*)
+    | Str of string
 
 and exp =
     | Const of cst
@@ -171,6 +171,7 @@ and string_of_lv margin x =
     | Deref (e, t) -> "*("^(string_of_exp margin e)^")_"^(string_of_typ t)
     | BlkLv (body, lv, _) -> 
 	"("^(string_of_blk margin body)^(string_of_lv margin lv)^")"
+    | Str str -> str
 
 and string_of_blk margin x =
   match x with
@@ -319,7 +320,7 @@ let rec normalize_exp x =
 	    
 and normalize_lv x =
   match x with
-      Local _ | Global _ -> ([], x, [])
+      Local _ | Global _ | Str _ -> ([], x, [])
     | Shift (lv, e) ->
 	let (pref1, lv, post1) = normalize_lv lv in
 	let (pref2, e, post2) = normalize_exp e in

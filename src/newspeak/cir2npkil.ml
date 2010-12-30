@@ -88,7 +88,24 @@ let translate src_lang prog =
     in
       (args, ret)
   in
-
+(* TODO:
+  let add_glb_cstr str =
+    let name = 
+(* TODO: String.escaped should be done by the Temps.to_string *)
+      Temps.to_string 0 (Temps.Cstr ("TODO: put fname", String.escaped str)) 
+    in
+    let _ = Array (char_typ, Some ((String.length str) + 1)) in
+      if not (Hashtbl.mem glbdecls name) then begin
+	Hashtbl.add glbdecls 
+	print_endline "toto";
+      end
+(*
+      if not (Hashtbl.mem used_globals name) 
+      then declare_global false name name t (Some (Data (Str str, t)));
+*)
+      K.Global name
+  in
+*)
   let rec translate_lv lv =
     match lv with
 	Local id -> K.Local id
@@ -96,6 +113,8 @@ let translate src_lang prog =
       | Global x -> 
 	  used_glbs := Set.add x !used_glbs;
 	  K.Global x
+
+      | Str _ -> invalid_arg "not implemented yet, TODO" (*add_glb_cstr x*)
 
       | Shift (lv, o) ->
 	  let lv = translate_lv lv in

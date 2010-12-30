@@ -434,7 +434,7 @@ let translate fname prog =
 	  let (lv, _, _) = incr in
 	    C.BlkLv ((C.Set incr, loc)::[], lv, is_after)
 
-      | Str str -> add_glb_cstr str
+      | Str str -> (* TODO: C.Str str*) add_glb_cstr str
 
       | FunName -> add_glb_cstr !current_fun
 
