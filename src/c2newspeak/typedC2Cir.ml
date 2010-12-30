@@ -132,7 +132,7 @@ let build_initialization_set v scalars =
    Sets scope of variables so that no goto escapes a variable declaration
    block
 *)
-let translate fname prog =
+let translate _ prog =
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
   let init = ref [] in
@@ -388,22 +388,6 @@ let translate fname prog =
 	    init := i@(!init);
 	    (t, true)
 
-(* TODO: maybe should put this code in csyntax2CoreC??? *)
-  and add_glb_cstr str =
-    (* TODO: fname is required here, otherwise when linking two different 
-       files with the same constant string, there will be a clash of names
-       
-       maybe in order to avoid this problem
-       => should think about keeping the strings in Cir?
-       => or should accept multiple occurences of the same variable in the link
-       phase when they are the same? (does not feel right to me)
-    *)
-    let name = Temps.to_string 0 (Temps.Cstr (fname, String.escaped str)) in
-    let t = Array (char_typ, Some (exp_of_int ((String.length str) + 1))) in
-      if not (Hashtbl.mem used_globals name) 
-      then declare_global false name name t (Some (Data (Str str, t)));
-      C.Global name
- 
   and translate_lv x =
     match x with
 	Local x -> C.Local x
@@ -435,7 +419,7 @@ let translate fname prog =
 
       | Str str -> C.Str str
 
-      | FunName -> add_glb_cstr !current_fun
+      | FunName -> C.Str !current_fun
 
       | Cast ((lv, _), _) -> 
 	  Npkcontext.report_accept_warning "Firstpass.translate_stmt" 
