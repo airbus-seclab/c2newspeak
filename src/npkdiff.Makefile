@@ -26,7 +26,7 @@
 
 TARGET=npkdiff
 DIRS=newspeak/ utils/ npkdiff/
-FILES=version newspeak/temps newspeak/config utils/standardMain \
+FILES=version newspeak/temps newspeak/config utils/standardApplication \
       newspeak/eBigInt newspeak/newspeak npkdiff/npkdiff
 LIBX=nums.cmxa str.cmxa
 

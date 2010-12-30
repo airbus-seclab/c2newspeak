@@ -26,7 +26,7 @@
 
 TARGET=npkfuns
 DIRS=newspeak/ utils/ npkfuns/
-FILES=version utils/listUtils utils/strSet utils/standardMain \
+FILES=version utils/listUtils utils/strSet utils/standardApplication \
       newspeak/temps newspeak/config newspeak/eBigInt newspeak/newspeak \
       newspeak/lowspeak \
       newspeak/npkcontext newspeak/npk2lpk \

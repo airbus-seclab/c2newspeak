@@ -251,4 +251,4 @@ let scan f =
 let process () = List.iter scan !input
 
 let _ = 
-  StandardMain.launch speclist anon_fun usage_msg process
+  StandardApplication.launch speclist anon_fun usage_msg process

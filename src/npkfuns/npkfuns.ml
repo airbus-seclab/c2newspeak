@@ -39,4 +39,5 @@ let process input =
       else GlbCollect.print glbs
 
 let _ =
-  StandardMain.launch_process_with_npk_argument "npkfuns" speclist process
+  StandardApplication.launch_process_with_npk_argument "npkfuns" 
+    speclist process

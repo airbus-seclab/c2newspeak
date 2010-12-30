@@ -52,7 +52,7 @@ let anon_fun file =
 let usage_msg = exec_name^" [options] [-help|--help] file.npk"
 
 let process () = 
-  if !input = "" then StandardMain.report_missing_file ();
+  if !input = "" then StandardApplication.report_missing_file ();
   
   let prog = Npk2lpk.translate (Newspeak.read !input) in
   let glb_tbl = GlbCollect.process true prog in
@@ -60,4 +60,4 @@ let process () =
     if !stats then Stats.print prog results
 
 let _ =
-  StandardMain.launch speclist anon_fun usage_msg process
+  StandardApplication.launch speclist anon_fun usage_msg process

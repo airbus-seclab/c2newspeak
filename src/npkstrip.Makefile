@@ -28,6 +28,6 @@ TARGET=npkstrip
 DIRS=newspeak/ utils npkstrip/
 LIBX=nums.cmxa str.cmxa
 FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
-      utils/standardMain newspeak/newspeak npkstrip/npkstrip
+      utils/standardApplication newspeak/newspeak npkstrip/npkstrip
 
 include common.Makefile

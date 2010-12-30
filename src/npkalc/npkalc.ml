@@ -124,7 +124,7 @@ let fill_command_table () =
   Hashtbl.add command_table "call" execute_call
 
 let process () = 
-  if !input = "" then StandardMain.report_missing_file ();
+  if !input = "" then StandardApplication.report_missing_file ();
 
   print_info "Welcome to the Newspeak calculator.";
   print_info ("Reading Newspeak file "^(!input)^"...");
@@ -169,5 +169,5 @@ let process () =
       print_info "Have a nice day..."
 	
 let _ =
-  StandardMain.launch speclist anon_fun usage_msg process
+  StandardApplication.launch speclist anon_fun usage_msg process
     

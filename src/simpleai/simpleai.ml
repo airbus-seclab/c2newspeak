@@ -34,4 +34,5 @@ let process input =
     Solver.compute simple
 
 let _ =
-  StandardMain.launch_process_with_npk_argument "simpleai" speclist process
+  StandardApplication.launch_process_with_npk_argument "simpleai" speclist 
+    process

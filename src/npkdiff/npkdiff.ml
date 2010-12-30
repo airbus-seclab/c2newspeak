@@ -99,4 +99,4 @@ let process () =
     diff "()" fundecs1 fundecs2
 
 let _ = 
-  StandardMain.launch speclist anon_fun usage_msg process
+  StandardApplication.launch speclist anon_fun usage_msg process

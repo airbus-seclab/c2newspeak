@@ -37,11 +37,11 @@ let anon_fun file =
   input := file
 
 let process () =
-  if !input = "" then StandardMain.report_missing_file ();
+  if !input = "" then StandardApplication.report_missing_file ();
   
   let prog = Npk2lpk.translate (Newspeak.read !input) in
   let eqs = Factory.build prog in
     Solver.run eqs
 
 let _ = 
-  StandardMain.launch speclist anon_fun usage_msg process
+  StandardApplication.launch speclist anon_fun usage_msg process

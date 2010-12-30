@@ -352,7 +352,7 @@ let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file.npk"
 
 let process () =
   if !input = "" 
-  then StandardMain.report_missing_file ();
+  then StandardApplication.report_missing_file ();
   
   let prog = Npk2lpk.translate (Newspeak.read !input) in
   let collector = new collector prog.ptr_sz !fun_to_count in
@@ -396,5 +396,5 @@ let process () =
       if !funstats then Funstats.collect prog
 
 let _ = 
-  StandardMain.launch speclist anon_fun usage_msg process
+  StandardApplication.launch speclist anon_fun usage_msg process
       
