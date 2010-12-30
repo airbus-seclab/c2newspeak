@@ -40,7 +40,7 @@
   * evaluation of C expressions with side effects.
   *)
 type t =
-  | Cstr of string * string (** String litterals : filename and contents *)
+  | Cstr of string          (** String litterals : filename and contents *)
   | Return                  (** Return value (inside function) *)
   | Value_of of string      (** Return value (inside caller) *)
   | Misc of string          (** Generic temporary variable *)

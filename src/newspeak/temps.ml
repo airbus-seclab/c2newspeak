@@ -34,7 +34,7 @@
   
 *)
 
-type t = Cstr of string * string
+type t = Cstr of string
        | Return
        | Value_of of string
        | Misc of string
@@ -49,7 +49,7 @@ let sep = "!"
 let to_string id x =
   let id_str = string_of_int id in
     match x with
-      | Cstr (fname, s) -> "cstr"     ^ sep      ^ id_str ^ sep ^ fname ^ "." ^ s
+      | Cstr s          -> sep        ^ "cstr"     ^ "." ^ String.escaped s
       | Return          -> sep        ^ "return"
       | Value_of s      -> "value_of" ^ sep      ^ id_str ^ sep ^ s
       | Misc desc       -> "tmp_"     ^ desc     ^ sep    ^ id_str
