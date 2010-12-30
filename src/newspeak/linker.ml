@@ -260,7 +260,8 @@ let generate_fundecs fundecs =
 	  [] -> []
 	| t::[] -> ("!return", t)::[]
 (* TODO: handle this case *)
-	| _ -> invalid_arg "Linker.generate_fundecs: case not handled yet"
+	| _ -> Npkcontext.report_error "Linker.generate_fundecs" 
+	    "case not handled yet"
     in      
       if Hashtbl.mem funspecs name then begin
         Npkcontext.report_error "Npklink.generate_funspecs" 
