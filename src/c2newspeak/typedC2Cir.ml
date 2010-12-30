@@ -66,12 +66,11 @@ let next_aligned o x =
    in Npkil *)
 let seq_of_string str =
   let len = String.length str in
-  let res = ref [(None, Data (exp_of_char '\x00', char_typ))] in
+  let res = ref [(None, Data (TypedC.exp_of_char '\x00', char_typ))] in
     for i = len - 1 downto 0 do
-      res := (None, Data (exp_of_char str.[i], char_typ))::!res
+      res := (None, Data (TypedC.exp_of_char str.[i], char_typ))::!res
     done;
     !res
-
 
 (* For detecting integers index, accesses and Addrof (accesss)*)
 let warn_report () =
@@ -114,7 +113,7 @@ and check_exp i =
   match i with
       C.Lval _ -> warn_report ()
     | C.Const (C.CInt c)  when Nat.compare c Nat.zero < 0 -> warn_report ()
-    | C.Unop   (K.Coerce _, C.Binop (N.MinusI, C.Const  (C.CInt c), e)) 
+    | C.Unop (K.Coerce _, C.Binop (N.MinusI, C.Const  (C.CInt c), e)) 
 	when Nat.compare c Nat.zero = 0 ->  
 	check_exp e
     | C.Binop  (_, e1, e2) -> check_exp e1; check_exp e2
@@ -434,7 +433,7 @@ let translate fname prog =
 	  let (lv, _, _) = incr in
 	    C.BlkLv ((C.Set incr, loc)::[], lv, is_after)
 
-      | Str str -> (* TODO: C.Str str*) add_glb_cstr str
+      | Str str -> C.Str str
 
       | FunName -> add_glb_cstr !current_fun
 

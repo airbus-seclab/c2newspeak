@@ -171,6 +171,7 @@ let int_kind = (Newspeak.Signed, Config.size_of_int)
 
 let int_typ = Int int_kind
 
+(* TODO: put in cir *)
 let exp_of_char c = Cst (Cir.CInt (Nat.of_int (Char.code c)), char_typ)
 
 let exp_of_int i = Cst (Cir.CInt (Nat.of_int i), int_typ)
