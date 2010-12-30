@@ -317,7 +317,15 @@ let translate src_lang prog =
   let translate_glbdecl x (t, loc, init) =
     Npkcontext.set_loc loc;
     let t = translate_typ t in 
-      Hashtbl.add glbdecls x (t, loc, init, false)
+    let declaration = 
+      {
+	K.global_type = t;
+	K.global_position = loc;
+	K.storage = init;
+	K.is_used = false;
+      }
+    in
+      Hashtbl.add glbdecls x declaration
   in
 
 (* TODO: remove unused argument from cir *)
@@ -339,8 +347,9 @@ let translate src_lang prog =
 
   let flag_glb x = 
     try  
-      let (t, loc, init, _) = Hashtbl.find glbdecls x in
- 	Hashtbl.replace glbdecls x (t, loc, init, true)
+      let declaration = Hashtbl.find glbdecls x in
+      let declaration = { declaration with K.is_used = true; } in
+ 	Hashtbl.replace glbdecls x declaration
     with Not_found -> 
       Npkcontext.report_error "Cir2npkil.flag_glb" 
 	("illegal use of " ^ x ^ " (undefined type)")
