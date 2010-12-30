@@ -23,25 +23,10 @@
   email: charles.hymans@penjili.org
 *)
 
-let input = ref ""
-
-let usage_msg = "npkflow [options] [-help|--help] file.npk"
-
-let speclist = 
-  [
-  ]
-
-let anon_fun file =
-  if !input <> "" 
-  then invalid_arg "You can only analyse one newspeak file at a time";
-  input := file
-
-let process () =
-  if !input = "" then StandardApplication.report_missing_file ();
-  
-  let prog = Npk2lpk.translate (Newspeak.read !input) in
+let process input =
+  let prog = Npk2lpk.translate (Newspeak.read input) in
   let eqs = Factory.build prog in
     Solver.run eqs
 
 let _ = 
-  StandardApplication.launch speclist anon_fun usage_msg process
+  StandardApplication.launch_process_with_npk_argument "npkflow" [] process

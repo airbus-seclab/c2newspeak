@@ -33,8 +33,6 @@ let command_table = Hashtbl.create 10
 
 let print_info message = print_endline ("  "^message)
 
-let input = ref ""
-
 let config_file = ref ""
 
 let set_config_file x = config_file := x
@@ -42,10 +40,6 @@ let set_config_file x = config_file := x
 let speclist = 
   [("--file", Arg.String set_config_file, "");
    ("-f", Arg.String set_config_file, "input from file")]
-
-let anon_fun filename = input := filename
-
-let usage_msg = "npkalc options <file.npk>"
 
 let add_call f g =
   try
