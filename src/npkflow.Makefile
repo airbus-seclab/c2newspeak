@@ -27,8 +27,8 @@
 TARGET=npkflow
 DIRS=newspeak/ utils/ npkflow/
 FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
-      newspeak/newspeak newspeak/lowspeak utils/standardApplication \
-      newspeak/npkcontext newspeak/npk2lpk \
+      newspeak/newspeak utils/standardApplication newspeak/npkcontext \
+      newspeak/lowspeak newspeak/npk2lpk \
       npkflow/equations npkflow/var npkflow/factory \
       npkflow/ptrDom \
       npkflow/store npkflow/solver \

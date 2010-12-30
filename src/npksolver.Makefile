@@ -37,8 +37,8 @@ npksolver.FILES= \
 		fixpoint tap test npksolver
 
 FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
-      newspeak/newspeak newspeak/lowspeak \
-      utils/standardApplication newspeak/npkcontext newspeak/npk2lpk \
+      newspeak/newspeak utils/standardApplication \
+      newspeak/npkcontext newspeak/lowspeak newspeak/npk2lpk \
       $(addprefix npksolver/,$(npksolver.FILES))
 LIBX=nums.cmxa str.cmxa
 

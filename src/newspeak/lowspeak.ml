@@ -220,7 +220,8 @@ let string_of_args_t args =
 let string_of_ret_t ret = string_of_args_t ret
 
 let string_of_loc (fname, line, carac) = 
-  if (fname = "") then invalid_arg "Newspeak.string_of_loc: unknown location";
+  if (fname = "") 
+  then Npkcontext.report_error "Newspeak.string_of_loc" "unknown location";
   if (line < 0) || (carac < 0) then fname
   else (fname^":"^(string_of_int line)^"#"^(string_of_int carac))
 
@@ -457,7 +458,7 @@ object
       if cur_loc = N.unknown_loc then ""
       else " in "^file^" line "^(string_of_int line)
     in
-      (invalid_arg (msg^pos) : unit)
+      (StandardApplication.report_error (msg^pos) : unit)
 
   method print_warning msg = 
     let (file, line, _) = cur_loc in
@@ -632,7 +633,7 @@ let rec negate exp =
     | BinOp (N.Gt t, e1, e2) -> UnOp (N.Not, BinOp (N.Gt t, e1, e2))
     | BinOp (N.Eq t, e1, e2) -> UnOp (N.Not, BinOp (N.Eq t, e1, e2))
     | UnOp (N.Coerce i, e) -> UnOp (N.Coerce i, negate e)
-    | _ -> invalid_arg "Newspeak.negate"
+    | _ -> StandardApplication.report_error "Newspeak.negate"
 
 let zero = Const (N.CInt N.Nat.zero)
 let one  = Const (N.CInt N.Nat.one)
@@ -754,7 +755,9 @@ object (self)
               | N.PlusI  -> N.Nat.add
               | N.MinusI -> N.Nat.sub
               | N.MultI  -> N.Nat.mul
-              | _ -> invalid_arg "Newspeak.big_int_op: unexpected operator"
+              | _ -> 
+		  Npkcontext.report_error "Newspeak.big_int_op" 
+		    "unexpected operator"
           in
           let z = nat_op op x y in
             Const (N.CInt z)
@@ -801,7 +804,9 @@ let simplify_gotos blk =
         (_, lbl)::tl -> 
           used_lbls := LblSet.remove lbl !used_lbls;
           stack := tl
-      | [] -> invalid_arg "Newspeak.simplify_gotos: unexpected empty stack"
+      | [] -> 
+	  Npkcontext.report_error "Newspeak.simplify_gotos" 
+	    "unexpected empty stack"
   in
 
   let rec simplify_blk x =
@@ -871,7 +876,10 @@ let simplify_gotos blk =
     
   let blk = simplify_blk blk in
     if not (LblSet.is_empty !used_lbls) 
-    then invalid_arg "Newspeak.simplify_gotos: unexpected goto without label";
+    then begin
+      Npkcontext.report_error "Newspeak.simplify_gotos" 
+	"unexpected goto without label"
+    end;
     blk
 
 let rec simplify_stmt actions (x, loc) =

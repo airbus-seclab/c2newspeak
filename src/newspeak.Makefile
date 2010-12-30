@@ -26,9 +26,9 @@
 
 #TODO: think about it, but npkcontext should not be part of INSTALL.FILES
 INSTALL.FILES=newspeak/temps.cmi newspeak/config.cmi newspeak/eBigInt.cmi \
-	      newspeak/newspeak.cmi newspeak/lowspeak.cmi \
+	      newspeak/newspeak.cmi \
 	      utils/standardApplication.cmi newspeak/npkcontext.cmi \
-              newspeak/npk2lpk.cmi \
+              newspeak/lowspeak.cmi newspeak/npk2lpk.cmi \
 	      newspeak.cma newspeak.cmxa newspeak.a
 
 all: $(INSTALL.FILES)
@@ -36,7 +36,7 @@ all: $(INSTALL.FILES)
 
 FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
       newspeak/newspeak utils/standardApplication \
-      newspeak/lowspeak newspeak/npkcontext newspeak/npk2lpk
+      newspeak/npkcontext newspeak/lowspeak newspeak/npk2lpk
 FILES.CMO=$(addsuffix .cmo,$(FILES))
 FILES.CMX=$(addsuffix .cmx,$(FILES))
 
