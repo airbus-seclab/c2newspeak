@@ -90,11 +90,9 @@ and exp_of_char c = N.Const (N.CInt (Nat.of_int (Char.code c)))
 and exp_of_int x = N.Const (N.CInt (Nat.of_int x))
 
 and add_glb_cstr str =
-  let (fname, _, _) = Npkcontext.get_loc () in
   let name =
     (* TODO: String.escaped should be done by the Temps.to_string *)
-(* TODO: remove fname *)
-    Temps.to_string 0 (Temps.Cstr (fname, String.escaped str)) 
+    Temps.to_string 0 (Temps.Cstr ("", String.escaped str)) 
   in
     if not (Hashtbl.mem globals name) then begin
       let loc = Npkcontext.get_loc () in
