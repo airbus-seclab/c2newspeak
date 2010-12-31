@@ -289,12 +289,19 @@ function_definition:
 declaration:
   declaration_specifiers 
   init_declarator_list                      { ($1, $2) }
+| typeof_declaration 			    { $1 }
 ;;
 
+typeof_declaration:
+type_qualifier_list TYPEOF LPAREN 
+type_specifier pointer RPAREN 
+type_qualifier_list ident_or_tname { ($4, [( ($5, Variable ($8, get_loc ())), []) , None])}
+;;
 init_declarator_list:
                                             { (((0, Abstract), []), None)::[] }
 | non_empty_init_declarator_list            { $1 }
 ;;
+
 
 non_empty_init_declarator_list:
   init_declarator COMMA 
@@ -302,10 +309,12 @@ non_empty_init_declarator_list:
 | init_declarator                           { $1::[] }
 ;;
 
+
 init_declarator:
   attr_declarator                           { ($1, None) }
 | attr_declarator EQ init                   { ($1, Some $3) }
 ;;
+
 
 attr_declarator:
   declarator extended_attribute_list        { ($1, $2) }
@@ -391,6 +400,7 @@ type_name:
 declaration_specifiers:
   type_qualifier_list type_specifier 
   type_qualifier_list                      { $2 }
+
 ;;
 
 type_qualifier_list:
@@ -955,7 +965,7 @@ external_declaration:
   RPAREN RPAREN STATIC function_definition { build_fundef true $8 }
 // GNU C extension
 | optional_extension 
-  EXTERN function_definition               { 
+  EXTERN function_definition               {
     Npkcontext.report_ignore_warning "Parser.external_declaration" 
       "extern function definition" Npkcontext.ExternFunDef;
     let ((b, m), _) = $3 in
