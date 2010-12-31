@@ -24,16 +24,19 @@
 # email: charles.hymans@penjili.org
 #
 
+#TODO: think about it, but npkcontext should not be part of INSTALL.FILES
 INSTALL.FILES=newspeak/temps.cmi newspeak/config.cmi newspeak/eBigInt.cmi \
-		newspeak/newspeak.cmi newspeak/lowspeak.cmi \
-	      newspeak/npkcontext.cmi newspeak/npk2lpk.cmi \
+	      newspeak/newspeak.cmi \
+	      utils/standardApplication.cmi newspeak/npkcontext.cmi \
+              newspeak/lowspeak.cmi newspeak/npk2lpk.cmi \
 	      newspeak.cma newspeak.cmxa newspeak.a
 
 all: $(INSTALL.FILES)
 	$(CP) $(INSTALL.FILES) ../bin
 
-FILES=version newspeak/temps newspeak/config newspeak/eBigInt newspeak/newspeak  \
-      newspeak/lowspeak newspeak/npkcontext newspeak/npk2lpk
+FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
+      newspeak/newspeak utils/standardApplication \
+      newspeak/npkcontext newspeak/lowspeak newspeak/npk2lpk
 FILES.CMO=$(addsuffix .cmo,$(FILES))
 FILES.CMX=$(addsuffix .cmx,$(FILES))
 
@@ -48,7 +51,7 @@ newspeak.a newspeak.cmxa: $(FILES.CMX)
 CLEANFILES=newspeak.a newspeak.cma newspeak.cmxa newspeak/newspeak.cmo
 
 TARGET=newspeak
-DIRS=newspeak/
+DIRS=utils/ newspeak/
 LIBX=nums.cmxa str.cmxa
 
 include common.Makefile

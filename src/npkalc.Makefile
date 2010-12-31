@@ -26,7 +26,7 @@
 
 TARGET=npkalc
 DIRS=newspeak/ utils/ npkalc/
-FILES=utils/standardMain npkalc/npkalc
+FILES=utils/standardApplication npkalc/npkalc
 LIBX=nums.cmxa str.cmxa newspeak.cmxa
 
 include common.Makefile

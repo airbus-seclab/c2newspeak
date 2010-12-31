@@ -341,20 +341,8 @@ object (this)
   initializer List.iter (fun f -> Hashtbl.add callstats f 0) fun_to_count
 end
 
-let input = ref ""
-
-let anon_fun file =
-  if !input = ""
-  then input := file
-  else invalid_arg "You can only get statistics on one file at a time."
-
-let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file.npk"
-
-let process () =
-  if !input = "" 
-  then StandardMain.report_missing_file ();
-  
-  let prog = Npk2lpk.translate (Newspeak.read !input) in
+let process input =
+  let prog = Npk2lpk.translate (Newspeak.read input) in
   let collector = new collector prog.ptr_sz !fun_to_count in
   let max_stats = Maxcount.count !debug prog in
     Lowspeak.visit (collector :> Lowspeak.visitor) prog;
@@ -396,5 +384,6 @@ let process () =
       if !funstats then Funstats.collect prog
 
 let _ = 
-  StandardMain.launch speclist anon_fun usage_msg process
+  StandardApplication.launch_process_with_npk_argument "npkstats" speclist 
+    process
       

@@ -33,8 +33,6 @@ let command_table = Hashtbl.create 10
 
 let print_info message = print_endline ("  "^message)
 
-let input = ref ""
-
 let config_file = ref ""
 
 let set_config_file x = config_file := x
@@ -42,10 +40,6 @@ let set_config_file x = config_file := x
 let speclist = 
   [("--file", Arg.String set_config_file, "");
    ("-f", Arg.String set_config_file, "input from file")]
-
-let anon_fun filename = input := filename
-
-let usage_msg = "npkalc options <file.npk>"
 
 let add_call f g =
   try
@@ -123,12 +117,10 @@ let fill_command_table () =
   Hashtbl.add command_table "exit" execute_exit;
   Hashtbl.add command_table "call" execute_call
 
-let process () = 
-  if !input = "" then StandardMain.report_missing_file ();
-
+let process input = 
   print_info "Welcome to the Newspeak calculator.";
-  print_info ("Reading Newspeak file "^(!input)^"...");
-  let prog = Newspeak.read !input in
+  print_info ("Reading Newspeak file "^input^"...");
+  let prog = Newspeak.read input in
     print_info ("Computing call graph...");
 
     compute_call_graph prog;
@@ -169,5 +161,5 @@ let process () =
       print_info "Have a nice day..."
 	
 let _ =
-  StandardMain.launch speclist anon_fun usage_msg process
+  StandardApplication.launch_process_with_npk_argument "npkalc" speclist process
     

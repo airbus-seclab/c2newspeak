@@ -23,15 +23,28 @@
   email: charles.hymans@penjili.org
 *)
 
-open Arg
+let report_error error_message =
+  invalid_arg error_message
 
-val report_missing_file: unit -> unit
+let launch speclist anon_fun usage_msg f =
+  try 
+    Arg.parse speclist anon_fun usage_msg;
+    f()
+  with Invalid_argument s -> 
+    print_endline ("Fatal error: "^s);
+    exit 0
 
-(* TODO: should put this together with report_error! *)
-(* TODO: find ways to standardize more/factor between applications which use
-   launch *)
-val launch: 
-  (key * spec * doc) list -> anon_fun -> usage_msg -> (unit -> unit) -> unit
-
-val launch_process_with_npk_argument: 
-  string -> (key * spec * doc) list -> (string -> unit) -> unit
+let launch_process_with_npk_argument name speclist process =
+  let usage_msg = name^" [options] [-help|--help] file.npk" in
+  let input = ref "" in
+  let anon_fun file = 
+    if !input <> "" then invalid_arg "you can only analyse one file at a time";
+    input := file
+  in
+  let process () = 
+    if !input = "" 
+  (* TODO: rather than giving this advice => should directly dump help *)
+    then report_error ("no file specified. Try "^Sys.argv.(0)^" --help");
+    process !input
+  in
+    launch speclist anon_fun usage_msg process

@@ -327,7 +327,8 @@ let print_debug msg =
 
 let print_size sz = print_debug ("Current size: "^(string_of_int sz))
 
-let report_error where msg = invalid_arg (string_of_error where msg)
+let report_error where msg = 
+  StandardApplication.report_error (string_of_error where msg)
 
 let handle_cmdline_options version_string comment_string = 
   let usage_msg =

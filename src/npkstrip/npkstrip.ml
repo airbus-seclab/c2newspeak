@@ -147,4 +147,4 @@ let process () =
     Newspeak.write !output npk
   
 let _ = 
-  StandardMain.launch speclist anon_fun usage_msg process
+  StandardApplication.launch speclist anon_fun usage_msg process

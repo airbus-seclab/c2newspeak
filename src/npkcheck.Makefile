@@ -27,8 +27,8 @@
 TARGET=npkcheck
 DIRS=newspeak/ utils/ npkcheck/
 FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
-     newspeak/newspeak newspeak/lowspeak utils/standardMain \
-     newspeak/npkcontext newspeak/npk2lpk npkcheck/npkcheck
+     newspeak/newspeak utils/standardApplication newspeak/npkcontext \
+     newspeak/lowspeak  newspeak/npk2lpk npkcheck/npkcheck
 LIBX=nums.cmxa str.cmxa
 
 include common.Makefile

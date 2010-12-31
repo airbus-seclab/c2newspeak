@@ -147,5 +147,5 @@ let check_file fname =
 let process () = List.iter check_file !inputs
 
 let _ = 
-  StandardMain.launch speclist anon_fun usage_msg process
+  StandardApplication.launch speclist anon_fun usage_msg process
 
