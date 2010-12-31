@@ -24,8 +24,10 @@
 # email: charles.hymans@penjili.org
 #
 
+IGNOREDMSG=expression of type signed integer used as an array index accepted
+
 COMMAND=$(C2NEWSPEAK) --reject-missing-fundecl \
-	`[ -e $*.in ] && cat $*.in` -o $*.npk $*.c > /dev/null 2>&1; \
+	`[ -e $*.in ] && cat $*.in` -o $*.npk $*.c 2>&1 | grep -v "$(IGNOREDMSG)" ;\
 	 $(NPKSOLVER) $*.npk
 PREREQ=%.c $(NPKSOLVER)
 DIFF=diff -u $*.spec $*.bak
