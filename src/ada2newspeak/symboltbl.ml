@@ -201,9 +201,8 @@ module Table = struct
               end
 
   let mkcast desc fn  ?(filter = fun _ -> true) lst  =
-    if ((compare (List.length lst) 1 > 0) (*WG *) &&
-	  (compare desc "subprogram" <> 0)  
-	  (*WG *)) 
+    if ((compare (List.length lst) 1 > 0) &&
+	  (compare desc "subprogram" <> 0)) 
     then
       begin
 	Npkcontext.print_debug("Multiple interpretations for " ^desc^ " :");
@@ -419,8 +418,8 @@ open Table
 
 type t = {         s_stack    : table Tree.t
          ; mutable s_cpkg     : string option
-         ; mutable s_with     : string list
-         ; mutable s_renaming : (string *
+	   (*; mutable s_with     : string list*)
+         ; mutable s_renaming : ( (string option * string) *
 				   ((string option * string) * 
 				    (Syntax_ada.param list) option
 				   ) list
@@ -451,7 +450,7 @@ let create _ =
   Tree.push library s;
   { s_stack    = s
   ; s_cpkg     = None
-  ; s_with     = ["system";"machine_code";"unchecked_conversion"]
+(*  ; s_with     = ["system";"machine_code";"unchecked_conversion"]*)
   ; s_renaming = []
   }
 
@@ -461,14 +460,19 @@ let reset_current s = s.s_cpkg <- None
 
 let current s = s.s_cpkg
 
+(*
 let add_with s x = s.s_with <- x::s.s_with
-
 let is_with  s x = List.mem x s.s_with
+*)
+let is_ada_pck p = List.exists (fun x -> compare x p = 0) 
+    ["system";"machine_code";"unchecked_conversion"]
 
-let add_use s p =
-  if (is_with s p || current s = Some p) then
+
+let add_use is_with s p =
+ 
+  if (is_with || is_ada_pck p ||  (current s = Some p)) then
     tbl_add_use (top s) p
-  else
+      else
     Npkcontext.report_error "Symboltbl.add_use"
       (p ^ " is undefined")
 
@@ -505,24 +509,52 @@ let find_rec s f =
  * call is (A -> A) and the circular dependency will be detected.
  * 
 *)
-let add_renaming_decl s new_name new_args old_name  =
+
+let equal_keyrenaming  (p1, n1) (p2, n2) = 
+     ( compare n1 n2 = 0) &&
+     (match p1, p2 with 
+	    Some a, Some b -> compare a b = 0 
+	  | _ -> false
+     ) 
+    
+
+let add_renaming_decl s (current, new_name) new_args old_name  =
   (*Making sure old name can later be found *)
-  if ((None,new_name) = old_name) then
-    Npkcontext.report_error "add_renaming_decl"
-                  ( "Circular declaration detected for '" ^ new_name ^ "'.")
-  else
-    (*Multiple renaming is possible*)    
-    if (List.mem_assoc new_name  s.s_renaming) then
+  let is_None x = match x with None -> true | _ -> false 
+  in
+    if ((is_None current) || (is_None (fst old_name) )) then 
+      Npkcontext.report_error "add_renaming_decl"
+	( "None package is specified" ^ new_name ^ "'.")
+    ;
+    
+    if ((None,new_name) = old_name) then
+      Npkcontext.report_error "add_renaming_decl"
+	( "Circular declaration detected for '" ^ new_name ^ "'.")
+    else
+      (*Multiple renaming is possible*)    
+      if (List.exists (fun (key, _) -> 
+			 equal_keyrenaming key (current, new_name)) s.s_renaming)
+      then
+	
       begin
 	Npkcontext.report_warning "add_renaming_decl"
 	  ( "Already renamed '"^ new_name ^ "' but added");
-	let bindings = List.assoc new_name s.s_renaming in
-	let removeds  = List.remove_assoc new_name  s.s_renaming in
-	  s.s_renaming <-  (new_name,
-			    (old_name, new_args)::bindings)::removeds
+
+	let founds, removeds =  List.partition ( fun (key,_) -> 
+	  equal_keyrenaming key (current, new_name)) s.s_renaming 
+	in
+	let bindings =  match founds with
+	    hd::[] -> snd hd
+	  | _ -> error ("Too many bining s for "^ new_name )
+	in
+	  s.s_renaming <- ((current, new_name) ,
+			   ((old_name, new_args)::
+			      bindings))::
+	    removeds
+			  
       end
     else
-      (* dans le cas contraire (et seulement) on le rajoute*)
+      (* Else (and only in this case) add it*)
       begin
 	Npkcontext.print_debug ( "renaming_declaration : "
 				 ^ new_name
@@ -533,7 +565,7 @@ let add_renaming_decl s new_name new_args old_name  =
 				   )
 				 ^ (snd old_name)
                                );
-	s.s_renaming <- (new_name,[(old_name, new_args)])::s.s_renaming
+	s.s_renaming <- ((current, new_name),[(old_name, new_args)])::s.s_renaming
       end
 	
 let enter_context ?name ?desc (s:t) =
@@ -596,7 +628,6 @@ let s_find_abs _desc f s p n =
     | None     -> raise Not_found
       
 
-(* raise Not_found *)
 let s_find desc finder s ?package n =
   match package with
     | Some p -> s_find_abs desc finder s p n
@@ -637,45 +668,25 @@ let find_variable_value s ?(silent = false) ?expected_type (package,n) =
                                   | Some _ -> " with this expected type")
 			    )
 		    end
-		      (*WG	       ^(match expected_type with
-                        | None   -> ""
-                        | Some t -> Ada_types.print  t)
-			^
-			( print s;	(*WG*)	     
-			)
-			)
-			end
-			WG*)
 		      
 let rec find_variable s ?silent ?expected_type name =
-  let var_name = snd name in 
+  let var_name = snd name in
   try
-    match List.assoc var_name s.s_renaming with 
-	(nam_assoc, _)::[]  -> 
-	  (*Particular case: renaming with the same name: 
-	    only allowed one-level deep*)
-	  if (compare  var_name (snd nam_assoc) = 0) then
-	    (fun (x,(n,y,_,z)) -> (x,(n,y,z)))
-	      (find_variable_value ?silent s ?expected_type nam_assoc) 
-	  else
-	    find_variable s ?silent ?expected_type nam_assoc
+    (*  let x = List.assoc var_name s.s_renaming in *)
+    let x = snd (List.find (fun (key, _) -> equal_keyrenaming key name ) s.s_renaming)
+    in
+    match x with 
+	(nam_assoc, _)::[]  -> find_variable s ?silent ?expected_type nam_assoc
+	  
       |  _ -> begin
 	   Npkcontext.report_warning "find_variable"
 	     ( "Already renamed variable '"^ var_name ^ 
-		 "' not impelmented for variable"); 
+		 "' not implemented for variable"); 
 	   raise Not_found 
 	 end
   with Not_found ->
     (fun (x,(n,y,_,z)) -> (x,(n,y,z)))
       (find_variable_value ?silent s ?expected_type name) 
-
-(* WG --try
-   find_variable s ?silent ?expected_type
-   (List.assoc (snd name) s.s_renaming)
-   with Not_found ->
-   (fun (x,(n,y,_,z)) -> (x,(n,y,z)))
-   (find_variable_value ?silent s ?expected_type name) 
-*)
 
 let find_type s (package,n) = 
   try
@@ -684,50 +695,43 @@ let find_type s (package,n) =
 
 
 let rec find_subprogram s ?(silent = false) (pack,n) norm_args xpect t_find =
-   let find_one_renaming  ((p_opt, n_a), params_opt) n = 
-    if (compare n n_a = 0) then
-      begin 
-	match p_opt with 
-	    Some pck -> 
-	      (*TO DO add the params_opt here see 'swap_formals'*)
-	      s_find "subprogram" 
-		(tbl_find_subprogram norm_args xpect t_find) s
-		~package:(pck) n_a
-	  | _ ->  	
-	      error  ("program '" ^ n ^ "'" ^"can not be resolved")
-      end
+   
+  let find_one_renaming  ((p_opt, n_a), params_opt) = 
+    if (equal_keyrenaming  (p_opt, n_a) (pack,n)) then
+      error  ("program '" ^ n ^ "'" ^"can not be resolved")
     else
       let (sc,(act_name,_, top)) =
 	find_subprogram s ~silent (p_opt, n_a) norm_args  xpect t_find 
       in
 	match params_opt with 
 	    Some formals -> 
-		(sc,(act_name,  formals, top))
+	      (sc,(act_name,  formals, top))
 	  | None  ->  error  ("program renamed'" ^ n ^ 
 				"'" ^"can not find previous formal parameters")
   in
-  
   let res = ref[] in 
-  
   let multiple_renaming x = 
     try
-      let new_spec = find_one_renaming x n in
+      let new_spec = find_one_renaming x  in
 	res:=new_spec::(!res)
     with _ -> ()
   in
-  
     try 
-      let names =  List.assoc n s.s_renaming in
-	List.iter  multiple_renaming names;
+      let names = snd (List.find (fun (key, _) -> 
+			equal_keyrenaming key (pack,n)
+				 ) s.s_renaming
+		      ) 
+      in
+	List.iter multiple_renaming names;
 	let nb_solution = List.length !res in 
 	  if (compare  nb_solution 0 = 0) then
-	    raise Not_found 
+	    raise Not_found
 	  else if (compare nb_solution 1 > 0) then
 	    error ("More than one program match spec:'" ^ n ^ "'")
 	  else
 	    List.hd (!res)
 
-    with Not_found ->
+    with Not_found -> 
       (*No need for tbl_find_subprogram here*)
       try 
 	match pack with 
@@ -744,31 +748,18 @@ let rec find_subprogram s ?(silent = false) (pack,n) norm_args xpect t_find =
 	  raise Not_found
 	else
 	  error ("Cannot find subprogram '" ^ n ^ "'")
-	    
-  (*
-    try  
-    find_subprogram s (List.assoc n s.s_renaming) norm_args t_find 
-    with Not_found ->
-    try
-    s_find "subprogram" (tbl_find_subprogram norm_args t_find) s ?package n
-    with Not_found ->
-    if silent then
-    raise Not_found
-    else
-    error ("Cannot find subprogram '" ^ n ^ "'")
-  *)
 	
 let is_operator_overloaded s n =
-  try begin
-    ignore (s_find "overloaded operator" tbl_find_subprogram_simple s n);
-    true
-  end
-  with Not_found -> (*false*)
-    List.mem_assoc n s.s_renaming 
+  try 
+    begin
+      ignore (s_find "overloaded operator" tbl_find_subprogram_simple s n);
+      true
+    end
+  with Not_found -> 
+    List.exists (fun ((_, key), _) -> compare  key n = 0) s.s_renaming
 
 
-let scope t =
-  t.t_scope
+let scope t = t.t_scope
 
 let add_variable s n loc ?value ?(no_storage = false) ?(ro = false) t =
   Npkcontext.print_debug ( "s_add_variable : adding '"
@@ -803,7 +794,6 @@ let replace_type s n new_t =
 		    ^")"
 		    )
 	  
-
 
 (*for Enumeration type redefining using the 'use' clause*)
 let replace_typ_enum s (name,data) oldt newt  = 
@@ -845,9 +835,6 @@ let type_ovl_intersection s n1 n2 =
     in
       List.filter (fun x -> List.exists (fun y -> sym_eq x y) l1) l2
   in   
-    (*  Needs  more work than only 'find_symbols (top s) n1'...
-	see t415
-    *)
   let all_find_symbols stack name = 
     let symb1 = Tree.fold (fun rf it ->
 	List.append rf (find_symbols it name)) [] stack.s_stack in
