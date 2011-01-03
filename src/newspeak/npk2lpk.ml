@@ -231,13 +231,17 @@ let translate prog =
 	| [] -> []
 	| (v, _)::[] -> [v]
 (* TODO: remove this case *)
-	| _ -> invalid_arg "Npk2lpk.translate_fundec: case not handled yet"
+	| _ -> 
+	    Npkcontext.report_error "Npk2lpk.translate_fundec" 
+	      "case not handled yet"
     in
     let ret_t =
       match fd.rets with
 	  [] -> []
 	| (_, t)::[] -> t::[]
-	| _ -> invalid_arg "Npk2lpk.translate_fundec: case not handled yet"
+	| _ -> 
+	    Npkcontext.report_error "Npk2lpk.translate_fundec" 
+	      "case not handled yet"
     in
     let arg_ids = List.map fst fd.args in
     let ft = (List.map snd fd.args, ret_t) in

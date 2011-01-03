@@ -64,9 +64,10 @@ let to_string id x =
             ; "/"   ; "mod" ; "rem" ; "**"
             ]
           in
-          if List.mem s operators then
+	    if not (List.mem s operators) then begin
+	      invalid_arg ("Temps.to_string: "^"ada operator '" ^ s ^ "'")
+	    end;
             sep ^ "op" ^ s
-          else invalid_arg ("Temps.to_string : ada operator '" ^ s ^ "'")
 
 let return_value = to_string 0 Return
 
