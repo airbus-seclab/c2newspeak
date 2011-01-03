@@ -12,9 +12,13 @@ type t = (string, info) Hashtbl.t
 let compute prog =
   let callgraph = Hashtbl.create 100 in
   let add_call f g =
-    let info = Hashtbl.find callgraph g in
-    let info = { info with callers = Set.add f info.callers } in
-      Hashtbl.replace callgraph g info
+    try
+      let info = Hashtbl.find callgraph g in
+      let info = { info with callers = Set.add f info.callers } in
+	Hashtbl.replace callgraph g info
+    with Not_found -> 
+      let info = { file = "missing definition"; callers = Set.singleton f } in
+	Hashtbl.add callgraph g info
   in
   let current_function = ref "" in
 
