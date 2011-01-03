@@ -152,7 +152,8 @@ let process input =
 		try 
 		  let execute = Hashtbl.find command_table command in
 		    execute arguments
-		with Not_found -> ()
+		with Not_found -> 
+		  print_info ("Unknown command '"^command^"'. Try help.")
 	      end
 	    | [] -> ()
       done
