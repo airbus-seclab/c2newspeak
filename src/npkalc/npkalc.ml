@@ -23,15 +23,9 @@
   email: charles.hymans@penjili.org
 *)
 
-open Newspeak
-
 module Set = Set.Make(String)
 
-let callgraph = Hashtbl.create 100
-
 let command_table = Hashtbl.create 10
-
-let print_info message = print_endline ("  "^message)
 
 let config_file = ref ""
 
@@ -41,93 +35,88 @@ let speclist =
   [("--file", Arg.String set_config_file, "");
    ("-f", Arg.String set_config_file, "input from file")]
 
-let add_call f g =
-  try
-    let callers = Hashtbl.find callgraph g in
-      Hashtbl.replace callgraph g (Set.add f callers)
-  with Not_found -> Hashtbl.add callgraph g (Set.singleton f)
-
-let get_callers f =
-  try Set.elements (Hashtbl.find callgraph f)
-  with Not_found -> []
-
-let compute_call_graph prog =
-  let current_function = ref "" in
-
-  let rec compute_blk x = List.iter compute_stmt x
-
-  and compute_stmt (x, _) =
-    match x with
-	Decl (_, _, body) | InfLoop body | DoWith (body, _) -> 
-	  compute_blk body
-      | Select (branch1, branch2) ->
-	  compute_blk branch1;
-	  compute_blk branch2
-      | Call (_, FunId g, _) -> add_call !current_function g
-      | Call (_, FunDeref _, _) -> 
-	  print_info "Function pointer dereference ignored"
-      | _ -> ()
-  in
-  let compute_fundec f declaration =
-    current_function := f;
-    compute_blk declaration.body
-  in
-
-  Hashtbl.iter compute_fundec prog.fundecs
-
 let execute_help _ =
-  print_info "List of available commands:";
-  Hashtbl.iter (fun command _ -> print_info ("- "^command)) command_table 
+  Utils.print_info "List of available commands:";
+  Hashtbl.iter (fun command _ -> Utils.print_info ("- "^command)) command_table 
 
-let print_path p =
-  let rec print_path margin p =
-    match p with
-      | [] -> ()
-      | f::tl -> 
-	  print_info (margin^f);
-	  print_path (margin^"  ") tl
+let build_paths_from callgraph f =
+  let result = Hashtbl.create 10 in
+  let add_call f g =
+    try
+      let previous_calls = Hashtbl.find result f in
+	Hashtbl.replace result f (Set.add g previous_calls)
+    with Not_found -> Hashtbl.add result f (Set.singleton g)
   in
-    print_path "" p
-
-let build_paths_from f =
+  let heads = ref Set.empty in
+  let visited = ref Set.empty in
   let rec build f =
-    let callers = get_callers f in
-      if callers = [] then [f::[]]
-      else begin
-	let build_one_path g = List.map (fun p -> f::p) (build g) in
-	let paths = List.map build_one_path callers in
-	  List.flatten paths
-      end
+    if not (Set.mem f !visited) then begin
+      visited := Set.add f !visited;
+      let callers = CallGraph.get_callers callgraph f in
+      let process_call g = 
+	add_call g f;
+	build g
+      in
+	if callers = [] then begin
+	  heads := Set.add f !heads
+	end;
+	List.iter process_call callers
+    end
   in
-    build f
+    build f;
+    (Set.elements !heads, result)
+    
+let print_paths (heads, callgraph) =
+  let visited = ref Set.empty in
+  let rec print_path margin f =
+    if Set.mem f !visited then begin
+      Utils.print_info (margin^f^"...");
+    end else begin
+      visited := Set.add f !visited;
+      Utils.print_info (margin^f);
+      let calls = try Hashtbl.find callgraph f with Not_found -> Set.empty in
+      let print_call g = print_path (margin^"  ") g in
+	Set.iter print_call calls
+    end
+  in
+    List.iter (print_path "") heads
 
 let execute_exit _ = raise End_of_file
 
-let execute_call arguments = 
+let execute_call callgraph arguments = 
   match arguments with
       f::_ -> 
-	let paths = build_paths_from f in
-	  List.iter print_path paths
+	let paths = build_paths_from callgraph f in
+	  print_paths paths
+    | _ -> ()
+
+let execute_where callgraph arguments =
+  match arguments with
+      f::_ ->
+	let filename = CallGraph.get_position callgraph f in
+	  Utils.print_info (f^" defined in file "^filename)
     | _ -> ()
 
 (* TODO: add command where global which shows all places where a global is 
    being used *)
-let fill_command_table () =
+let fill_command_table callgraph =
   Hashtbl.add command_table "help" execute_help;
   Hashtbl.add command_table "exit" execute_exit;
-  Hashtbl.add command_table "call" execute_call
+  Hashtbl.add command_table "call" (execute_call callgraph);
+  Hashtbl.add command_table "where" (execute_where callgraph)
+
 
 let process input = 
-  print_info "Welcome to the Newspeak calculator.";
-  print_info ("Reading Newspeak file "^input^"...");
+  Utils.print_info "Welcome to the Newspeak calculator.";
+  Utils.print_info ("Reading Newspeak file "^input^"...");
   let prog = Newspeak.read input in
-    print_info ("Computing call graph...");
+    Utils.print_info ("Computing call graph...");
 
-    compute_call_graph prog;
+    let callgraph = CallGraph.compute prog in
 
-    fill_command_table ();
+      fill_command_table callgraph;
     
-    print_info "Type help for a list of commands.";
+      Utils.print_info "Type help for a list of commands.";
 
     let read_line =
       if !config_file = "" then read_line
@@ -153,13 +142,13 @@ let process input =
 		  let execute = Hashtbl.find command_table command in
 		    execute arguments
 		with Not_found -> 
-		  print_info ("Unknown command '"^command^"'. Try help.")
+		  Utils.print_info ("Unknown command '"^command^"'. Try help.")
 	      end
 	    | [] -> ()
       done
     with End_of_file -> 
-      print_info "Thank you for using the Newspeak calculator.";
-      print_info "Have a nice day..."
+      Utils.print_info "Thank you for using the Newspeak calculator.";
+      Utils.print_info "Have a nice day..."
 	
 let _ =
   StandardApplication.launch_process_with_npk_argument "npkalc" speclist process
