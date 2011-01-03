@@ -57,7 +57,8 @@ let build_paths_from callgraph f =
 	  List.flatten paths
       end
   in
-    build f
+  let paths = build f in
+    List.map List.rev paths
 
 let execute_exit _ = raise End_of_file
 

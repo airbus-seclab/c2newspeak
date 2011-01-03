@@ -3,7 +3,7 @@
   Computing call graph...
   Type help for a list of commands.
 $ call f
-  f
-    main
+  main
+    f
 $   Thank you for using the Newspeak calculator.
   Have a nice day...
