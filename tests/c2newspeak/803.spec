@@ -2,7 +2,7 @@ Warning: 803.c:3#0: goto statement accepted
 Warning: 803.c:4#0: goto statement accepted
 Newspeak output
 ---------------
-void main(void) {
+void (803.c:1#5)^main(void) {
   (803.c:2#1)^uint32 goto!b;
   (803.c:2#1)^goto!b =(uint32) 0;
   (803.c:2#1)^{

@@ -103,6 +103,7 @@ and fundec = {
   args : (string * typ) list; (** formal argument names and types *)
   rets : (string * typ) list; (** formal return values names and types *)
   body : blk;                 (** function body *)
+  position: location;         (** position of the start of the function *)
 }
 
 and globals = (string, gdecl) Hashtbl.t

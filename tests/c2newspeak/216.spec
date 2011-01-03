@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (216.c:26#5)^main(void) {
   (216.c:27#9)^fptr fptr;
   (216.c:28#2)^fptr tmp_cir!0;
   (216.c:28#2)^tmp_cir!0 =(fptr) fptr_fptr;

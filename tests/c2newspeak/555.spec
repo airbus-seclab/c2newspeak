@@ -1,7 +1,7 @@
 Warning: 555.c:33#0: switch with default case in intermediary position accepted
 Newspeak output
 ---------------
-void main(void) {
+void (555.c:26#5)^main(void) {
   (555.c:27#5)^int32 i;
   (555.c:28#1)^do {
     (555.c:28#1)^choose {

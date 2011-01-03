@@ -42,6 +42,7 @@ module N = Newspeak
 (* Association table global -> Newspeak.typ *)
 let globals = Hashtbl.create 100
 let funspecs = Hashtbl.create 100
+let cstr_init = ref []
 
 let scalar_of_typ t =
   match t with
@@ -81,7 +82,39 @@ and generate_lv lv =
     | Deref (e, sz) -> N.Deref (generate_exp e, sz)
     | Shift (lv', e) -> N.Shift (generate_lv lv', generate_exp e)
     | Local v -> N.Local v
-        
+    | Str str -> add_glb_cstr str
+ 
+(* TODO: put in newspeak? *)
+and exp_of_char c = N.Const (N.CInt (Nat.of_int (Char.code c)))
+(* TODO: put in newspeak? *)
+and exp_of_int x = N.Const (N.CInt (Nat.of_int x))
+
+and add_glb_cstr str =
+  let name = Temps.to_string 0 (Temps.Cstr str) in
+    if not (Hashtbl.mem globals name) then begin
+      let loc = Npkcontext.get_loc () in
+      (* TODO: put in newspeak? *)
+      let char_typ = N.Int (N.Signed, Config.size_of_char) in
+      let len = String.length str in	  
+      let t = N.Array (N.Scalar char_typ, len + 1) in
+	Hashtbl.add globals name (t, loc);
+	(* TODO: think about it, this code is redundant with initialization in
+	   typedC2Cir *)
+	let offset = ref 0 in
+	let size = Config.size_of_char in
+	  for i = 0 to len - 1 do
+	    let e = exp_of_char str.[i] in
+(* TODO: factor creation of lv *)
+	    let lv = N.Shift (N.Global name, exp_of_int !offset) in
+	      cstr_init := (N.Set (lv, e, char_typ), loc)::!cstr_init;
+	      offset := !offset + size
+	  done;
+	  let lv = N.Shift (N.Global name, exp_of_int !offset) in
+	    cstr_init := 
+	      (N.Set (lv, exp_of_char '\x00', char_typ), loc)::!cstr_init
+    end;
+    N.Global name
+    
 and generate_exp e =
   match e with
     | Lval (lv, t) -> N.Lval (generate_lv lv, generate_typ t)
@@ -129,19 +162,20 @@ and generate_tmp_nat x =
     | Mult (v, n) -> 
         let i = generate_tmp_nat v in
           Nat.mul_int n i
-
-let generate_global name (t, loc, storage, used) =
-  Npkcontext.set_loc loc;
-  if used || (not !Npkcontext.remove_temp) then begin
-    let t = generate_typ t in
-      Hashtbl.add globals name (t, loc);
-      match storage with
-          Extern -> 
-            Npkcontext.report_accept_warning "Link.generate_global" 
-              ("extern global variable "^name) Npkcontext.ExternGlobal
-        | _ -> ()
-  end;
-  Npkcontext.print_debug ("Global linked: "^name)
+	    
+let generate_global name declaration =
+  let loc = declaration.global_position in
+    Npkcontext.set_loc loc;
+    if declaration.is_used || (not !Npkcontext.remove_temp) then begin
+      let t = generate_typ declaration.global_type in
+	Hashtbl.add globals name (t, loc);
+	match declaration.storage with
+            Extern -> 
+              Npkcontext.report_accept_warning "Link.generate_global" 
+		("extern global variable "^name) Npkcontext.ExternGlobal
+          | _ -> ()
+    end;
+    Npkcontext.print_debug ("Global linked: "^name)
 
 let translate_set (lv, e, t) =
   match (t, e) with
@@ -155,6 +189,7 @@ let translate_set (lv, e, t) =
           "translate_set not implemented yet"
 
 let rec generate_stmt (sk, loc) =
+  Npkcontext.set_loc loc;
   let new_sk = 
     match sk with
         Set (lv, e, t) -> translate_set (lv, e, t)
@@ -217,15 +252,16 @@ and generate_body body = List.map generate_stmt body
 
 let generate_fundecs fundecs =
   let funspecs = Hashtbl.create 100 in
-  let add_fundec (name, (_, args, ftyp, body)) =
-    let body = generate_body body in
-    let ftyp = generate_ftyp ftyp in
+  let add_fundec (name, declaration) =
+    let body = generate_body declaration.body in
+    let ftyp = generate_ftyp declaration.function_type in
     let ret_t = 
       match snd ftyp with
 	  [] -> []
 	| t::[] -> ("!return", t)::[]
 (* TODO: handle this case *)
-	| _ -> invalid_arg "Linker.generate_fundecs: case not handled yet"
+	| _ -> Npkcontext.report_error "Linker.generate_fundecs" 
+	    "case not handled yet"
     in      
       if Hashtbl.mem funspecs name then begin
         Npkcontext.report_error "Npklink.generate_funspecs" 
@@ -234,69 +270,87 @@ let generate_fundecs fundecs =
       Hashtbl.add funspecs name
         {
           N.rets = ret_t;
-          N.args = List.combine args (fst ftyp) ;
-          N.body = body ;
-        } ;
+          N.args = List.combine declaration.arg_identifiers (fst ftyp);
+          N.body = body;
+	  N.position = declaration.position;
+        };
+      Npkcontext.forget_loc ();
       Npkcontext.print_debug ("Function linked: "^name)
   in
     List.iter add_fundec fundecs;
     funspecs      
 
+let merge_types name prev_t t =
+  try
+    if (Npkil.is_mp_typ t prev_t) then t else prev_t
+  with Npkil.Uncomparable -> 
+    (* TODO: add the respective locations *)
+    Npkcontext.report_error "Npklink.update_glob_link"
+      ("different types for "^name^": '"
+       ^(Npkil.string_of_typ prev_t)^"' and '"
+       ^(Npkil.string_of_typ t)^"'")
+
+
+let merge_storages name prev_loc prev_storage storage =
+  match (storage, prev_storage) with
+      (Extern, Declared _) -> prev_storage
+    | (Declared _, Extern) -> storage
+    | (Extern, Extern) -> prev_storage
+    | (Declared true, Declared true) -> 
+        Npkcontext.report_error "Npklink.update_glob_link" 
+          ("multiple declaration of "^name)
+    | _ ->
+	let loc = Npkcontext.get_loc () in
+        let info = 
+          if prev_loc = loc then begin
+            let (file, _, _) = loc in
+              ", in file "^file^" variable "
+              ^name^" should probably be extern"
+            end else begin
+              " (previous definition: "
+              ^(Newspeak.string_of_loc prev_loc)^")"
+            end
+        in
+          Npkcontext.report_accept_warning "Npklink.update_glob_link"
+            ("multiple definitions of global variable "^name^info) 
+            Npkcontext.MultipleDef;             
+          prev_storage
+
 (* TODO: optimization, this is probably not efficient to read the whole
    program and then again a second time!!! reprogram Npkil.read and write *)
 let merge npkos =
+  let src_lang = ref N.C in
   let glb_decls = Hashtbl.create 100 in
   let init = ref [] in
   let fundefs = ref [] in
 
   let add_fundef f body = fundefs := (f, body)::!fundefs in
 
-  let add_global name (t, loc, storage, used) =
-    Npkcontext.set_loc loc;
+  let add_global name declaration =
+    Npkcontext.set_loc declaration.global_position;
     try
-      let (prev_t, prev_loc, prev_storage, prev_used) = 
-        Hashtbl.find glb_decls name 
+      let previous_declaration = Hashtbl.find glb_decls name in
+      let t = 
+	merge_types name previous_declaration.global_type 
+	  declaration.global_type 
       in
-        
-      let t =
-        try
-          if (Npkil.is_mp_typ t prev_t) then t
-          else prev_t
-        with Npkil.Uncomparable -> 
-          (* TODO: add the respective locations *)
-          Npkcontext.report_error "Npklink.update_glob_link"
-            ("different types for "^name^": '"
-             ^(Npkil.string_of_typ prev_t)^"' and '"
-             ^(Npkil.string_of_typ t)^"'")
-      in
-      let used = used || prev_used in
+      let prev_loc = previous_declaration.global_position in
       let storage = 
-        match (storage, prev_storage) with
-            (Extern, Declared _) -> prev_storage
-          | (Declared _, Extern) -> storage
-          | (Extern, Extern) -> prev_storage
-          | (Declared true, Declared true) -> 
-              Npkcontext.report_error "Npklink.update_glob_link" 
-                ("multiple declaration of "^name)
-          | _ ->
-              let info = 
-                if prev_loc = loc then begin
-                  let (file, _, _) = loc in
-                    ", in file "^file^" variable "
-                    ^name^" should probably be extern"
-                end else begin
-                  " (previous definition: "
-                  ^(Newspeak.string_of_loc prev_loc)^")"
-                end
-              in
-                Npkcontext.report_accept_warning "Npklink.update_glob_link"
-                  ("multiple definitions of global variable "^name^info) 
-                  Npkcontext.MultipleDef;             
-                prev_storage
+	merge_storages name prev_loc 
+	  previous_declaration.storage declaration.storage
       in
-        Hashtbl.replace glb_decls name (t, prev_loc, storage, used)
+      let used = declaration.is_used || previous_declaration.is_used in
+      let declaration = 
+	{
+	  global_type = t;
+	  global_position = prev_loc;
+	  storage = storage;
+	  is_used = used;
+	}
+      in
+        Hashtbl.replace glb_decls name declaration
           
-    with Not_found -> Hashtbl.add glb_decls name (t, loc, storage, used)
+    with Not_found -> Hashtbl.add glb_decls name declaration
   in
 
   let merge npko =
@@ -305,18 +359,12 @@ let merge npkos =
       Hashtbl.iter add_global prog.globals;
       init := prog.init@(!init);
       Hashtbl.iter add_fundef prog.fundecs;
-      prog.src_lang
+      src_lang := prog.src_lang
   in
-    match npkos with
-        [] -> Npkcontext.report_error "Linker.merge" "empty file list"
-      | hd::tl -> 
-          let src_lang = merge hd in
-          let check_merge x = 
-            let _ = merge x in
-              ()
-          in
-            List.iter check_merge tl;
-            (glb_decls, !fundefs, src_lang, !init)
+    if (npkos = []) 
+    then Npkcontext.report_error "Linker.merge" "empty file list";
+    List.iter merge npkos;
+    (glb_decls, !fundefs, !src_lang, !init)
 
 let reject_backward_gotos prog =
   let defined_lbls = ref [] in
@@ -356,6 +404,8 @@ let link npkos =
     Npkcontext.print_debug "Functions...";
     let init = generate_blk init in
     let fundecs = generate_fundecs fun_decls in
+(* TODO: think about it: a bit inefficient *)
+    let init = (List.rev !cstr_init)@init in
         
     let prog = { 
       N.globals = globals;

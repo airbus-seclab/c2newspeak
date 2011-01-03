@@ -2,7 +2,7 @@ Warning: 433.c:28#2: cast to void accepted
 Warning: 433.c:28#2: cast to void accepted
 Newspeak output
 ---------------
-void main(void) {
+void (433.c:26#5)^main(void) {
   (433.c:27#6)^int32 x;
   (433.c:28#2)^choose {
    -->

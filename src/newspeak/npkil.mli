@@ -32,9 +32,9 @@ open Newspeak
    By default, we accept extern as if they were declared but not defined 
 *)
 type t = {
-  globals: (string, ginfo) Hashtbl.t;
+  globals: (string, gdecl) Hashtbl.t;
   init: blk;
-  fundecs: (fid, funinfo) Hashtbl.t;
+  fundecs: (fid, fundec) Hashtbl.t;
   src_lang: src_lang
 }
 
@@ -46,10 +46,12 @@ and token =
   | LvalToken of (lval * typ)
   | CstToken of Newspeak.cst
 
-(* None is for extern *)
-and ginfo = typ * location * storage * used
-
-and used = bool
+and gdecl = {
+  global_type: typ;
+  storage: storage;
+  global_position: location;
+  is_used: bool
+}
 
 and storage = 
     Extern
@@ -58,7 +60,12 @@ and storage =
 and initialized = bool
 
 (* TODO: code cleanup, remove everything unecessary for link *)
-and funinfo = (string list * string list * ftyp * blk)
+and fundec = {
+  arg_identifiers: string list;
+  function_type: ftyp;
+  body: blk;
+  position: location;
+}
 
 and typ = 
     Scalar of Newspeak.scalar_t
@@ -97,6 +104,7 @@ and lval =
   | Global of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
+  | Str of string
 
 and exp =
     Const of cst

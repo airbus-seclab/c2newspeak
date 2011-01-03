@@ -31,15 +31,18 @@
 open Newspeak
 
 type t = {
-  globals: (string, ginfo) Hashtbl.t;
+  globals: (string, gdecl) Hashtbl.t;
   init: blk;
-  fundecs: (fid, funinfo) Hashtbl.t;
+  fundecs: (fid, fundec) Hashtbl.t;
   src_lang: src_lang
 }
 
-and ginfo = (typ * location * storage * used)
-
-and used = bool
+and gdecl = {
+  global_type: typ;
+  storage: storage;
+  global_position: location;
+  is_used: bool
+}
 
 and storage = 
     Extern
@@ -47,7 +50,12 @@ and storage =
 
 and initialized = bool
 
-and funinfo = (string list * string list * ftyp * blk)
+and fundec =  {
+  arg_identifiers: string list;
+  function_type: ftyp;
+  body: blk;
+  position: location;
+}
 
 and stmtkind =
     Set of (lval * exp * typ)
@@ -86,6 +94,7 @@ and lval =
   | Global of string
   | Deref of (exp * size_t)
   | Shift of (lval * exp)
+  | Str of string
 
 and exp =
     Const of cst
@@ -199,6 +208,7 @@ let rec string_of_lval lv =
     | Global name -> "Global("^name^")"
     | Deref (e, sz) -> "["^(string_of_exp e)^"]"^(string_of_size_t sz)
     | Shift (lv, sh) -> (string_of_lval lv)^" + "^(string_of_exp sh)
+    | Str str -> str
 
 and string_of_exp e =
   match e with
@@ -297,23 +307,25 @@ let dump_npko prog =
 
   let print_usedglbs title globs =
     print_endline title;
-    Hashtbl.iter (fun x (_, _, _, used) -> if used then print_endline x) 
-      globs;
+    let print_used_global x declaration =
+      if declaration.is_used then print_endline x
+    in
+    Hashtbl.iter print_used_global globs;
     print_newline ()
   in
 
-  let print_glob n (t, _, storage, _) =
-    let str = (string_of_typ t)^" "^n in
+  let print_glob n declaration =
+    let str = (string_of_typ declaration.global_type)^" "^n in
     let str = 
-      match storage with
+      match declaration.storage with
 	  Extern -> "extern "^str
 	| _ -> str 
     in
       print_endline (str^";")
   in
 
-  let print_fundef n (_, _, _, pbody) =
-    dump_fundec n pbody;
+  let print_fundef n fundec =
+    dump_fundec n fundec.body;
     print_newline ()
   in
     print_usedglbs "Global used" prog.globals;

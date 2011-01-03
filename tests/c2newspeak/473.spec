@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (473.c:31#5)^main(void) {
   (473.c:32#2)^a + (belongs[0,2] 0 * 8) =(int8) 0;
 }
 

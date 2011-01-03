@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void __deprecated__(void) {
+void (638.c:26#5)^__deprecated__(void) {
 }
 
 

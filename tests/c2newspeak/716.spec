@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void f(ptr x) {
+void (716.c:31#5)^f(ptr x) {
 }
 
 

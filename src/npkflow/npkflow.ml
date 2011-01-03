@@ -23,27 +23,10 @@
   email: charles.hymans@penjili.org
 *)
 
-let input = ref ""
-
-let usage_msg = "npkflow [options] [-help|--help] file.npk"
-
-let speclist = 
-  [
-  ]
-
-let anon_fun file =
-  if !input <> "" 
-  then invalid_arg "You can only analyse one newspeak file at a time";
-  input := file
+let process input =
+  let prog = Npk2lpk.translate (Newspeak.read input) in
+  let eqs = Factory.build prog in
+    Solver.run eqs
 
 let _ = 
-  try
-    Arg.parse speclist anon_fun usage_msg;
-    if !input = "" then invalid_arg "no file specified. Try option --help";
-
-    let prog = Npk2lpk.translate (Newspeak.read !input) in
-    let eqs = Factory.build prog in
-      Solver.run eqs
-  with Invalid_argument s -> 
-    print_endline ("Fatal error: "^s);
-    exit 0
+  StandardApplication.launch_process_with_npk_argument "npkflow" [] process

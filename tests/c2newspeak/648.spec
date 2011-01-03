@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void weak(void) {
+void (648.c:26#5)^weak(void) {
 }
 
 

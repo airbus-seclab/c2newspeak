@@ -44,43 +44,36 @@
 (*----------------------*)
 
 (* Translation options *)
-let ignores_asm = ref false
+let ignores_asm 	  = ref false
 let ignores_extern_fundef = ref false
-let ignores_pack = ref false
-let ignores_volatile = ref false
-let accept_gnuc = ref true
-let accept_signed_index = ref true
-let opt_checks = ref true
-
-let accept_forward_goto = ref true
-let accept_goto = ref true
-
-let accept_dirty_syntax = ref true
-let use_strict_syntax = ref false
-
-let accept_dirty_cast = ref true
-let ignores_pragmas = ref false
-let remove_temp = ref true
-let remove_do_loops = ref false
-let accept_extern = ref true
-let accept_flex_array = ref true
-
-let no_opt = ref false
-
-let accept_mult_def = ref true
+let ignores_pack 	  = ref false
+let ignores_volatile 	  = ref false
+let accept_gnuc 	  = ref true
+let accept_signed_index   = ref true
+let opt_checks 		  = ref true
+let accept_forward_goto   = ref true
+let accept_goto 	  = ref true
+let accept_dirty_syntax   = ref true
+let use_strict_syntax 	  = ref false
+let accept_dirty_cast 	  = ref true
+let ignores_pragmas 	  = ref false
+let remove_temp 	  = ref true
+let accept_extern 	  = ref true
+let accept_flex_array 	  = ref true
+let no_opt 		  = ref false
+let accept_mult_def 	  = ref true
 
 (* TODO: Handle assumptions correctly *)
 (* let assumptions = ref [] *)
 
 
 (* Verbose options *)
-
-let verb_debug = ref false
-let verb_ast = ref false
-let verb_cir = ref false
-let verb_npko = ref false
-let verb_newspeak = ref false
-let verb_lowspeak = ref false
+let verb_debug 		     = ref false
+let verb_ast 		     = ref false
+let verb_cir 		     = ref false
+let verb_npko 		     = ref false
+let verb_newspeak 	     = ref false
+let verb_lowspeak 	     = ref false
 let accept_transparent_union = ref true
 
 let verbose boolean () =
@@ -120,49 +113,49 @@ type error =
 
 let flag_of_error err =
   match err with
-      Asm -> ignores_asm
-    | Pragma -> ignores_pragmas
-    | Pack -> ignores_pack
-    | Volatile -> ignores_volatile
-    | DirtyCast -> accept_dirty_cast
-    | DirtySyntax -> accept_dirty_syntax
-    | PartialFunDecl -> accept_partial_fdecl
-    | MissingFunDecl -> accept_missing_fdecl
-    | ForwardGoto -> accept_forward_goto
-    | BackwardGoto -> accept_goto
-    | StrictSyntax -> use_strict_syntax
-    | ExternGlobal -> accept_extern
-    | FlexArray -> accept_flex_array
-    | MultipleDef -> accept_mult_def
-    | GnuC -> accept_gnuc
-    | DisableOpt -> no_opt
-    | DisableCheckOpt -> opt_checks
+      Asm 	       -> ignores_asm
+    | Pragma 	       -> ignores_pragmas
+    | Pack 	       -> ignores_pack
+    | Volatile 	       -> ignores_volatile
+    | DirtyCast        -> accept_dirty_cast
+    | DirtySyntax      -> accept_dirty_syntax
+    | PartialFunDecl   -> accept_partial_fdecl
+    | MissingFunDecl   -> accept_missing_fdecl
+    | ForwardGoto      -> accept_forward_goto
+    | BackwardGoto     -> accept_goto
+    | StrictSyntax     -> use_strict_syntax
+    | ExternGlobal     -> accept_extern
+    | FlexArray        -> accept_flex_array
+    | MultipleDef      -> accept_mult_def
+    | GnuC 	       -> accept_gnuc
+    | DisableOpt       -> no_opt
+    | DisableCheckOpt  -> opt_checks
     | TransparentUnion -> accept_transparent_union
-    | ExternFunDef -> ignores_extern_fundef
-    | SignedIndex -> accept_signed_index
+    | ExternFunDef     -> ignores_extern_fundef
+    | SignedIndex      -> accept_signed_index
  
 let opt_of_flag err =
   match err with
-      Asm -> "--ignore-asm"
-    | Pragma -> "--ignore-pragma"
-    | Pack -> "--ignore-pack"
-    | Volatile -> "--ignore-volatile"
-    | DirtyCast -> "--reject-dirty-cast"
-    | DirtySyntax -> "--reject-dirty-syntax"
-    | PartialFunDecl -> "--reject-incomplete-fundecl"
-    | MissingFunDecl -> "--reject-missing-fundecl"
-    | ForwardGoto -> "--reject-goto"
-    | BackwardGoto -> "--reject-backward-goto"
-    | StrictSyntax -> "--use-strict-syntax"
-    | ExternGlobal -> "--reject-extern"
-    | FlexArray -> "--reject-flexible-array"
-    | MultipleDef -> "--reject-mult-def"
-    | GnuC -> "--reject-gnuc"
-    | DisableOpt -> "--disable-opt"
-    | DisableCheckOpt -> "--disable-checks-opt"
+      Asm 	       -> "--ignore-asm"
+    | Pragma 	       -> "--ignore-pragma"
+    | Pack 	       -> "--ignore-pack"
+    | Volatile 	       -> "--ignore-volatile"
+    | DirtyCast        -> "--reject-dirty-cast"
+    | DirtySyntax      -> "--reject-dirty-syntax"
+    | PartialFunDecl   -> "--reject-incomplete-fundecl"
+    | MissingFunDecl   -> "--reject-missing-fundecl"
+    | ForwardGoto      -> "--reject-goto"
+    | BackwardGoto     -> "--reject-backward-goto"
+    | StrictSyntax     -> "--use-strict-syntax"
+    | ExternGlobal     -> "--reject-extern"
+    | FlexArray        -> "--reject-flexible-array"
+    | MultipleDef      -> "--reject-mult-def"
+    | GnuC 	       -> "--reject-gnuc"
+    | DisableOpt       -> "--disable-opt"
+    | DisableCheckOpt  -> "--disable-checks-opt"
     | TransparentUnion -> "--reject-transparent-union"
-    | ExternFunDef -> "--ignore-extern-definition"
-    | SignedIndex -> "--reject-signed-index"
+    | ExternFunDef     -> "--ignore-extern-definition"
+    | SignedIndex      -> "--reject-signed-index"
 
 (* Version *)
 
@@ -170,19 +163,19 @@ let version = ref false
 
 let clear_gotos () =
   accept_forward_goto := false;
-  accept_goto := false
+  accept_goto 	      := false
 
 let set_ansi () =
-  accept_dirty_cast := false;
-  accept_dirty_syntax := false;
-  accept_partial_fdecl := false;
-  accept_missing_fdecl := false;
-  accept_extern := false;
-  accept_flex_array := false;
-  accept_mult_def := false;
-  accept_gnuc := false;
+  accept_dirty_cast 	   := false;
+  accept_dirty_syntax 	   := false;
+  accept_partial_fdecl 	   := false;
+  accept_missing_fdecl 	   := false;
+  accept_extern 	   := false;
+  accept_flex_array 	   := false;
+  accept_mult_def 	   := false;
+  accept_gnuc 		   := false;
   accept_transparent_union := false;
-  accept_signed_index := false
+  accept_signed_index 	   := false
 
 let argslist = [
   ("-c", Arg.Set compile_only,
@@ -235,11 +228,6 @@ let argslist = [
 
   ("--disable-vars-elimination", Arg.Clear remove_temp,
    "does not remove unused variables\n");
-
-  ("--remove-do-loops", Arg.Set remove_do_loops,
-   "transforms do loops into while loops, by unrolling their body once. "
-   ^"Carefull: this transformation is exponential in the imbrication "
-   ^"depth of do loops\n");
 
   (opt_of_flag Pragma, Arg.Set (flag_of_error Pragma),
    "ignores any #pragma directive");
@@ -339,7 +327,8 @@ let print_debug msg =
 
 let print_size sz = print_debug ("Current size: "^(string_of_int sz))
 
-let report_error where msg = invalid_arg (string_of_error where msg)
+let report_error where msg = 
+  StandardApplication.report_error (string_of_error where msg)
 
 let handle_cmdline_options version_string comment_string = 
   let usage_msg =
@@ -414,7 +403,6 @@ let string_of_options () =
     add_option DisableOpt;
     add_option DisableCheckOpt;
     if not !remove_temp then options := ("--disable-vars-elimination", "")::!options;
-    if !remove_do_loops then options := ("--remove-do-loops", "")::!options;
     add_option Pragma;
     add_option Asm;
     add_option Pack;

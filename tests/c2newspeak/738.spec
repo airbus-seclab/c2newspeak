@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (738.c:28#5)^main(void) {
   (738.c:29#2)^choose {
    -->
     (738.c:29#2)^guard((x_int32 ==_int32 0));

@@ -97,6 +97,7 @@ and fundec = {
   args : (string * typ) list;
   rets : (string * typ) list;
   body : blk;
+  position: location;         (** position of the start of the function *)
 }
 
 and globals = (string, gdecl) Hashtbl.t
@@ -453,6 +454,9 @@ let string_of_assertion x =
     List.iter append_token x;
     !res
 
+let string_of_loc_as_prefix loc = 
+  if loc = unknown_loc then "" else "("^(string_of_loc loc)^")^"
+
 let string_of_blk offset x =
   let buf = Buffer.create 80 in
   let offset = ref offset in
@@ -463,7 +467,7 @@ let string_of_blk offset x =
       Buffer.add_string buf (margin^str^"\n") 
   in
   let dump_line_at loc str =
-    let loc = if loc = unknown_loc then "" else "("^(string_of_loc loc)^")^" in
+    let loc = string_of_loc_as_prefix loc in
     let margin = String.make !offset ' ' in
       Buffer.add_string buf (margin^loc^str^"\n") 
   in
@@ -551,7 +555,8 @@ let string_of_blk offset x =
 let dump_fundec name fd =
   let str_args = string_of_formal_args fd.args in
   let str_ret  = string_of_ret fd.rets in
-    print_endline (str_ret ^ " " ^ name ^ str_args ^ " {");
+  let position = string_of_loc_as_prefix fd.position in
+    print_endline (str_ret ^ " " ^ position ^ name ^ str_args ^ " {");
     print_string (string_of_blk 2 fd.body);
     print_endline "}";
     print_newline ()
@@ -1066,6 +1071,7 @@ and build_fundec builder fd =
     { args = args_t;
       rets = ret_t;
       body = build_blk builder fd.body;
+      position = fd.position;
     }
 
 and build_typ builder t =

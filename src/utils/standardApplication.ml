@@ -1,4 +1,4 @@
-/*
+(*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
   Copyright (C) 2007  Charles Hymans, Olivier Levillain
@@ -21,11 +21,30 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
+*)
 
-*/
+let report_error error_message =
+  invalid_arg error_message
 
-void main() {
-  int t[10]; 
-  unsigned char i;
-  t[i] = 1;
-}
+let launch speclist anon_fun usage_msg f =
+  try 
+    Arg.parse speclist anon_fun usage_msg;
+    f()
+  with Invalid_argument s -> 
+    print_endline ("Fatal error: "^s);
+    exit 0
+
+let launch_process_with_npk_argument name speclist process =
+  let usage_msg = name^" [options] [-help|--help] file.npk" in
+  let input = ref "" in
+  let anon_fun file = 
+    if !input <> "" then invalid_arg "you can only analyse one file at a time";
+    input := file
+  in
+  let process () = 
+    if !input = "" 
+  (* TODO: rather than giving this advice => should directly dump help *)
+    then report_error ("no file specified. Try "^Sys.argv.(0)^" --help");
+    process !input
+  in
+    launch speclist anon_fun usage_msg process

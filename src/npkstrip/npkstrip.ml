@@ -140,13 +140,11 @@ let filter_globals used_gvars globals =
   let is_used (x, _, _) = StringSet.mem x used_gvars in
     List.filter is_used globals
       
+let process () =
+  let prog = Newspeak.read !input in
+  let npk = collect_used prog in
+    if !print then Newspeak.dump npk;
+    Newspeak.write !output npk
+  
 let _ = 
-  try 
-    Arg.parse speclist anon_fun usage_msg;
-    let prog = Newspeak.read !input in
-    let npk = collect_used prog in
-      if !print then Newspeak.dump npk;
-      Newspeak.write !output npk
-  with Invalid_argument s ->
-    print_endline ("Fatal error: "^s);
-    exit 0
+  StandardApplication.launch speclist anon_fun usage_msg process

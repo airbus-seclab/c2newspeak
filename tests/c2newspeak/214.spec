@@ -1,10 +1,10 @@
 Warning: 214.c:32#2: the order of execution of side-effects in expressions not specified, picking a random one, be careful
 Newspeak output
 ---------------
-void f(int32 x, int32 y) {
+void (214.c:26#5)^f(int32 x, int32 y) {
 }
 
-void main(void) {
+void (214.c:30#5)^main(void) {
   (214.c:31#6)^int32 x;
   (214.c:31#6)^x =(int32) 0;
   (214.c:32#2)^{

@@ -24,9 +24,9 @@
 # email: charles.hymans@penjili.org
 #
 
-DIR=c2newspeak mult-files lowspeak npkstats mem_opt npk2bytesz npkcheck \
+DIR=c2newspeak mult-files lowspeak npkstats mem_opt npkcheck \
     npkbugfind npkdiff newspeak npkstrip ada2newspeak npkpointer options \
-    npkflow npkfuns npktests npknull simpleai npksolver ulimit
+    npkflow npkfuns npktests npknull simpleai npksolver npkalc ulimit
 
 .PHONY: $(DIR)
 

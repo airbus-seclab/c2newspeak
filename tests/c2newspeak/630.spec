@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void __cdecl__(void) {
+void (630.c:26#5)^__cdecl__(void) {
 }
 
 

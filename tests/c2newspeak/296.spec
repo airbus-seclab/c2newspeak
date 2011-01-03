@@ -1,7 +1,7 @@
 Warning: 296.c:28#0: halting condition should be explicit
 Newspeak output
 ---------------
-void main(void) {
+void (296.c:26#5)^main(void) {
   (296.c:27#6)^int32 i;
   (296.c:28#7)^i =(int32) 0;
   (296.c:28#2)^while (1) {

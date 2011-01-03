@@ -1,4 +1,4 @@
-/*
+(*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
   Copyright (C) 2007  Charles Hymans, Olivier Levillain
@@ -21,18 +21,17 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
+*)
 
-*/
+open Arg
 
-typedef struct {
-  int c:3;
-  int d:1;
-} s;
+(* TODO: should move some code of npkcontext into here? *)
+val report_error: string -> 'a
 
-void a(s) {
-}
+(* TODO: find ways to standardize more/factor between applications which use
+   launch *)
+val launch: 
+  (key * spec * doc) list -> anon_fun -> usage_msg -> (unit -> unit) -> unit
 
-void main() {
-  int x;
-  x = 1;
-}
+val launch_process_with_npk_argument: 
+  string -> (key * spec * doc) list -> (string -> unit) -> unit

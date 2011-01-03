@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-int32 main(void) {
+int32 (804.c:9#4)^main(void) {
   (804.c:16#7)^ptr p;
   (804.c:15#4)^{ int32 0; int32 32; int32 64; }96 t;
   (804.c:17#2)^p =(ptr) focus32 &(t + 64);

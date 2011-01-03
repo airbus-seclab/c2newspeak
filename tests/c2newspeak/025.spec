@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (025.c:29#5)^main(void) {
   (025.c:30#6)^int32 x;
   (025.c:31#2)^x =(int32) (x_int32 ==_int32 -2147483648);
   (025.c:32#2)^x =(int32) (-2147483648 ==_int32 x_int32);

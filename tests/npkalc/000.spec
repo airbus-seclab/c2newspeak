@@ -1,0 +1,9 @@
+  Welcome to the Newspeak calculator.
+  Reading Newspeak file 000.npk...
+  Computing call graph...
+  Type help for a list of commands.
+$ call f
+  f
+    main
+$   Thank you for using the Newspeak calculator.
+  Have a nice day...

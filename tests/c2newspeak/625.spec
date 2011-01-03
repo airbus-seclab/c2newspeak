@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void aligned(void) {
+void (625.c:26#5)^aligned(void) {
 }
 
 

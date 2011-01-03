@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-int32 g(void) {
+int32 (279.c:27#4)^g(void) {
   (279.c:28#6)^int32 x;
   (279.c:30#2)^{
     int32 tmp_cir!0;

@@ -144,12 +144,8 @@ let check_file fname =
     let checker = new checker prog.Lowspeak.ptr_sz in
       Lowspeak.visit (checker :> Lowspeak.visitor) prog
 
+let process () = List.iter check_file !inputs
+
 let _ = 
-  try
-    Arg.parse speclist anon_fun usage_msg;
-    List.iter check_file !inputs;
-    exit 0
-  with Invalid_argument s -> 
-    print_endline ("Fatal error: "^s);
-    exit 1
+  StandardApplication.launch speclist anon_fun usage_msg process
 

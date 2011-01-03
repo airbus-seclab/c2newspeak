@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void dllimport(void) {
+void (626.c:26#5)^dllimport(void) {
 }
 
 

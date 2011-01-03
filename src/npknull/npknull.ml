@@ -25,10 +25,6 @@
 (* TODO: factor launcher and error treatment for the several newspeak 
    utilities *)
 
-let exec_name = "npknull"
-
-let input = ref ""
-
 let stats = ref false
 
 let speclist = 
@@ -45,23 +41,12 @@ let speclist =
      "prints more details")
   ]
 
-let anon_fun file = 
-  if !input <> "" then invalid_arg "you can only analyse one file at a time";
-  input := file
-
-let usage_msg = exec_name^" [options] [-help|--help] file.npk"
+let process input = 
+  let prog = Npk2lpk.translate (Newspeak.read input) in
+  let glb_tbl = GlbCollect.process true prog in
+  let results = Solver.process glb_tbl prog in
+    if !stats then Stats.print prog results
 
 let _ =
-  try
-    Arg.parse speclist anon_fun usage_msg;
-    if !input = "" 
-    then invalid_arg ("no file specified. Try "^exec_name^" --help");
-
-    let prog = Npk2lpk.translate (Newspeak.read !input) in
-    let glb_tbl = GlbCollect.process true prog in
-    let results = Solver.process glb_tbl prog in
-      if !stats then Stats.print prog results
-
-  with Invalid_argument s -> 
-    Context.print_err ("Fatal error: "^s);
-    exit 0
+  StandardApplication.launch_process_with_npk_argument "npknull" speclist 
+    process

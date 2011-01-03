@@ -1,7 +1,7 @@
 Warning: 170.c:31#2: dirty cast from integer to pointer accepted
 Newspeak output
 ---------------
-void main(void) {
+void (170.c:28#5)^main(void) {
   (170.c:29#7)^ptr x;
   (170.c:31#2)^uint32 tmp_cir!0;
   (170.c:31#2)^tmp_cir!0: uint32 <- f();

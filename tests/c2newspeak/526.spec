@@ -1,7 +1,7 @@
 Warning: 526.c:30#2: expression without post effects expected
 Newspeak output
 ---------------
-void main(void) {
+void (526.c:26#5)^main(void) {
   (526.c:27#7)^ptr ptr;
   (526.c:28#6)^int32 i;
   (526.c:30#2)^[(ptr_ptr + (i_int32 * 32))]32 =(int32) ([(ptr_ptr + (i_int32 * 32))]32_int32 | 0);

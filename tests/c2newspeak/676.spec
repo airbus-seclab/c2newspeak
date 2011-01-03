@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (676.c:30#5)^main(void) {
   (676.c:31#2)^choose {
    -->
     (676.c:31#2)^choose {

@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void f(void) {
+void (721.c:32#5)^f(void) {
   (721.c:33#7)^ptr ptr;
   (721.c:34#2)^ptr =(ptr) u_ptr;
 }

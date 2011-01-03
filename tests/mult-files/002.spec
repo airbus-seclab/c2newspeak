@@ -2,7 +2,7 @@ Warning: 002-a.c:32#2: expression of type signed integer used as an array index 
 Warning: 002-a.c:34#2: expression of type signed integer used as an array index accepted
 Newspeak output
 ---------------
-void main(void) {
+void (002-a.c:28#5)^main(void) {
   (002-a.c:29#6)^int32 x;
   (002-a.c:30#6)^int32 i;
   (002-a.c:31#7)^ptr ptr;

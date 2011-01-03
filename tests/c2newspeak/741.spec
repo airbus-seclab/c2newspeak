@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (741.c:28#5)^main(void) {
   (741.c:29#2)^r =(int32) ((x_int32 ==_int32 y_int32) ==_int32 z_int32);
 }
 

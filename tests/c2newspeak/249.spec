@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void f(void) {
+void (249.c:26#5)^f(void) {
   (249.c:27#6)^int32[22] x;
   (249.c:28#6)^int32 y;
   (249.c:29#2)^choose {

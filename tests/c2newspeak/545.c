@@ -26,6 +26,7 @@
 void main() {
   int x;
   __typeof(x) y;
-  
+  __typeof__(x) z;
   y = x;
+  z = y;
 }

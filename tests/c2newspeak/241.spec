@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void f(void) {
+void (241.c:26#5)^f(void) {
   (241.c:27#6)^int32 x;
   (241.c:29#2)^do {
     (241.c:29#2)^while (1) {
@@ -16,7 +16,7 @@ void f(void) {
   } with lbl1:
 }
 
-void g(void) {
+void (241.c:34#5)^g(void) {
   (241.c:35#6)^int32 x;
   (241.c:37#2)^x =(int32) coerce[-2147483648,2147483647] (x_int32 + 1);
   (241.c:38#2)^do {

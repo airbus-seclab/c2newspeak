@@ -248,11 +248,7 @@ let scan f =
     if !debug then print_endline "Third scanner";
     scan2_prog prog.fundecs
 
+let process () = List.iter scan !input
+
 let _ = 
-  try
-    Arg.parse speclist anon_fun usage_msg;
-    List.iter scan !input
-      
-  with Invalid_argument s -> 
-    print_endline ("Fatal error: "^s);
-    exit 0
+  StandardApplication.launch speclist anon_fun usage_msg process

@@ -1,11 +1,11 @@
 Warning: 215.c:36#2: expression of type signed integer used as an array index accepted
 Newspeak output
 ---------------
-int32 f(void) {
+int32 (215.c:28#4)^f(void) {
   (215.c:30#2)^!return =(int32) 4;
 }
 
-void main(void) {
+void (215.c:33#5)^main(void) {
   (215.c:34#6)^int32[10] t;
   (215.c:36#2)^int32 tmp_cir!0;
   (215.c:36#2)^tmp_cir!0 =(int32) t + (belongs[0,9] x_int32 * 32)_int32;

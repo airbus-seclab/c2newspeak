@@ -22,34 +22,17 @@
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
 *)
-(* TODO: factor launcher and error treatment for the several newspeak 
-   utilities *)
-
-let exec_name = "simpleai"
-
-let input = ref ""
 
 let speclist = 
   [
     ("--verbose", Arg.Unit Context.set_verbose, "prints more details")
   ]
 
-let anon_fun file = 
-  if !input <> "" then invalid_arg "you can only analyse one file at a time";
-  input := file
-
-let usage_msg = exec_name^" [options] [-help|--help] file.npk"
+let process input = 
+  let prog = Newspeak.read input in
+  let simple = Filter.process prog in
+    Solver.compute simple
 
 let _ =
-  try
-    Arg.parse speclist anon_fun usage_msg;
-    if !input = "" 
-    then invalid_arg ("no file specified. Try "^exec_name^" --help");
-
-    let prog = Newspeak.read !input in
-    let simple = Filter.process prog in
-      Solver.compute simple
-      
-  with Invalid_argument s -> 
-    Context.print_err ("Fatal error: "^s);
-    exit 0
+  StandardApplication.launch_process_with_npk_argument "simpleai" speclist 
+    process

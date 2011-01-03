@@ -1,7 +1,7 @@
 Warning: 292.c:31#9: missing initializers for structure accepted
 Newspeak output
 ---------------
-void main(void) {
+void (292.c:33#5)^main(void) {
   (292.c:34#2)^x + 32 =(int32) 2;
 }
 

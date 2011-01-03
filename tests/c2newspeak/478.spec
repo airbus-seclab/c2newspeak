@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (478.c:26#5)^main(void) {
   (478.c:27#7)^int8 v1;
   (478.c:28#16)^uint8 v2;
   (478.c:29#8)^int16 v3;

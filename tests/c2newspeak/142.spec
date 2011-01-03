@@ -1,6 +1,6 @@
 Newspeak output
 ---------------
-void main(void) {
+void (142.c:29#5)^main(void) {
   (142.c:30#8)^float32 x;
   (142.c:31#9)^float64 y;
   (142.c:32#6)^int32 z;

@@ -1,7 +1,7 @@
 Warning: 523.c:28#0: block within expression accepted
 Newspeak output
 ---------------
-void main(void) {
+void (523.c:26#5)^main(void) {
   (523.c:27#6)^int32 x;
   (523.c:28#2)^int32 tmp_firstpass!0;
   (523.c:28#2)^choose {

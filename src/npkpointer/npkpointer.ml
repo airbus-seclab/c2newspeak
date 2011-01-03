@@ -30,28 +30,14 @@ let speclist =
     "prints information about intermediate computations");
   ]
 
-let input = ref ""
-
-let anon_fun file =
-  if !input = ""
-  then input := file
-  else invalid_arg "You can only analyse one file at a time."
-
-let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file.npk"
-
-let _ = 
-  try
-    Arg.parse speclist anon_fun usage_msg;
-
-    if !input = "" 
-    then invalid_arg ("no file specified. Try "^Sys.argv.(0)^" --help");
-
-    let prog = Npk2lpk.translate (Newspeak.read !input) in
-    let (vars, prog) = Build.translate prog in
-      if !debug then Ptrspeak.print (vars, prog);
+let process input =
+  let prog = Npk2lpk.translate (Newspeak.read input) in
+  let (vars, prog) = Build.translate prog in
+    if !debug then Ptrspeak.print (vars, prog);
     let graph = Analysis.run prog in
       Results.print vars graph
-  with Invalid_argument s -> 
-    print_endline ("Fatal error: "^s);
-    exit 0
+  
+let _ = 
+   StandardApplication.launch_process_with_npk_argument "npkpointer" 
+     speclist process
       
