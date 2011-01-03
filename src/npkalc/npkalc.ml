@@ -69,12 +69,21 @@ let execute_call callgraph arguments =
 	  List.iter print_path paths
     | _ -> ()
 
+let execute_where callgraph arguments =
+  match arguments with
+      f::_ ->
+	let filename = CallGraph.get_position callgraph f in
+	  Utils.print_info (f^" defined in file "^filename)
+    | _ -> ()
+
 (* TODO: add command where global which shows all places where a global is 
    being used *)
 let fill_command_table callgraph =
   Hashtbl.add command_table "help" execute_help;
   Hashtbl.add command_table "exit" execute_exit;
-  Hashtbl.add command_table "call" (execute_call callgraph)
+  Hashtbl.add command_table "call" (execute_call callgraph);
+  Hashtbl.add command_table "where" (execute_where callgraph)
+
 
 let process input = 
   Utils.print_info "Welcome to the Newspeak calculator.";

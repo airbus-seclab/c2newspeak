@@ -2,17 +2,32 @@ open Newspeak
 
 module Set = Set.Make(String)
 
-type t = (string, Set.t) Hashtbl.t
+type info = {
+  callers: Set.t;
+  file: string
+}
+
+type t = (string, info) Hashtbl.t
 
 let compute prog =
   let callgraph = Hashtbl.create 100 in
   let add_call f g =
-    try
-      let callers = Hashtbl.find callgraph g in
-	Hashtbl.replace callgraph g (Set.add f callers)
-    with Not_found -> Hashtbl.add callgraph g (Set.singleton f)
+    let info = Hashtbl.find callgraph g in
+    let info = { info with callers = Set.add f info.callers } in
+      Hashtbl.replace callgraph g info
   in
   let current_function = ref "" in
+
+  let init f declaration = 
+    let (filename, _, _) = declaration.position in
+    let info = 
+      {
+	callers = Set.empty;
+	file = filename
+      }
+    in
+      Hashtbl.add callgraph f info
+  in
 
   let rec compute_blk x = List.iter compute_stmt x
 
@@ -28,14 +43,21 @@ let compute prog =
 	  Utils.print_info "Function pointer dereference ignored"
       | _ -> ()
   in
+
   let compute_fundec f declaration =
     current_function := f;
     compute_blk declaration.body
   in
 
+    Hashtbl.iter init prog.fundecs;
     Hashtbl.iter compute_fundec prog.fundecs;
     callgraph
 
 let get_callers callgraph f =
-  try Set.elements (Hashtbl.find callgraph f)
-  with Not_found -> []
+  let info = Hashtbl.find callgraph f in
+    Set.elements info.callers
+	
+let get_position callgraph f =
+  let info = Hashtbl.find callgraph f in
+    info.file
+  
