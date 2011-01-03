@@ -86,7 +86,7 @@ let rec make_name_of_lval lv =
     | SName (pf, tl) -> make_name_of_lval pf @ [tl]
     | _ -> invalid_arg "make_name_of_lval"
 	
-let subtyp_to_adatyp gtbl n =
+let subtyp_to_adatyp gtbl n = 
   let n' = mangle_sname n in
   try
     snd(Symboltbl.find_type gtbl n')
@@ -417,7 +417,6 @@ let rec normalize_exp ?expected_type exp =
  *)
 and make_arg_list args spec =
   let argtbl = Hashtbl.create 5 in
-
   (**
    * Step 1 : extract positional parameters. Named parameters go into the
    * argtbl hashtable.
@@ -486,17 +485,17 @@ and make_arg_list args spec =
                                    ^ ", which has no default one.")
                      ) in
                      make_arg x value) spec
-            | (ev,_)::pt,s::st -> 
+            | (ev,_)::pt,s::st ->
 		let t = subtyp_to_adatyp s.param_type in
                   (make_arg s (ev,t))::(merge_with_specification pt st)
             | _::_,[]     -> Npkcontext.report_error "normalize.function_call"
                             "Too many actual arguments in function call"
   in
-      (* Step 1... *)
-      let pos      = extract_positional_parameters args in
-      (* Step 2... *)
-      let eff_args = merge_with_specification pos spec in
-       eff_args
+    (* Step 1... *)
+  let pos      = extract_positional_parameters args in
+    (* Step 2... *)
+  let eff_args = merge_with_specification pos spec in
+    eff_args
 
 (**
  * Normalize an actual argument.
@@ -577,17 +576,18 @@ and normalize_binop bop e1 e2 xpec =
 		let n = Ada_utils.make_operator_name bop in
 		  try
 		    let (sc,( act_name, spec, top)) =
-		    Sym.find_subprogram ~silent:true gtbl (Sym.current gtbl, n) 
-		      norm_typs xpec
-	      	      (fun x -> Symboltbl.find_type gtbl x)
+		      Sym.find_subprogram ~silent:true gtbl 
+			(Sym.current gtbl, n) norm_typs xpec
+	      		(fun x -> Symboltbl.find_type gtbl x)
 	      	    in 
+
 		    let t = match top with	
 		      | None -> Npkcontext.report_error "normalize_"
 	      		  "Expected function, got procedure"
 	      		    
 		      | Some top -> top
 	      	    in
-	      	    let effective_args = make_arg_list norm_args spec 
+		    let effective_args = make_arg_list norm_args spec 
 		    in
 		      Ast.FunctionCall (sc, act_name, effective_args, t), t
 			
@@ -650,6 +650,7 @@ and normalize_fcall (n, params) expectedtype =
             "Expected function, got procedure"
 	| Some top -> top
       in
+		    
       let effective_args = make_arg_list norm_args spec in
 	Ast.FunctionCall(sc, act_name, effective_args, t),t
     with Not_found ->
@@ -921,23 +922,25 @@ and normalize_params_cur param =
   (*This function adds packing name info in parameter type label
     of specifications, requires: type is in standard, and type is 
     not already precised by a package *)
-  let add_pack pack param =
+  let add_pack pack param =  
     let p_typ = param.param_type in
        if (is_basic_or_pre_typ p_typ) then
 	 p_typ
        else
 	 pack::p_typ 	  
   in
-
+   
     match (Sym.current gtbl) with
-      | Some x -> { 
+      | Some x ->
+	  { 
 	  formal_name  = param.formal_name
 	  ; mode  = param.mode
 	    (*Add package name only if not a Standard type*)
 	  ; param_type = add_pack x param 
 	  ; default_value =  param.default_value
 	}
-      | None -> param
+      | None ->
+	  param
 	  
 	  
 and normalize_sub_program_spec subprog_spec ~addparam =
@@ -945,24 +948,24 @@ and normalize_sub_program_spec subprog_spec ~addparam =
     if addparam then
       Sym.enter_context ~desc:"SP body (parameters)" gtbl;
     List.map
-      (fun param ->
-         if func && (param.mode <> In)
-         then Npkcontext.report_error
-           "Normalize.normalize_params"
-           ( "invalid parameter mode : functions can only have"
-             ^ " \"in\" parameters");
-         if (param.default_value <> None && param.mode <> In) then
-           Npkcontext.report_error "Normalize.normalize_params"
-             "default values are only allowed for \"in\" parameters";
-         if addparam then begin
-           Sym.add_variable gtbl param.formal_name (Newspeak.unknown_loc)
-             (subtyp_to_adatyp param.param_type)
-             ~ro:(param.mode = In)
-           ;
-         end;
-         { Ast.formal_name = param.formal_name
-         ; Ast.param_type  = subtyp_to_adatyp param.param_type
-         }
+      ( fun param ->
+          if func && (param.mode <> In)
+          then Npkcontext.report_error
+            "Normalize.normalize_params"
+            ( "invalid parameter mode : functions can only have"
+              ^ " \"in\" parameters");
+          if (param.default_value <> None && param.mode <> In) then
+            Npkcontext.report_error "Normalize.normalize_params"
+              "default values are only allowed for \"in\" parameters";
+          if addparam then begin
+            Sym.add_variable gtbl param.formal_name (Newspeak.unknown_loc)
+              (subtyp_to_adatyp param.param_type)
+              ~ro:(param.mode = In)
+            ;
+          end;
+          { Ast.formal_name = param.formal_name
+          ; Ast.param_type  = subtyp_to_adatyp param.param_type
+          }
       )
       param_list
   in
@@ -977,7 +980,7 @@ and normalize_sub_program_spec subprog_spec ~addparam =
 	    let arguments = 
 	      normalize_params norm_param_list (return_type <> None) 
 	    in
-              {
+	      {
 		Ast.name = norm_name;
 		Ast.arguments = arguments;
 		Ast.return_type = t;
@@ -1048,11 +1051,38 @@ and normalize_basic_decl item loc =
       let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
       Sym.add_type gtbl ident loc (merge_types norm_subtyp_ind);
       []
-  | RenamingDecl (n, arguments, o) -> 
+  | RenamingDecl (n, arguments, o) ->
+      let update_args args =
+	match args with 
+	    Some arguments -> Some( List.map (   
+	      fun x ->
+		let param_t  = x.param_type in
+		let packing_type = match param_t with 
+		    [] -> Npkcontext.report_error 
+		      "Renaming Function/procedure"
+		      ("no type for parameter'"^x.formal_name^"'")
+		  | _::[] -> begin
+		      match (Sym.current gtbl) with 
+			  Some e -> e::param_t
+			| _ -> param_t 
+		    end
+		  | _ -> param_t 
+		in
+		  {formal_name   = x.formal_name;
+		   mode          = x.mode;
+		   param_type    = packing_type;
+		   default_value = x.default_value;
+		  }
+	    ) arguments)
+	  | _ -> None
+      in
+      let updt_arguments = update_args arguments in
       let (pk, o') = mangle_sname o in
       let old = add_p (pk, o')  in
-	Sym.add_renaming_decl gtbl (Sym.current gtbl, n) arguments old;
+	Sym.add_renaming_decl gtbl (Sym.current gtbl, n) updt_arguments old;
+	(*Sym.add_renaming_decl gtbl (Sym.current gtbl, n) arguments old;*)
         []
+
   | RepresentClause (id, EnumRepClause aggr) ->
 	    add_representation_clause id aggr loc;[]
   | RepresentClause (id, _) -> Npkcontext.report_warning "normalize"
@@ -1285,11 +1315,12 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
       let norm_args = List.map normalize_arg params in
       let norm_typs = List.map (fun (s,(_,t)) -> (s,t)) norm_args in
       let (sc,(act_name,spec,_)) = 
-	(* Sym.find_subprogram gtbl n in*)
-	Sym.find_subprogram gtbl (add_p n) norm_typs None (fun x -> 
-				Symboltbl.find_type gtbl x) in	 
- 
-	let effective_args = make_arg_list norm_args spec in
+     (* Sym.find_subprogram gtbl n in*)
+	Sym.find_subprogram gtbl (add_p n) norm_typs None
+	     ( fun x -> Symboltbl.find_type gtbl x ) 
+      in	 
+	
+      let effective_args = make_arg_list norm_args spec in
 
 	  [Ast.ProcedureCall( sc, act_name, effective_args), loc]
   | LvalInstr((Var _|SName (Var _,_)) as lv) ->

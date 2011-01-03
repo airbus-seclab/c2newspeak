@@ -259,9 +259,7 @@ module Table = struct
    (fun (wh,(x,y,z)) -> wh,(x,y,z))
      (cast_s (find_symbols tbl n))
 
-     
- let tbl_find_subprogram  n_args xpect my_find tbl n =
-
+ let tbl_find_subprogram n_args xpect my_find tbl n =
     let match_ret_typ xpect z =
       match (xpect, z) with
     	  Some xpec, Some ret -> T.is_compatible xpec ret
@@ -303,7 +301,6 @@ module Table = struct
     	   with Not_found ->
     	     Npkcontext.report_error "Symbtbl:not found" ""
        in
-	 
        let rec are_compatible pos_list spec =
          match pos_list, spec with
            |  [], _  -> (* end of positional parameters *)
@@ -323,7 +320,7 @@ module Table = struct
 	      Npkcontext.report_error "normalize.function_call"
               "Too many actual arguments in function call"
       in
-      let pos  = extract_positional_parameters norm_args in
+      let pos = extract_positional_parameters norm_args in
 	are_compatible pos params 
     in
     let subs = find_symbols tbl n in
@@ -334,6 +331,7 @@ module Table = struct
 		 ) 
 	 subs
 	)
+
 
   let tbl_find_variable tbl ?expected_type n =
     let ovl_predicate = match expected_type with
@@ -533,13 +531,11 @@ let add_renaming_decl s (current, new_name) new_args old_name  =
     else
       (*Multiple renaming is possible*)    
       if (List.exists (fun (key, _) -> 
-			 equal_keyrenaming key (current, new_name)) s.s_renaming)
+	equal_keyrenaming key (current, new_name)) s.s_renaming)
       then
-	
       begin
 	Npkcontext.report_warning "add_renaming_decl"
 	  ( "Already renamed '"^ new_name ^ "' but added");
-
 	let founds, removeds =  List.partition ( fun (key,_) -> 
 	  equal_keyrenaming key (current, new_name)) s.s_renaming 
 	in
@@ -565,7 +561,8 @@ let add_renaming_decl s (current, new_name) new_args old_name  =
 				   )
 				 ^ (snd old_name)
                                );
-	s.s_renaming <- ((current, new_name),[(old_name, new_args)])::s.s_renaming
+	s.s_renaming <- 
+	  ((current, new_name),[(old_name, new_args)])::s.s_renaming
       end
 	
 let enter_context ?name ?desc (s:t) =
@@ -670,32 +667,49 @@ let find_variable_value s ?(silent = false) ?expected_type (package,n) =
 		    end
 		      
 let rec find_variable s ?silent ?expected_type name =
-  let var_name = snd name in
   try
-    (*  let x = List.assoc var_name s.s_renaming in *)
-    let x = snd (List.find (fun (key, _) -> equal_keyrenaming key name ) s.s_renaming)
+    let x = snd (List.find (fun (key, _) -> 
+	equal_keyrenaming key name ) s.s_renaming)
     in
-    match x with 
-	(nam_assoc, _)::[]  -> find_variable s ?silent ?expected_type nam_assoc
-	  
-      |  _ -> begin
-	   Npkcontext.report_warning "find_variable"
-	     ( "Already renamed variable '"^ var_name ^ 
-		 "' not implemented for variable"); 
-	   raise Not_found 
-	 end
+      match x with 
+	  (nam_assoc, _)::[]  -> find_variable s ?silent ?expected_type nam_assoc
+	    
+	|  _ -> begin
+	     Npkcontext.report_warning "find_variable"
+	       ( "Already renamed '"^(snd name)^"': not implemented for variable"); 
+	     raise Not_found 
+	   end
   with Not_found ->
     (fun (x,(n,y,_,z)) -> (x,(n,y,z)))
       (find_variable_value ?silent s ?expected_type name) 
 
-let find_type s (package,n) = 
+
+let rec find_type s (package, n) = 
   try
+    let x = snd ( List.find (fun (key, _) -> 
+		  equal_keyrenaming key (package,n) ) s.s_renaming)
+    in  
+      match x with 
+	  (nam_assoc, _)::[]  ->  begin
+	    find_type s nam_assoc
+	  end
+	|  _ -> begin  
+	     Npkcontext.report_warning "find_type"
+	       ( "Already renamed typr '"^n^ "' not implemented for type"); 
+	     raise Not_found 
+	   end
+  with Not_found -> 
+    s_find "type" tbl_find_type s ?package n
+
+(*  try
     s_find "type" tbl_find_type s ?package n
   with Not_found -> error ("Cannot find type '" ^ n ^ "'")
+*)
+
+
 
 
 let rec find_subprogram s ?(silent = false) (pack,n) norm_args xpect t_find =
-   
   let find_one_renaming  ((p_opt, n_a), params_opt) = 
     if (equal_keyrenaming  (p_opt, n_a) (pack,n)) then
       error  ("program '" ^ n ^ "'" ^"can not be resolved")
@@ -704,8 +718,8 @@ let rec find_subprogram s ?(silent = false) (pack,n) norm_args xpect t_find =
 	find_subprogram s ~silent (p_opt, n_a) norm_args  xpect t_find 
       in
 	match params_opt with 
-	    Some formals -> 
-	      (sc,(act_name,  formals, top))
+	    Some formals ->  (sc,(act_name, formals, top))
+	   
 	  | None  ->  error  ("program renamed'" ^ n ^ 
 				"'" ^"can not find previous formal parameters")
   in
@@ -717,10 +731,9 @@ let rec find_subprogram s ?(silent = false) (pack,n) norm_args xpect t_find =
     with _ -> ()
   in
     try 
-      let names = snd (List.find (fun (key, _) -> 
-			equal_keyrenaming key (pack,n)
-				 ) s.s_renaming
-		      ) 
+      let names = snd (
+	List.find (fun (key, _) -> equal_keyrenaming key (pack,n)) 
+	  s.s_renaming) 
       in
 	List.iter multiple_renaming names;
 	let nb_solution = List.length !res in 
@@ -735,7 +748,7 @@ let rec find_subprogram s ?(silent = false) (pack,n) norm_args xpect t_find =
       (*No need for tbl_find_subprogram here*)
       try 
 	match pack with 
-	    Some pck ->  
+	    Some pck -> 
 	      s_find "subprogram"
 		(tbl_find_subprogram norm_args xpect t_find) s ~package:(pck) n 
 		
