@@ -905,7 +905,7 @@ and normalize_ident_cur ident =
   | None   -> [ident]
 
 and normalize_params_cur param =
-  let is_basic_or_pre_typ strs =
+  let is_basic_or_pref_typ strs =
     let is_basic str =
       match str with
 	  "integer" | "float" | "boolean" -> true
@@ -919,17 +919,14 @@ and normalize_params_cur param =
                   "chain of selected names is too deep"
 	    
   in
-  (*This function adds packing name info in parameter type label
-    of specifications, requires: type is in standard, and type is 
-    not already precised by a package *)
+  (*This function adds packing name info in parameter type label of specifications, requires: type is in standard, and type is not already precised by a package *)
   let add_pack pack param =  
     let p_typ = param.param_type in
-       if (is_basic_or_pre_typ p_typ) then
+       if (is_basic_or_pref_typ p_typ) then
 	 p_typ
        else
 	 pack::p_typ 	  
   in
-   
     match (Sym.current gtbl) with
       | Some x ->
 	  { 
@@ -1052,43 +1049,21 @@ and normalize_basic_decl item loc =
       Sym.add_type gtbl ident loc (merge_types norm_subtyp_ind);
       []
   | RenamingDecl (n, arguments, o) ->
-      let update_args args =
-	match args with 
-	    Some arguments -> Some( List.map (   
-	      fun x ->
-		let param_t  = x.param_type in
-		let packing_type = match param_t with 
-		    [] -> Npkcontext.report_error 
-		      "Renaming Function/procedure"
-		      ("no type for parameter'"^x.formal_name^"'")
-		  | _::[] -> begin
-		      match (Sym.current gtbl) with 
-			  Some e -> e::param_t
-			| _ -> param_t 
-		    end
-		  | _ -> param_t 
-		in
-		  {formal_name   = x.formal_name;
-		   mode          = x.mode;
-		   param_type    = packing_type;
-		   default_value = x.default_value;
-		  }
-	    ) arguments)
-	  | _ -> None
-      in
-      let updt_arguments = update_args arguments in
+      let updt_arguments = Ada_utils.may 
+	(List.map normalize_params_cur) arguments in
       let (pk, o') = mangle_sname o in
-      let old = add_p (pk, o')  in
-	Sym.add_renaming_decl gtbl (Sym.current gtbl, n) updt_arguments old;
-	(*Sym.add_renaming_decl gtbl (Sym.current gtbl, n) arguments old;*)
+      let old = add_p (pk, o')  in	
+	Sym.add_renaming_decl gtbl
+	  (Sym.current gtbl, n) updt_arguments old;
         []
 
   | RepresentClause (id, EnumRepClause aggr) ->
 	    add_representation_clause id aggr loc;[]
-  | RepresentClause (id, _) -> Npkcontext.report_warning "normalize"
-                              ( "Ignoring representation clause "
-                              ^ "for '" ^ id ^ "'");
-                              []
+  | RepresentClause (id, _) -> 
+      Npkcontext.report_warning "normalize"
+        ( "Ignoring representation clause "
+          ^ "for '" ^ id ^ "'");
+      []
   | GenericInstanciation  (ident , names, actuals) when
       ((compare (List.length names) 1  = 0) &&
        (compare(List.hd names) "unchecked_conversion" = 0)) -> 
