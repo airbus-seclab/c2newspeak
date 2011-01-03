@@ -23,13 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
-open Newspeak
-
-module Set = Set.Make(String)
-
 let command_table = Hashtbl.create 10
-
-let print_info message = print_endline ("  "^message)
 
 let config_file = ref ""
 
@@ -39,59 +33,23 @@ let speclist =
   [("--file", Arg.String set_config_file, "");
    ("-f", Arg.String set_config_file, "input from file")]
 
-let compute_callgraph prog =
-  let callgraph = Hashtbl.create 100 in
-  let add_call f g =
-    try
-      let callers = Hashtbl.find callgraph g in
-	Hashtbl.replace callgraph g (Set.add f callers)
-    with Not_found -> Hashtbl.add callgraph g (Set.singleton f)
-  in
-  let current_function = ref "" in
-
-  let rec compute_blk x = List.iter compute_stmt x
-
-  and compute_stmt (x, _) =
-    match x with
-	Decl (_, _, body) | InfLoop body | DoWith (body, _) -> 
-	  compute_blk body
-      | Select (branch1, branch2) ->
-	  compute_blk branch1;
-	  compute_blk branch2
-      | Call (_, FunId g, _) -> add_call !current_function g
-      | Call (_, FunDeref _, _) -> 
-	  print_info "Function pointer dereference ignored"
-      | _ -> ()
-  in
-  let compute_fundec f declaration =
-    current_function := f;
-    compute_blk declaration.body
-  in
-
-    Hashtbl.iter compute_fundec prog.fundecs;
-    callgraph
-
 let execute_help _ =
-  print_info "List of available commands:";
-  Hashtbl.iter (fun command _ -> print_info ("- "^command)) command_table 
+  Utils.print_info "List of available commands:";
+  Hashtbl.iter (fun command _ -> Utils.print_info ("- "^command)) command_table 
 
 let print_path p =
   let rec print_path margin p =
     match p with
       | [] -> ()
       | f::tl -> 
-	  print_info (margin^f);
+	  Utils.print_info (margin^f);
 	  print_path (margin^"  ") tl
   in
     print_path "" p
 
 let build_paths_from callgraph f =
-  let get_callers f =
-    try Set.elements (Hashtbl.find callgraph f)
-    with Not_found -> []
-  in
   let rec build f =
-    let callers = get_callers f in
+    let callers = CallGraph.get_callers callgraph f in
       if callers = [] then [f::[]]
       else begin
 	let build_one_path g = List.map (fun p -> f::p) (build g) in
@@ -118,16 +76,16 @@ let fill_command_table callgraph =
   Hashtbl.add command_table "call" (execute_call callgraph)
 
 let process input = 
-  print_info "Welcome to the Newspeak calculator.";
-  print_info ("Reading Newspeak file "^input^"...");
+  Utils.print_info "Welcome to the Newspeak calculator.";
+  Utils.print_info ("Reading Newspeak file "^input^"...");
   let prog = Newspeak.read input in
-    print_info ("Computing call graph...");
+    Utils.print_info ("Computing call graph...");
 
-    let callgraph = compute_callgraph prog in
+    let callgraph = CallGraph.compute prog in
 
-    fill_command_table callgraph;
+      fill_command_table callgraph;
     
-    print_info "Type help for a list of commands.";
+      Utils.print_info "Type help for a list of commands.";
 
     let read_line =
       if !config_file = "" then read_line
@@ -153,13 +111,13 @@ let process input =
 		  let execute = Hashtbl.find command_table command in
 		    execute arguments
 		with Not_found -> 
-		  print_info ("Unknown command '"^command^"'. Try help.")
+		  Utils.print_info ("Unknown command '"^command^"'. Try help.")
 	      end
 	    | [] -> ()
       done
     with End_of_file -> 
-      print_info "Thank you for using the Newspeak calculator.";
-      print_info "Have a nice day..."
+      Utils.print_info "Thank you for using the Newspeak calculator.";
+      Utils.print_info "Have a nice day..."
 	
 let _ =
   StandardApplication.launch_process_with_npk_argument "npkalc" speclist process
