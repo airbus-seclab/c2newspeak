@@ -609,9 +609,7 @@ let read name =
                        ^"different version of c2newspeak. "
                        ^"Please regenerate your file or install the latest "
                        ^"version of newspeak."^
-                       " Operation aborted. "
-		       ^"\nExpected version: "^Version.newspeak_hash
-		       ^"\nActual version: "^version)
+                       " Operation aborted.")
         end;
         Marshal.from_channel cin
   with Failure "input_value: bad object" -> 
