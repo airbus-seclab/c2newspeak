@@ -29,7 +29,7 @@ DIRS=$(CILDIR) utils newspeak ada2newspeak
 LIBX=unix.cmxa str.cmxa nums.cmxa 
 
 newspeak.FILES=\
-	temps config eBigInt newspeak lowspeak npkcontext npk2lpk \
+	temps config eBigInt newspeak npkcontext lowspeak npk2lpk \
 	npkil cir cir2npkil linker x2newspeak
 
 ada2newspeak.FILES=  \
@@ -49,7 +49,7 @@ ada2newspeak.FILES=  \
 	firstpass          \
 	ada2newspeak
 
-FILES=version utils/listUtils utils/tree \
+FILES=version utils/listUtils utils/tree utils/standardApplication \
       $(addprefix newspeak/, $(newspeak.FILES)) \
       $(addprefix ada2newspeak/, $(ada2newspeak.FILES))
 

@@ -23,8 +23,9 @@
   email: charles.hymans@penjili.org
 *)
 
-open Parser
 
+open Parser
+(* TODO : token_tbl redundant with parser => try to remove *)
 let token_tbl = Hashtbl.create 50
 
 let builtin_names = 
@@ -82,6 +83,7 @@ let _ =
   *)
   Hashtbl.add token_tbl "__typeof" TYPEOF;
   Hashtbl.add token_tbl "typeof" TYPEOF;
+  Hashtbl.add token_tbl "__typeof__" TYPEOF;
   Hashtbl.add token_tbl "__builtin_offsetof" OFFSETOF;
   Hashtbl.add token_tbl "__PRETTY_FUNCTION__" FUNNAME;
   Hashtbl.add token_tbl "__FUNCTION__" FUNNAME;
@@ -97,6 +99,7 @@ let _ =
 
 
 let find_token str =
+  if not !Npkcontext.accept_gnuc then raise Not_found;
   Hashtbl.find token_tbl str
 
 let is_gnuc_token str = Hashtbl.mem token_tbl str

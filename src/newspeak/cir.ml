@@ -39,7 +39,7 @@ let fresh_id () =
 type t = {
   globals: (string, ginfo) Hashtbl.t;
   init: blk;
-  fundecs: (string, funinfo) Hashtbl.t;
+  fundecs: (string, fundec) Hashtbl.t;
 }
 
 and assertion = token list
@@ -54,8 +54,12 @@ and ginfo = typ * location * Npkil.storage
 
 and field = (string * (int * typ))
 
-(* TODO: remove location, unused! *)
-and funinfo = (string * string list * ftyp * blk)
+and fundec = {
+  arg_identifiers: string list;
+  function_type: ftyp;
+  body: blk;
+  position: location;
+}
 
 and typ =
     | Void
@@ -102,6 +106,7 @@ and lv =
    having some optimization get
    rid of unnecessary temporary variable??? If better *)
     | BlkLv of (blk *  lv * bool)
+    | Str of string
 
 and exp =
     | Const of cst
@@ -166,6 +171,7 @@ and string_of_lv margin x =
     | Deref (e, t) -> "*("^(string_of_exp margin e)^")_"^(string_of_typ t)
     | BlkLv (body, lv, _) -> 
 	"("^(string_of_blk margin body)^(string_of_lv margin lv)^")"
+    | Str str -> str
 
 and string_of_blk margin x =
   match x with
@@ -210,9 +216,9 @@ let string_of_lv = string_of_lv ""
 
 let string_of_blk = string_of_blk ""
 
-let print_fundec f (_, _, _, body) =
+let print_fundec f declaration =
   print_endline (f^" {");
-  print_endline (string_of_blk body);
+  print_endline (string_of_blk declaration.body);
   print_endline "}"
 
 let print prog = Hashtbl.iter print_fundec prog.fundecs
@@ -252,7 +258,7 @@ let rec size_of_typ t =
 (* TODO: if possible remove int_kind, int_typ and char_typ, they are
    in csyntax rather *)
 let int_kind = (Signed, Config.size_of_int)
-
+(* TODO: remove and move to npkil? *)
 let char_typ = Scalar (Int (Signed, Config.size_of_char))
 
 let int_typ = Scalar (Int int_kind)
@@ -314,7 +320,7 @@ let rec normalize_exp x =
 	    
 and normalize_lv x =
   match x with
-      Local _ | Global _ -> ([], x, [])
+      Local _ | Global _ | Str _ -> ([], x, [])
     | Shift (lv, e) ->
 	let (pref1, lv, post1) = normalize_lv lv in
 	let (pref2, e, post2) = normalize_exp e in
@@ -822,7 +828,7 @@ and size_of_stmt (x, _) =
 
 and size_of_case (_, body) = size_of_blk body
 
-let size_of_fundef (_, _, _, body) = size_of_blk body
+let size_of_fundef declaration = size_of_blk declaration.body
 
 let size_of prog =
   let res = ref 0 in

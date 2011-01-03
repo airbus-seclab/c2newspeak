@@ -32,13 +32,17 @@ module Nat = Newspeak.Nat
 
 type t = {
   global_variables: (string * glbinfo) list;
-  function_declarations: (string * funinfo) list;
+  function_declarations: (string * fundec) list;
   user_specifications: assertion list
 }
 (* TODO: put the location inside the decl?? *)
 and glbinfo = (decl * Newspeak.location)
 
-and funinfo = (ftyp * bool * blk * Newspeak.location)
+and fundec = {
+  function_type: ftyp;
+  body: blk;
+  position: Newspeak.location;
+}
 
 and assertion = spec_token list
 
@@ -167,6 +171,7 @@ let int_kind = (Newspeak.Signed, Config.size_of_int)
 
 let int_typ = Int int_kind
 
+(* TODO: put in cir *)
 let exp_of_char c = Cst (Cir.CInt (Nat.of_int (Char.code c)), char_typ)
 
 let exp_of_int i = Cst (Cir.CInt (Nat.of_int i), int_typ)
@@ -196,34 +201,34 @@ let deref_typ t =
 
 let rec string_of_exp e =
   match e with
-      Cst (Cir.CInt c, _) -> Newspeak.Nat.to_string c
-    | Cst _ -> "Cst"
-    | Local x | Global x -> x
-    | Field ((e, _), f) -> (string_of_exp e)^"."^f
-    | Index (e1, _, (e2, _)) -> 
+      Cst (Cir.CInt c, _) 	      -> Newspeak.Nat.to_string c
+    | Cst _ 			      -> "Cst"
+    | Local x | Global x 	      -> x
+    | Field ((e, _), f) 	      -> (string_of_exp e)^"."^f
+    | Index (e1, _, (e2, _)) 	      -> 
 	"("^(string_of_exp e1)^")["^(string_of_exp e2)^"]"
-    | Deref (e, _) -> "*("^(string_of_exp e)^")"
-    | AddrOf (e, _) -> "&("^(string_of_exp e)^")"
-    | Unop (_, _, e) -> "op("^(string_of_exp e)^")"
+    | Deref (e, _) 		      -> "*("^(string_of_exp e)^")"
+    | AddrOf (e, _) 		      -> "&("^(string_of_exp e)^")"
+    | Unop (_, _, e) 		      -> "op("^(string_of_exp e)^")"
     | IfExp (e1, (e2, _), (e3, _), _) -> 
 	let e1 = string_of_exp e1 in
 	let e2 = string_of_exp e2 in
 	let e3 = string_of_exp e3 in
 	  "("^e1^") ? ("^e2^") : ("^e3^")"
-    | Binop (_, (e1, _), (e2, _)) -> 
+    | Binop (_, (e1, _), (e2, _))     -> 
 	(string_of_exp e1) ^" op "^(string_of_exp e2)
-    | Call _ -> "Call"
-    | Offsetof _ -> "Offsetof"
-    | Sizeof _ -> "Sizeof"
-    | Str _ -> "Str"
-    | FunName -> "FunName"
-    | Cast ((e, _), _) -> 
+    | Call _ 			      -> "Call"
+    | Offsetof _ 		      -> "Offsetof"
+    | Sizeof _ 			      -> "Sizeof"
+    | Str _ 			      -> "Str"
+    | FunName 			      -> "FunName"
+    | Cast ((e, _), _) 		      -> 
 	let e = string_of_exp e in
 	  "(typ) "^e
-    | Set ((lv, _), None, (e, _)) -> (string_of_exp lv)^" = "^(string_of_exp e)^";"
-    | Set _ -> "Set"
-    | OpExp _ -> "OpExp"
-    | BlkExp _ -> "BlkExp"
+    | Set ((lv, _), None, (e, _))     -> (string_of_exp lv)^" = "^(string_of_exp e)^";"
+    | Set _ 			      -> "Set"
+    | OpExp _ 			      -> "OpExp"
+    | BlkExp _ 			      -> "BlkExp"
 
 let rec string_of_typ t =
   match t with
@@ -247,8 +252,8 @@ and string_of_aux_cmp cmp =
   match cmp with
       Unknown s            -> "(Unknown struct or union "^ s^")"
     | Known (l, is_struct) -> 
-	let start = if is_struct then "struct" else "union" in
-	let l' = List.map (fun (s, t) -> (string_of_typ t)^" "^s^"; ") l in
+	let start  = if is_struct then "struct" else "union" in
+	let l' 	   = List.map (fun (s, t) -> (string_of_typ t)^" "^s^"; ") l in
 	let fields = List.fold_left (fun s s' -> s'^s) "" (List.rev l') in
 	start^" {"^fields^"}"
 
@@ -272,10 +277,10 @@ let rec equals_typ t1 t2 =
     | (Int k1, Int k2)
     | (Bitfield (k1, _), Bitfield (k2, _)) -> k1 = k2
     | (Ptr t1, Ptr t2)
-    | (Array (t1, _), Array (t2, _)) -> equals_typ t1 t2
-    | (Fun ft1, Fun ft2) -> equals_ftyp ft1 ft2
-    | (Comp c1, Comp c2) -> c1 = c2
-    | _ -> t1 = t2
+    | (Array (t1, _), Array (t2, _)) 	   -> equals_typ t1 t2
+    | (Fun ft1, Fun ft2) 		   -> equals_ftyp ft1 ft2
+    | (Comp c1, Comp c2) 		   -> c1 = c2
+    | _ 				   -> t1 = t2
 	  
 and equals_ftyp (args1, ret1) (args2, ret2) =
   let b =

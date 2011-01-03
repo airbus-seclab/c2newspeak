@@ -32,11 +32,11 @@ let process lexer_name lexbuf =
   try Parser.parse Lexer.token lexbuf
   with Parsing.Parse_error -> 
     let src_file = "Compiler.parse" in
-    let lexeme = Lexing.lexeme lexbuf in
-    let msg = "syntax error: unexpected token: "^lexeme in
-    let advice = ", rewrite your code" in
-    let pos = Lexing.lexeme_start_p lexbuf in
-    let loc = 
+    let lexeme 	 = Lexing.lexeme lexbuf in
+    let msg 	 = "syntax error: unexpected token: "^lexeme in
+    let advice 	 = ", rewrite your code" in
+    let pos 	 = Lexing.lexeme_start_p lexbuf in
+    let loc 	 = 
       (pos.Lexing.pos_fname, pos.Lexing.pos_lnum, 
        pos.Lexing.pos_cnum-pos.Lexing.pos_bol) 
     in
@@ -85,9 +85,9 @@ let add_types prog =
   Npkcontext.print_debug "Typing...";
   Csyntax2TypedC.process prog
 
-let translate_typedC2cir fname prog =
+let translate_typedC2cir prog =
   Npkcontext.print_debug "Running first pass...";
-  let prog = TypedC2Cir.translate fname prog in
+  let prog = TypedC2Cir.translate prog in
     Npkcontext.forget_loc ();
     Npkcontext.print_debug "First pass done.";
     Npkcontext.print_size (Cir.size_of prog);
@@ -105,9 +105,5 @@ let compile fname =
   let prog = parse fname in
   let prog = remove_gotos prog in
   let prog = add_types prog in
-    (* TODO: should put fname inside prog instead of passing it as an 
-       argument here
-       or better => fname should not be needed in translate_typedC2cir!!
-    *)
-  let prog = translate_typedC2cir fname prog in
+  let prog = translate_typedC2cir prog in
     translate_cir2npkil prog

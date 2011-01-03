@@ -28,7 +28,7 @@ open Newspeak
 type t = {
   globals: (string, ginfo) Hashtbl.t;
   init: blk;
-  fundecs: (string, funinfo) Hashtbl.t;
+  fundecs: (string, fundec) Hashtbl.t;
 }
 and assertion = token list
 
@@ -40,8 +40,12 @@ and token =
 
 and ginfo = typ * location * Npkil.storage
 
-(* TODO: remove location, unused! *)
-and funinfo = (string * string list * ftyp * blk)
+and fundec = {
+  arg_identifiers: string list;
+  function_type: ftyp;
+  body: blk;
+  position: location;
+}
 
 and typ =
     | Void
@@ -90,6 +94,7 @@ and lv =
    having some optimization get
    rid of unnecessary temporary variable??? If better *)
     | BlkLv of (blk * lv * bool)
+    | Str of string
 
 and exp =
     | Const of cst

@@ -43,12 +43,6 @@ module Nat = Newspeak.Nat
    TODO: should remove Cir
 *)
 
-let new_id =
-  let c = ref 0 in
-  fun _ ->
-    incr c;
-    !c
-
 let ret_lbl = 0
 let cnt_lbl = 1
 let brk_lbl = 2
@@ -72,12 +66,11 @@ let next_aligned o x =
    in Npkil *)
 let seq_of_string str =
   let len = String.length str in
-  let res = ref [(None, Data (exp_of_char '\x00', char_typ))] in
+  let res = ref [(None, Data (TypedC.exp_of_char '\x00', char_typ))] in
     for i = len - 1 downto 0 do
-      res := (None, Data (exp_of_char str.[i], char_typ))::!res
+      res := (None, Data (TypedC.exp_of_char str.[i], char_typ))::!res
     done;
     !res
-
 
 (* For detecting integers index, accesses and Addrof (accesss)*)
 let warn_report () =
@@ -120,19 +113,26 @@ and check_exp i =
   match i with
       C.Lval _ -> warn_report ()
     | C.Const (C.CInt c)  when Nat.compare c Nat.zero < 0 -> warn_report ()
-    | C.Unop   (K.Coerce _, C.Binop (N.MinusI, C.Const  (C.CInt c), e)) 
+    | C.Unop (K.Coerce _, C.Binop (N.MinusI, C.Const  (C.CInt c), e)) 
 	when Nat.compare c Nat.zero = 0 ->  
 	check_exp e
     | C.Binop  (_, e1, e2) -> check_exp e1; check_exp e2
     | C.BlkExp (_, e, _) -> check_exp e    
     | _ -> ()
 
+let build_initialization_set v scalars =
+  let loc = Npkcontext.get_loc () in
+  let build_set (o, t, e) =
+    let lv = C.Shift (v, C.exp_of_int o) in
+      (C.Set (lv, t, e), loc)
+  in
+    List.map build_set scalars
 
 (*
    Sets scope of variables so that no goto escapes a variable declaration
    block
 *)
-let translate fname prog =
+let translate prog =
   let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
   let init = ref [] in
@@ -160,28 +160,25 @@ let translate fname prog =
       (ret_name, args_id)
   in
 
-  let update_global x name loc (t, storage) =
+  let update_global x name (t, storage) =
+    let loc = Npkcontext.get_loc () in
     let info =
       try 
 	let (prev_t, prev_loc, prev_storage) = Hashtbl.find used_globals name in
 	let t = TypedC.min_typ t prev_t in
 	  match (prev_storage, storage) with
-	      (Npkil.Extern, _)  
-	    | (Npkil.Declared false, Npkil.Declared _) -> (t, loc, storage)
-	    | (Npkil.Declared _, Npkil.Extern) 
-	    | (Npkil.Declared _, Npkil.Declared false) -> 
+	      (K.Extern, _)  
+	    | (K.Declared false, K.Declared _) -> (t, loc, storage)
+	    | (K.Declared _, K.Extern) 
+	    | (K.Declared _, K.Declared false) -> 
 		(t, prev_loc, prev_storage)
-	    | (Npkil.Declared true, Npkil.Declared true) -> 
+	    | (K.Declared true, K.Declared true) -> 
 		Npkcontext.report_error "Firstpass.update_global"
 		  ("global variable "^x^" initialized twice")
       with Not_found -> (t, loc, storage)
     in
 (* TODO: remove used_globals in firstpass, done in cir2npkil?? *)
       Hashtbl.replace used_globals name info
-  in
-
-  let add_fundef f (ret, args) body t = 
-    Hashtbl.replace fundefs f (ret, args, t, body) 
   in
 
   let translate_lbl lbl =
@@ -381,42 +378,20 @@ let translate fname prog =
     in
     let t = translate 0 t x in
       (List.rev !res, t)
-  
-  and translate_glb_init loc name t x =
+
+  and translate_glb_init name t x =
     match x with
 	None -> (t, false)
       | Some i -> 
 	  let (i, t) = translate_init t i in
-	  let v = C.Global name in
-(* TODO: factor this with the translation of the local variable init too! *)
-	  let translate_scalar (o, t, e) = 
-	    let lv = C.Shift (v, C.exp_of_int o) in
-	      init := (C.Set (lv, t, e), loc)::!init
-	  in
-	    (* TODO: try to avoid this List.rev! *)
-	    List.iter translate_scalar (List.rev i);
+	  let i = build_initialization_set (C.Global name) i in
+	    init := i@(!init);
 	    (t, true)
 
-(* TODO: maybe should put this code in csyntax2CoreC??? *)
-  and add_glb_cstr str =
-(* TODO: it's strange to need fname here! 
-   should maybe be factored with code in csyntax2TypedC
-*)
-    let name = 
-      Temps.to_string (new_id ()) (Temps.Cstr (fname, String.escaped str)) 
-    in
-    let t = Array (char_typ, Some (exp_of_int ((String.length str) + 1))) in
-      if not (Hashtbl.mem used_globals name) then begin
-	let loc = Npkcontext.get_loc () in
-	  declare_global false name name loc t (Some (Data (Str str, t)))
-      end;
-      C.Global name
- 
   and translate_lv x =
     match x with
 	Local x -> C.Local x
       | Global x -> C.Global x
-
       | Field ((lv, t), f) -> 
 	  let lv = translate_lv lv in
 	  let (r, _, _) = translate_comp (TypedC.comp_of_typ t) in
@@ -442,9 +417,9 @@ let translate fname prog =
 	  let (lv, _, _) = incr in
 	    C.BlkLv ((C.Set incr, loc)::[], lv, is_after)
 
-      | Str str -> add_glb_cstr str
+      | Str str -> C.Str str
 
-      | FunName -> add_glb_cstr !current_fun
+      | FunName -> C.Str !current_fun
 
       | Cast ((lv, _), _) -> 
 	  Npkcontext.report_accept_warning "Firstpass.translate_stmt" 
@@ -527,7 +502,7 @@ let translate fname prog =
 		translate e
 	    with Invalid_argument _ -> 
 	      let loc = Npkcontext.get_loc () in
-	      let (x, decl, v) = gen_tmp loc t in
+	      let (x, decl, v) = gen_tmp t in
 	      let blk1 = 
 		(Exp (Set ((Local x, t), None, (e1, t)), t), loc)::[] 
 	      in
@@ -664,7 +639,7 @@ let translate fname prog =
 	    let loc = Npkcontext.get_loc () in
 	    let sz = if sz mod 8 = 0 then sz/8 else (sz/8)+1 in
 	    let t = Array (char_typ, Some (exp_of_int sz)) in
-	    let (_, decl, v) = gen_tmp loc t in
+	    let (_, decl, v) = gen_tmp t in
 	    let e = addr_of (v, t) in
 	    let init = init_va_args loc v args in
 	      ((C.BlkExp (decl::init, e, false))::[], (Va_arg, id)::[])
@@ -681,7 +656,8 @@ let translate fname prog =
     in
       translate_args args args_t
 
-  and gen_tmp loc t =
+  and gen_tmp t =
+    let loc = Npkcontext.get_loc () in
     let x = Temps.to_string !tmp_cnt (Temps.Misc "firstpass") in
     let t = translate_typ t in
     let decl = (C.Decl (t, x), loc) in
@@ -744,11 +720,11 @@ let translate fname prog =
 
   and translate_scalar_typ t =
     match t with
-      | Int k -> N.Int k
-      | Float n -> N.Float n	
-      | Ptr (Fun _) -> N.FunPtr
-      | Ptr _ -> N.Ptr
-      | Va_arg -> N.Ptr
+      | Int k 		      -> N.Int k
+      | Float n 	      -> N.Float n	
+      | Ptr (Fun _) 	      -> N.FunPtr
+      | Ptr _ 		      -> N.Ptr
+      | Va_arg 		      -> N.Ptr
       | Bitfield ((s, n), sz) -> 
 	  let sz = translate_exp false (sz, int_typ) in
 	  let sz = Nat.to_int (C.eval_exp sz) in
@@ -757,7 +733,7 @@ let translate fname prog =
 		"width of bitfield exceeds its type"
 	    end;
 	    N.Int (s, sz)
-      | _ -> 
+      | _ 		      -> 
 	  Npkcontext.report_error "Firstpass.translate_scalar_typ" 
 	    "scalar type expected"
 
@@ -826,7 +802,7 @@ let translate fname prog =
 
   and translate_local_decl loc x d =
     if d.is_static || d.is_extern then begin
-      declare_global d.is_extern x d.name loc d.t d.initialization;
+      declare_global d.is_extern x d.name d.t d.initialization;
       []
     end else begin
       (* TODO: see if more can be factored with translate_global_decl *) 
@@ -835,16 +811,11 @@ let translate fname prog =
 	    None -> ([], d.t)
 	  | Some init -> translate_init d.t init
       in
-      let v = C.Local x in
-      let build_set (o, t, e) =
-	let lv = C.Shift (v, C.exp_of_int o) in
-	  (C.Set (lv, t, e), loc)
-      in
-      let init = List.map build_set init in
+      let init = build_initialization_set (C.Local x) init in
       let t' = translate_typ t in
 	check_array_type_length t';
-      let decl = (C.Decl (t', x), loc) in
-	decl::init
+	let decl = (C.Decl (t', x), loc) in
+	  decl::init
     end
 
   (* type and translate blk *)
@@ -943,12 +914,6 @@ let translate fname prog =
 (* TODO: why is it necessary to have a block construction with None? *)
       | Block body -> (C.Block (translate_blk body, None), loc)::[]
 
-      | DoWhile (body, e) when !Npkcontext.remove_do_loops ->
-	  (* carefull: this transformation duplicates code and has an 
-	     exponential behavior in the imbrication depths of do loops *)
-	  let loop = For (body, e, body, []) in 
-	    translate_stmt (loop, loc)
-
       | DoWhile (body, e) -> 
 	  let body = translate_blk body in
 	  let guard = translate_stmt (If (e, [], (Break, loc)::[]), loc) in
@@ -965,13 +930,13 @@ let translate fname prog =
 	    (C.Block (init::loop::[], Some brk_lbl), loc)::[]
 
       | CSwitch (e, choices, default) -> 
-	  let e = translate_exp false e in
+	  let e 		 = translate_exp false e in
 	  let (last_lbl, switch) = translate_switch choices in
-	  let default_action = (C.Goto default_lbl, loc)::[] in
-	  let switch = (C.Switch (e, switch, default_action), loc)::[] in
-	  let body = translate_cases (last_lbl, switch) choices in
-	  let default = translate_blk default in
-	  let body = (C.Block (body, Some default_lbl), loc)::default in
+	  let default_action 	 = (C.Goto default_lbl, loc)::[] in
+	  let switch 		 = (C.Switch (e, switch, default_action), loc)::[] in
+	  let body 		 = translate_cases (last_lbl, switch) choices in
+	  let default 		 = translate_blk default in
+	  let body 		 = (C.Block (body, Some default_lbl), loc)::default in
 	    (C.Block (body, Some brk_lbl), loc)::[]
 
       | UserSpec x -> (translate_assertion loc x)::[]
@@ -983,13 +948,13 @@ let translate fname prog =
 
   and translate_token x =
     match x with
-	SymbolToken x -> C.SymbolToken x
-      | IdentToken x -> C.IdentToken x
+	SymbolToken x 	  -> C.SymbolToken x
+      | IdentToken x 	  -> C.IdentToken x
       | LvalToken (lv, t) -> 
 	  let lv = translate_lv lv in
 	  let t = translate_typ t in
 	    C.LvalToken (lv, t)
-      | CstToken c -> C.CstToken c
+      | CstToken c 	  -> C.CstToken c
 
 (* TODO: think about this: simplify *)
   and translate_if loc (e, blk1, blk2) =
@@ -1219,29 +1184,37 @@ let translate fname prog =
       | Bitfield (k, _) -> align_of (Int k)
       | _ -> size_of t
 
-(* TODO: use this function at all points where translate_glb_init is called
-   + simplify code of global declaration!!! *)
-  and declare_global extern x name loc t init =
-    update_global x name loc (t, Npkil.Extern);
-    let (t, init) = translate_glb_init loc name t init in
-    let init = if extern then Npkil.Extern else Npkil.Declared init in
-      update_global x name loc (t, init)
+(* TODO: simplify code of global declaration!!! *)
+  and declare_global extern x name t init =
+    update_global x name (t, K.Extern);
+    let (t, init) = translate_glb_init name t init in
+    let init = if extern then K.Extern else K.Declared init in
+      update_global x name (t, init)
   in
 
-  let translate_fundecl (f, (ft, _, body, loc)) =
-    Npkcontext.set_loc loc;
+  let translate_fundecl (f, declaration) =
+    Npkcontext.set_loc declaration.position;
     current_fun := f;
     let ft = 
-      match ft with
+      match declaration.function_type with
 	  (Some args_t, ret_t) -> (args_t, ret_t)
 	| (None, _) -> 
 	    Npkcontext.report_error "Firstpass.translate_global" 
 	      "unreachable code"
     in
-    let formalids = add_formals ft in
-    let body = translate_blk body in
-    let body = (C.Block (body, Some ret_lbl), loc)::[] in
-      add_fundef f formalids body (translate_ftyp ft);
+    let (_, args) = add_formals ft in
+    let body = translate_blk declaration.body in
+    let body = (C.Block (body, Some ret_lbl), declaration.position)::[] in
+    let ftyp = translate_ftyp ft in
+    let declaration = 
+      {
+	C.arg_identifiers = args;
+	C.function_type = ftyp;
+	C.body = body;
+	C.position = declaration.position;
+      }
+    in
+      Hashtbl.replace fundefs f declaration;
       current_fun := "";
       Hashtbl.clear lbl_tbl;
       lbl_cnt := default_lbl
@@ -1255,7 +1228,7 @@ let translate fname prog =
     (* TODO:TODO:TODO: remove static?? *)
     (* TODO:TODO:TODO: think about name and x difference, shouldn't there be 
        only normalized names in typedC? *)
-    declare_global d.is_extern x d.name loc d.t d.initialization
+    declare_global d.is_extern x d.name d.t d.initialization
   in
 
   let add_glbdecl name (t, loc, storage) =

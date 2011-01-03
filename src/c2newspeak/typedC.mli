@@ -29,13 +29,17 @@
 
 type t = {
   global_variables: (string * glbinfo) list;
-  function_declarations: (string * funinfo) list;
+  function_declarations: (string * fundec) list;
   user_specifications: assertion list
 }
 
 and glbinfo = (decl * Newspeak.location)
 
-and funinfo = (ftyp * bool * blk * Newspeak.location)
+and fundec = {
+  function_type: ftyp;
+  body: blk;
+  position: Newspeak.location;
+}
 
 and assertion = spec_token list
 

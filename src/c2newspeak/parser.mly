@@ -289,12 +289,19 @@ function_definition:
 declaration:
   declaration_specifiers 
   init_declarator_list                      { ($1, $2) }
+| typeof_declaration 			    { $1 }
 ;;
 
+typeof_declaration:
+type_qualifier_list TYPEOF LPAREN 
+type_specifier pointer RPAREN 
+type_qualifier_list ident_or_tname { ($4, [( ($5, Variable ($8, get_loc ())), []) , None])}
+;;
 init_declarator_list:
                                             { (((0, Abstract), []), None)::[] }
 | non_empty_init_declarator_list            { $1 }
 ;;
+
 
 non_empty_init_declarator_list:
   init_declarator COMMA 
@@ -302,10 +309,12 @@ non_empty_init_declarator_list:
 | init_declarator                           { $1::[] }
 ;;
 
+
 init_declarator:
   attr_declarator                           { ($1, None) }
 | attr_declarator EQ init                   { ($1, Some $3) }
 ;;
+
 
 attr_declarator:
   declarator extended_attribute_list        { ($1, $2) }
@@ -391,6 +400,7 @@ type_name:
 declaration_specifiers:
   type_qualifier_list type_specifier 
   type_qualifier_list                      { $2 }
+
 ;;
 
 type_qualifier_list:
@@ -938,7 +948,7 @@ type_specifier:
 | ENUM IDENTIFIER                        { Enum None }
 | ENUM IDENTIFIER 
   LBRACE enum_list RBRACE                { Enum (Some $4) }
-
+| TYPEOF LPAREN type_specifier RPAREN    { $3 }
 | TYPEOF LPAREN IDENTIFIER RPAREN        { Typeof $3 }
 | VA_LIST                                { Va_arg }
 ;;
@@ -955,7 +965,7 @@ external_declaration:
   RPAREN RPAREN STATIC function_definition { build_fundef true $8 }
 // GNU C extension
 | optional_extension 
-  EXTERN function_definition               { 
+  EXTERN function_definition               {
     Npkcontext.report_ignore_warning "Parser.external_declaration" 
       "extern function definition" Npkcontext.ExternFunDef;
     let ((b, m), _) = $3 in
@@ -1029,10 +1039,12 @@ attribute_name:
   IDENTIFIER                               { 
     begin match $1 with
 	"aligned" | "__aligned__" | "__cdecl__" | "noreturn" | "__noreturn__"
-      | "__always_inline__" | "__nothrow__" | "__pure__" | "__gnu_inline__"
+      | "__always_inline__" | "always_inline"  | "__nothrow__" 
+      | "__pure__" | "pure" | "__gnu_inline__"
       | "__deprecated__" | "deprecated" | "__malloc__" 
-      | "__warn_unused_result__" | "__unused__" | "unused" 
-      | "__artificial__" -> ()
+      | "__warn_unused_result__" | "warn_unused_result"
+      | "__unused__" | "unused" 
+      | "__artificial__" | "__cold__" | "cold" -> ()
       | "dllimport" -> 
 	  Npkcontext.report_warning "Parser.attribute" 
 	    "ignoring attribute dllimport"
@@ -1053,7 +1065,8 @@ attribute_name:
     if ($1 = "alias") then begin
       Npkcontext.report_warning "Parser.attribute" 
       ("ignoring attribute alias")
-    end else if ($1 <> "__warning__") && ($1 <> "__error__")
+    end 
+    else if ($1 <> "__warning__") && ($1 <> "__error__") && ($1 <> "__section__") && ($1 <> "section")
     then raise Parsing.Parse_error;
     []
   }
