@@ -27,8 +27,6 @@ open Newspeak
 
 module Set = Set.Make(String)
 
-let callgraph = Hashtbl.create 100
-
 let command_table = Hashtbl.create 10
 
 let print_info message = print_endline ("  "^message)
@@ -41,17 +39,14 @@ let speclist =
   [("--file", Arg.String set_config_file, "");
    ("-f", Arg.String set_config_file, "input from file")]
 
-let add_call f g =
-  try
-    let callers = Hashtbl.find callgraph g in
-      Hashtbl.replace callgraph g (Set.add f callers)
-  with Not_found -> Hashtbl.add callgraph g (Set.singleton f)
-
-let get_callers f =
-  try Set.elements (Hashtbl.find callgraph f)
-  with Not_found -> []
-
-let compute_call_graph prog =
+let compute_callgraph prog =
+  let callgraph = Hashtbl.create 100 in
+  let add_call f g =
+    try
+      let callers = Hashtbl.find callgraph g in
+	Hashtbl.replace callgraph g (Set.add f callers)
+    with Not_found -> Hashtbl.add callgraph g (Set.singleton f)
+  in
   let current_function = ref "" in
 
   let rec compute_blk x = List.iter compute_stmt x
@@ -73,7 +68,8 @@ let compute_call_graph prog =
     compute_blk declaration.body
   in
 
-  Hashtbl.iter compute_fundec prog.fundecs
+    Hashtbl.iter compute_fundec prog.fundecs;
+    callgraph
 
 let execute_help _ =
   print_info "List of available commands:";
@@ -89,7 +85,11 @@ let print_path p =
   in
     print_path "" p
 
-let build_paths_from f =
+let build_paths_from callgraph f =
+  let get_callers f =
+    try Set.elements (Hashtbl.find callgraph f)
+    with Not_found -> []
+  in
   let rec build f =
     let callers = get_callers f in
       if callers = [] then [f::[]]
@@ -103,19 +103,19 @@ let build_paths_from f =
 
 let execute_exit _ = raise End_of_file
 
-let execute_call arguments = 
+let execute_call callgraph arguments = 
   match arguments with
       f::_ -> 
-	let paths = build_paths_from f in
+	let paths = build_paths_from callgraph f in
 	  List.iter print_path paths
     | _ -> ()
 
 (* TODO: add command where global which shows all places where a global is 
    being used *)
-let fill_command_table () =
+let fill_command_table callgraph =
   Hashtbl.add command_table "help" execute_help;
   Hashtbl.add command_table "exit" execute_exit;
-  Hashtbl.add command_table "call" execute_call
+  Hashtbl.add command_table "call" (execute_call callgraph)
 
 let process input = 
   print_info "Welcome to the Newspeak calculator.";
@@ -123,9 +123,9 @@ let process input =
   let prog = Newspeak.read input in
     print_info ("Computing call graph...");
 
-    compute_call_graph prog;
+    let callgraph = compute_callgraph prog in
 
-    fill_command_table ();
+    fill_command_table callgraph;
     
     print_info "Type help for a list of commands.";
 
