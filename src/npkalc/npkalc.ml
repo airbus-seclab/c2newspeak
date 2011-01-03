@@ -23,6 +23,8 @@
   email: charles.hymans@penjili.org
 *)
 
+module Set = Set.Make(String)
+
 let command_table = Hashtbl.create 10
 
 let config_file = ref ""
@@ -37,28 +39,47 @@ let execute_help _ =
   Utils.print_info "List of available commands:";
   Hashtbl.iter (fun command _ -> Utils.print_info ("- "^command)) command_table 
 
-let print_path p =
-  let rec print_path margin p =
-    match p with
-      | [] -> ()
-      | f::tl -> 
-	  Utils.print_info (margin^f);
-	  print_path (margin^"  ") tl
-  in
-    print_path "" p
-
 let build_paths_from callgraph f =
-  let rec build f =
-    let callers = CallGraph.get_callers callgraph f in
-      if callers = [] then [f::[]]
-      else begin
-	let build_one_path g = List.map (fun p -> f::p) (build g) in
-	let paths = List.map build_one_path callers in
-	  List.flatten paths
-      end
+  let result = Hashtbl.create 10 in
+  let add_call f g =
+    try
+      let previous_calls = Hashtbl.find result f in
+	Hashtbl.replace result f (Set.add g previous_calls)
+    with Not_found -> Hashtbl.add result f (Set.singleton g)
   in
-  let paths = build f in
-    List.map List.rev paths
+  let heads = ref Set.empty in
+  let visited = ref Set.empty in
+  let rec build f =
+    if not (Set.mem f !visited) then begin
+      visited := Set.add f !visited;
+      let callers = CallGraph.get_callers callgraph f in
+      let process_call g = 
+	add_call g f;
+	build g
+      in
+	if callers = [] then begin
+	  heads := Set.add f !heads
+	end;
+	List.iter process_call callers
+    end
+  in
+    build f;
+    (Set.elements !heads, result)
+    
+let print_paths (heads, callgraph) =
+  let visited = ref Set.empty in
+  let rec print_path margin f =
+    if Set.mem f !visited then begin
+      Utils.print_info (margin^f^"...");
+    end else begin
+      visited := Set.add f !visited;
+      Utils.print_info (margin^f);
+      let calls = try Hashtbl.find callgraph f with Not_found -> Set.empty in
+      let print_call g = print_path (margin^"  ") g in
+	Set.iter print_call calls
+    end
+  in
+    List.iter (print_path "") heads
 
 let execute_exit _ = raise End_of_file
 
@@ -66,7 +87,7 @@ let execute_call callgraph arguments =
   match arguments with
       f::_ -> 
 	let paths = build_paths_from callgraph f in
-	  List.iter print_path paths
+	  print_paths paths
     | _ -> ()
 
 let execute_where callgraph arguments =
