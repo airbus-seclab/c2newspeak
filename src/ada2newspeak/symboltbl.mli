@@ -146,7 +146,7 @@ val add_subprogram : t
                 -> Ada_types.t option
       -> unit
 
-val add_use : t -> string -> unit
+val add_use : bool -> t -> string -> unit
 
 (** Set the current package. *)
 val set_current       : t -> string -> unit
@@ -158,10 +158,14 @@ val reset_current     : t -> unit
  * after the last call to [set_current], the empty package is returned.
  *)
 val current           : t -> string option
-(** Add a package to the "with" list. *)
+
+(* Add a package to the "with" list. 
 val add_with          : t -> string -> unit
-(** Is a package in the "with" list ? *)
+Is a package in the "with" list ? 
 val is_with           : t -> string -> bool
+*)
+val is_ada_pck :  string -> bool
+
 val s_get_use         : t -> string list
 
-val add_renaming_decl : t -> string ->  (Syntax_ada.param list) option ->  string option * string -> unit
+val add_renaming_decl : t ->  string option * string->  (Syntax_ada.param list) option ->  string option * string -> unit

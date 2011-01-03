@@ -403,7 +403,7 @@ let translate compil_unit =
       (params_typ, return_typ)
 
   and translate_basic_declaration basic loc = match basic with
-    | ObjectDecl (id,t,_,blkopt) ->
+    | ObjectDecl (id,t,_,blkopt) -> 
         [C.Decl (T.translate t, id), loc],(match blkopt with
                                            | Some b -> b
                                            | None   -> []
@@ -463,17 +463,19 @@ let translate compil_unit =
             Npkil.Declared true
           end
     in
-    Hashtbl.add globals tr_name (tr_typ, loc, storage)
+      Hashtbl.add globals tr_name (tr_typ, loc, storage)
   in
 
   let rec translate_global_basic_declaration (basic, loc) =
     match basic with
-      | ObjectDecl(ident, subtyp, _, init_o) ->
+      | ObjectDecl(ident, subtyp, _, init_o) -> begin
 	  let tr_typ = T.translate subtyp in
           let init =
             if !extern then None else init_o
           in
-          add_global loc tr_typ init ident
+	    add_global loc tr_typ init ident
+	    
+	end
       | SpecDecl spec -> translate_spec spec
       | NumberDecl _ -> ()
 
@@ -489,15 +491,10 @@ let translate compil_unit =
       | SubProgramSpec(subprog_spec) -> 
           ignore (translate_sub_program_spec subprog_spec )
       | PackageSpec (nom, basic_decl_list) ->
-	  (*WG*)
-	  (*print_endline ("nom de la spec :"^nom^(if (not (f_is_with nom)) then " pas deja present dans with" else "deja present"));  
-	  if (not (f_is_with  nom)) then begin
-	*)
-          curpkg := Some nom;
+	  curpkg := Some nom;
 	  List.iter translate_global_basic_declaration basic_decl_list;
-(*WG*)	  add_spec nom;
+	  add_spec nom;
           curpkg := None
-	(*end*)
 
   and translate_body body loc =
     Npkcontext.set_loc loc;
@@ -505,14 +502,14 @@ let translate compil_unit =
       | SubProgramBody(subprog_decl, block) ->
           add_funbody subprog_decl block loc
       | PackageBody(name, package_spec, decl_part) ->
-          curpkg := Some name;
+	  curpkg := Some name;
           (match package_spec with
              | None -> ()
-             | Some(_, basic_decls) ->
-                 begin
-                   List.iter translate_global_basic_declaration basic_decls;
-                 end
-          );
+             | Some(_, basic_decls) ->	  
+	         List.iter 
+		   translate_global_basic_declaration 
+		   basic_decls;
+	  );
           List.iter translate_global_decl_item decl_part;
   in
 
