@@ -120,17 +120,14 @@ and generate_exp e =
     | Lval (lv, t) -> N.Lval (generate_lv lv, generate_typ t)
     | Const c -> N.Const c 
     | AddrOfFun (fid, ft) -> N.AddrOfFun (fid, generate_ftyp ft)
-    | AddrOf (lv, sz) -> 
-        let sz = 
-          try Nat.to_int (generate_tmp_nat sz) 
-          with Invalid_argument "Newspeak.Nat.to_int" -> Config.max_sizeof
-        in
-          if (sz > Config.max_sizeof) then begin
-            Npkcontext.report_error "Link.generate_exp" 
-              ("size too large: maximum allowed is "
-               ^(string_of_int Config.max_sizeof)^" bits")
-          end;
-          N.UnOp (N.Focus sz, N.AddrOf (generate_lv lv))
+    | AddrOf (lv, sz) -> begin
+        try 
+	  generate_addr_of lv (Nat.to_int (generate_tmp_nat sz))
+          with 
+	      Invalid_argument "Newspeak.Nat.to_int" -> 
+		generate_addr_of lv Config.max_sizeof
+	    | Failure "generate_tmp_nat" -> N.AddrOf (generate_lv lv)
+      end
     | UnOp (o, e) -> N.UnOp (generate_unop o, generate_exp e)
     | BinOp (o, e1, e2) -> N.BinOp (o, generate_exp e1, generate_exp e2)
 
@@ -151,7 +148,8 @@ and generate_unop o =
 
 and generate_tmp_nat x =
   match x with
-      Known i -> i
+      Unknown -> raise (Failure "generate_tmp_nat")
+    | Known i -> i
     | Length name -> begin
         match get_glob_typ name with
             Newspeak.Array (_, len) -> Nat.of_int len
@@ -162,6 +160,14 @@ and generate_tmp_nat x =
     | Mult (v, n) -> 
         let i = generate_tmp_nat v in
           Nat.mul_int n i
+
+and generate_addr_of lv sz =
+  if (sz > Config.max_sizeof) then begin
+    Npkcontext.report_error "Link.generate_exp" 
+      ("size too large: maximum allowed is "
+       ^(string_of_int Config.max_sizeof)^" bits")
+  end;
+  N.UnOp (N.Focus sz, N.AddrOf (generate_lv lv))
 	    
 let generate_global name declaration =
   let loc = declaration.global_position in

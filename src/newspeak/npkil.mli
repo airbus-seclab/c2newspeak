@@ -129,9 +129,10 @@ and unop =
 
 (* TODO: code cleanup: think about this! *)
 and tmp_nat =
-      Known of Nat.t
-    | Length of string
-    | Mult of (tmp_nat * int)
+    Unknown (* flexible array *)
+  | Known of Nat.t
+  | Length of string
+  | Mult of (tmp_nat * int)
 
 and tmp_size_t = int option
 

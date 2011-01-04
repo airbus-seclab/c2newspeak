@@ -282,6 +282,8 @@ val string_of_lval : lval -> string
 
 val string_of_stmt: stmt -> string
 
+val string_of_fundec: fid -> fundec -> string
+
 (** [string_of_block blk] returns the string representation of block [blk]. *)
 val string_of_blk: blk -> string
 

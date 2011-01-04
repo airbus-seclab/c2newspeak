@@ -29,7 +29,7 @@ DIRS=newspeak/ utils/ npkstats/
 FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
       newspeak/newspeak utils/standardApplication newspeak/npkcontext \
       newspeak/lowspeak newspeak/npk2lpk npkstats/maxcount npkstats/funstats \
-      npkstats/npkstats
+      npkstats/libfuns npkstats/npkstats
 LIBX=nums.cmxa str.cmxa
 
 include common.Makefile

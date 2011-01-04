@@ -124,7 +124,10 @@ let translate src_lang prog =
 
       | AddrOf (lv, Array (elt_t, len)) ->
 (* TODO: put use of length_of_array in firstpass!!! *)
-	  let sz = K.Mult (length_of_array len lv, size_of_typ elt_t) in
+	  let sz = 
+	    try K.Mult (length_of_array len lv, size_of_typ elt_t) 
+	    with _ -> K.Unknown
+	  in
 	  let lv = translate_lv lv in
 	    K.AddrOf (lv, sz)
 

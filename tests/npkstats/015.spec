@@ -11,4 +11,7 @@ Maximum number of variables on the stack: 0
 Maximum height of the stack (bytes): 0
 Maximum depth of function calls: 1
 Maximum depth of imbricated loops: 0
+======
+Function statistics
 Functions that read/update globals: 1
+======

@@ -130,9 +130,10 @@ and ftyp = typ list * typ list
 and field = offset * typ
 
 and tmp_nat = 
-    | Known of Nat.t
-    | Length of string (* length of global array *)
-    | Mult of (tmp_nat * int)
+    Unknown (* flexible array *)
+  | Known of Nat.t
+  | Length of string (* length of global array *)
+  | Mult of (tmp_nat * int)
 
 module String_set = 
   Set.Make (struct type t = string let compare = Pervasives.compare end)
@@ -186,8 +187,9 @@ let string_of_fid fid = fid
 
 let rec string_of_tmp_nat x =
   match x with
-      Known i -> Nat.to_string i
-    | Length v -> "len("^v^")"
+      Unknown 	  -> "?"
+    | Known i 	  -> Nat.to_string i
+    | Length v 	  -> "len("^v^")"
     | Mult (v, n) -> "("^(string_of_tmp_nat v)^" * "^(string_of_int n)^")"
 
 let string_of_unop op =
