@@ -552,14 +552,16 @@ let string_of_blk offset x =
     dump_blk x;
     Buffer.contents buf
   
-let dump_fundec name fd =
-  let str_args = string_of_formal_args fd.args in
-  let str_ret  = string_of_ret fd.rets in
-  let position = string_of_loc_as_prefix fd.position in
-    print_endline (str_ret ^ " " ^ position ^ name ^ str_args ^ " {");
-    print_string (string_of_blk 2 fd.body);
-    print_endline "}";
-    print_newline ()
+let string_of_fundec name declaration =
+  let str_args = string_of_formal_args declaration.args in
+  let str_ret  = string_of_ret declaration.rets in
+  let position = string_of_loc_as_prefix declaration.position in
+  let result = str_ret ^ " " ^ position ^ name ^ str_args ^ " {\n" in
+  let result = result^string_of_blk 2 declaration.body^"}\n" in
+    result
+
+let dump_fundec name declaration = 
+  print_endline (string_of_fundec name declaration)
 
 let dump_globals gdecls = 
   (* TODO: Clean this mess... StringMap *)
