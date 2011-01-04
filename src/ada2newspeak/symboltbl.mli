@@ -101,9 +101,11 @@ val find_variable :    t
                     -> string option * string
          -> scope * (string * AdaTypes.t * bool)
 
-(* TODO: try to remove ?silent option *)
+
+(* TODO: try to remove all optional arguments *)
+
 val find_variable_value :    t
-                    -> ?silent: bool
+                    -> bool (* TODO: try to remove this bool *)
                     -> ?expected_type: AdaTypes.t
                     -> string option * string
          -> scope * (string * AdaTypes.t * (AdaTypes.data_t option) * bool)

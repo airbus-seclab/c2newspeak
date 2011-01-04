@@ -853,8 +853,7 @@ and add_representation_clause id aggr loc =
         let orgn_val =
           try
             let (_,(_,_,x,_)) = 
-	      Sym.find_variable_value ~expected_type:t
-                gtbl (None,i)
+	      Sym.find_variable_value ~expected_type:t gtbl false (None,i)
             in 
 	      x
           with Sym.Variable_no_storage (_,x) -> Some x

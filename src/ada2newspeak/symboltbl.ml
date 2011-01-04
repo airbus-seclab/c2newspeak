@@ -653,13 +653,12 @@ let s_find desc finder s ?package n =
            end
        end
 
-let find_variable_value s ?(silent = false) ?expected_type (package,n) =
+let find_variable_value s silent ?expected_type (package,n) =
   try
     s_find "variable" (fun tbl n -> tbl_find_variable tbl ?expected_type n)
       s ?package n
   with Not_found -> 
-    if silent
-    then raise Not_found
+    if silent then raise Not_found
     else begin
       error ("Cannot find variable '" ^ n ^ "'"
              ^ (match expected_type with
@@ -683,7 +682,7 @@ let find_variable s silent ?expected_type name =
 	       raise Not_found
     with Not_found ->
       let (x, (n, y, _, z)) = 
-	find_variable_value ~silent:silent s ?expected_type name 
+	find_variable_value s silent ?expected_type name 
       in
 	(x, (n, y, z))
   in
