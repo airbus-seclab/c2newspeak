@@ -189,46 +189,38 @@ struct
         | None   -> None
         | Some y -> if filter y then Some y else None
     in
-    match l with
-    |  []  -> raise Not_found
-    | h::t -> begin
-                match p' h with
-                  | None -> extract_unique p' t
-                  | Some r -> if List.exists (fun x -> p' x <> None) t
-                              then 
-				None
-		              else Some r
-              end
+      match l with
+	|  []  -> raise Not_found
+	| h::t -> begin
+            match p' h with
+              | None -> extract_unique p' t
+              | Some r -> 
+		  if List.exists (fun x -> p' x <> None) t
+                  then None
+		  else Some r
+          end
 
-  let mkcast desc fn  ?(filter = fun _ -> true) lst  =
-    if ((compare (List.length lst) 1 > 0) &&
-	  (compare desc "subprogram" <> 0)) 
-    then
-      begin
-	Npkcontext.print_debug("Multiple interpretations for " ^desc^ " :");
-	List.iter (fun (_,x) -> Npkcontext.print_debug
-		     ("\t" ^ print_symbol_join x)) lst
-      end;
-  
+  let mkcast desc fn ?(filter = fun _ -> true) lst  =
     let fn' (wh,x) =
       match fn x with
-      | None -> None
-      | Some y -> Some (wh,y)
+	| None -> None
+	| Some y -> Some (wh,y)
     in
       match extract_unique ~filter fn' lst with
-	| None   -> 
+	| None -> 
 	    Npkcontext.report_error "Symboltbl.mkcast" 
 	      ("Ambiguous " ^ desc ^ " name") 
 	| Some x -> x
 
-  let cast_v ?filter = mkcast "variable"
-                      (fun s -> match s with
-                        | Variable (_,_,_     ,false,_) -> Some s
-                        | Variable (_,_,Some _,true ,_) -> Some s
-                        | Subprogram (_,[],Some  _)     -> Some s
-                        |_ -> None
-                      )
-                      ?filter
+  let cast_v ?filter = 
+    mkcast "variable"
+      (fun s -> match s with
+         | Variable (_,_,_     ,false,_) -> Some s
+         | Variable (_,_,Some _,true ,_) -> Some s
+         | Subprogram (_,[],Some  _)     -> Some s
+         |_ -> None
+      )
+      ?filter
 
   let cast_t ?filter = mkcast "type"
                        (function Type x -> Some x
@@ -338,18 +330,9 @@ struct
   let tbl_find_variable tbl ?expected_type n =
     let ovl_predicate = 
       match expected_type with
-	| Some t when not (T.is_unknown t) -> 
-	    (fun x -> T.is_compatible x t)
+	| Some t when not (T.is_unknown t) -> (fun x -> T.is_compatible x t)
 	| _ -> (fun _ -> true)
     in
-      begin
-	Npkcontext.print_debug ( "Find_variable "
-				 ^ n
-				 ^ " : expected type is "
-				 ^ match expected_type with None   -> "None"
-                                   | Some t -> T.print t
-                               )
-      end;
       try
 	let (s,sym) =
           cast_v ~filter:(function
@@ -367,7 +350,7 @@ struct
 		raise (Parameterless_function (s, rt))
             | _ -> Npkcontext.report_error "find_variable" "unreachable"
 	in
-	  s,(n,t,v,(match v with Some _ -> true | None -> r))
+	  s, (n, t, v, (match v with Some _ -> true | None -> r))
       with
 	| Parameterless_function (Lexical, rt) ->
             raise (Parameterless_function (tbl.t_scope, rt))
