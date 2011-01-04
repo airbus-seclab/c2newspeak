@@ -334,7 +334,8 @@ module Table = struct
 
 
   let tbl_find_variable tbl ?expected_type n =
-    let ovl_predicate = match expected_type with
+    let ovl_predicate = 
+      match expected_type with
       | Some t when not (T.is_unknown t)
           -> fun x ->    T.is_compatible x t
       | _ -> fun _ -> true
@@ -676,21 +677,15 @@ let find_variable s ?expected_type name =
   in
     find name
 
-let report_variable_not_found ?expected_type (_, n) =
-  let expected_type = 
-    match expected_type with
-      | None   -> ""
-      | Some _ -> " with this expected type"
-  in
-    error ("Cannot find variable '"^n^"'"^ expected_type)
+let report_variable_not_found (_, n) = error ("Cannot find variable '"^n^"'")
 
 let find_variable_with_error_report s ?expected_type name =
   try find_variable s ?expected_type name
-  with Not_found -> report_variable_not_found ?expected_type name
+  with Not_found -> report_variable_not_found name
 
 let find_variable_value s ?expected_type name =
   try find_variable_value s ?expected_type name
-  with Not_found -> report_variable_not_found ?expected_type name
+  with Not_found -> report_variable_not_found name
 	
 let rec find_type s (package, n) = 
   try
