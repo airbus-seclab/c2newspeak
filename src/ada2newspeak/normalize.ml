@@ -148,7 +148,7 @@ let rec resolve_selected ?expected_type n =
     begin
       try
 	let (sc,(act_id, t, ro)) = 
-	  Sym.find_variable ?expected_type gtbl false (pkg,id) 
+	  Sym.find_variable_with_error_report ?expected_type gtbl (pkg,id) 
 	in
 	  SelectedVar(sc,act_id,t,ro)
       with
@@ -157,34 +157,31 @@ let rec resolve_selected ?expected_type n =
       	
     end
   in
-  match n with
-  | SName(Var pfx, fld) ->
-      begin
-        try
-          let (_,(act_id,t,_)) =
-            Sym.find_variable gtbl true (None, pfx)
-          in
-          let (off, tf) = T.record_field t fld in
-          let lv = Ast.Var (Sym.Lexical, act_id, t) in
-          SelectedRecord (lv , off, tf)
-     	with Not_found -> resolve_variable (Some pfx) fld
-      end
-  | Var id ->  resolve_variable None id
-
-  | SName (SName (Var _, _) as pf, z) -> begin
-      match (resolve_selected pf) with
-        | SelectedFCall _ 
-        | SelectedVar   _ 
-        | SelectedConst _ -> Npkcontext.report_error "resolve_selected"
-                                    "bad type for selected value field"
-        | SelectedRecord (lv, off0, tf0) ->
-            let (off,tf) = T.record_field tf0 z in
-            let lv = Ast.RecordAccess (lv,off0,tf0) in
-            SelectedRecord (lv, off, tf)
-    end
-  | _ -> Npkcontext.report_error "normalize"
-                    "Chain of selected_names too long"
-
+   match n with
+     | SName (Var pfx, fld) -> begin
+         try
+           let (_, (act_id, t, _)) = Sym.find_variable gtbl (None, pfx) in
+           let (off, tf) = T.record_field t fld in
+           let lv = Ast.Var (Sym.Lexical, act_id, t) in
+             SelectedRecord (lv , off, tf)
+     	 with Not_found -> resolve_variable (Some pfx) fld
+       end
+     | Var id ->  resolve_variable None id
+	 
+     | SName (SName (Var _, _) as pf, z) -> begin
+	 match (resolve_selected pf) with
+           | SelectedFCall _ 
+           | SelectedVar   _ 
+           | SelectedConst _ -> Npkcontext.report_error "resolve_selected"
+               "bad type for selected value field"
+           | SelectedRecord (lv, off0, tf0) ->
+               let (off,tf) = T.record_field tf0 z in
+               let lv = Ast.RecordAccess (lv,off0,tf0) in
+		 SelectedRecord (lv, off, tf)
+       end
+     | _ -> Npkcontext.report_error "normalize"
+         "Chain of selected_names too long"
+	   
 (**************************************************
  *                                                *
  *             Body vs spec functions             *
@@ -327,7 +324,9 @@ let rec normalize_exp ?expected_type exp =
 	      "Lval (SName (ParExp(Var n, params), fld)) case "
 	in
 	  try
-	    let (_,(_, t,_)) = Sym.find_variable gtbl false (None,n) in
+	    let (_,(_, t,_)) = 
+	      Sym.find_variable_with_error_report gtbl (None,n) 
+	    in
 	    let tc = fst (T.extract_array_types t) in
 	      if not (T.is_record tc) then 
 		Npkcontext.report_error "normalize_exp"
@@ -660,7 +659,9 @@ and normalize_fcall (n, params) expectedtype =
 	(*To do double checked because conversion de tablo
 	  contraint/non contraint cf 8.2 *)
 	begin
-	  let (sc,(act_id, t,_)) = Sym.find_variable gtbl false n in
+	  let (sc,(act_id, t,_)) = 
+	    Sym.find_variable_with_error_report gtbl n 
+	  in
 	  let tc = fst (T.extract_array_types t) in
 	  let params' = List.map snd params in
 	  let lv = Ast.Var (sc, act_id, t) in
@@ -674,7 +675,7 @@ and normalize_fcall (n, params) expectedtype =
 	  match n with 
 	    | Some f, fld -> 
 		let (sc,(act_name, t,_)) = 
-		  Sym.find_variable gtbl false (None,f) 
+		  Sym.find_variable_with_error_report gtbl (None,f) 
 		in
 		  if (T.is_record t) then 
 		    let (off, tf) = T.record_field t fld in	
@@ -853,7 +854,7 @@ and add_representation_clause id aggr loc =
         let orgn_val =
           try
             let (_,(_,_,x,_)) = 
-	      Sym.find_variable_value ~expected_type:t gtbl false (None,i)
+	      Sym.find_variable_value ~expected_type:t gtbl (None,i)
             in 
 	      x
           with Sym.Variable_no_storage (_,x) -> Some x
@@ -1338,7 +1339,7 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 	| ArrayRange n -> begin
             let n = make_name_of_lval n in
             let n = mangle_sname n in
-            let (_,(_,t,_)) = Sym.find_variable gtbl false n in
+            let (_,(_,t,_)) = Sym.find_variable_with_error_report gtbl n in
               ( fst (T.attr_get t "first")
                   , fst (T.attr_get t "last"))
           end

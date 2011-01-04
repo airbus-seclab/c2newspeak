@@ -120,7 +120,7 @@ let eval_static exp tbl =
       in
       let (package,id) = name in
       let (_, (_,_,r,_)) = 
-	Symboltbl.find_variable_value tbl false ~expected_type 
+	Symboltbl.find_variable_value tbl ~expected_type 
 	  (convert_scope package,id)
       in
       match r with

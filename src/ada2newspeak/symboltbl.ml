@@ -653,25 +653,15 @@ let s_find desc finder s ?package n =
            end
        end
 
-let find_variable_value s silent ?expected_type (package,n) =
-  try
-    s_find "variable" (fun tbl n -> tbl_find_variable tbl ?expected_type n)
-      s ?package n
-  with Not_found -> 
-    if silent then raise Not_found
-    else begin
-      error ("Cannot find variable '" ^ n ^ "'"
-             ^ (match expected_type with
-                  | None   -> ""
-                  | Some _ -> " with this expected type")
-	    )
-    end
-		      
-let find_variable s silent ?expected_type name =
+let find_variable_value s ?expected_type (package,n) =
+  s_find "variable" (fun tbl n -> tbl_find_variable tbl ?expected_type n)
+    s ?package n
+
+let find_variable s ?expected_type name =
   let rec find name =
     try
       let (_, x) = 
-	(List.find (fun (key, _) -> equal_keyrenaming key name) s.s_renaming)
+	List.find (fun (key, _) -> equal_keyrenaming key name) s.s_renaming
       in
 	match x with 
 	    (nam_assoc, _)::[] -> find nam_assoc
@@ -681,14 +671,27 @@ let find_variable s silent ?expected_type name =
 		   ^"': not implemented for variable"); 
 	       raise Not_found
     with Not_found ->
-      let (x, (n, y, _, z)) = 
-	find_variable_value s silent ?expected_type name 
-      in
+      let (x, (n, y, _, z)) = find_variable_value s ?expected_type name in
 	(x, (n, y, z))
   in
     find name
 
+let report_variable_not_found ?expected_type (_, n) =
+  let expected_type = 
+    match expected_type with
+      | None   -> ""
+      | Some _ -> " with this expected type"
+  in
+    error ("Cannot find variable '"^n^"'"^ expected_type)
 
+let find_variable_with_error_report s ?expected_type name =
+  try find_variable s ?expected_type name
+  with Not_found -> report_variable_not_found ?expected_type name
+
+let find_variable_value s ?expected_type name =
+  try find_variable_value s ?expected_type name
+  with Not_found -> report_variable_not_found ?expected_type name
+	
 let rec find_type s (package, n) = 
   try
     let x = snd ( List.find (fun (key, _) -> 
