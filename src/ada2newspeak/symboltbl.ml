@@ -25,31 +25,29 @@ open AdaSyntax
 
 module T = AdaTypes
 
-let error x =
-  Npkcontext.report_error "Symbol table" x
-
 type scope = Lexical | In_package of string
 
 exception Parameterless_function of scope * T.t
 exception Variable_no_storage    of T.t * T.data_t
 
-module Table = struct
-
-  module Symset : sig
+module Table = 
+struct
+  module Symset : 
+  sig
     type 'a t
-
+      
     val empty : 'a t
     val iter : ('a -> unit) -> 'a t -> unit
     val elements : 'a t -> 'a list
     val add : 'a -> 'a t -> 'a t
     val filter : ('a -> bool) -> 'a t -> 'a t
-      
-  end = struct
-
+  end = 
+  struct
+    
     type 'a t = 'a list
-
+	
     let add e sy = if (List.mem e sy) then sy else e::sy
-
+      
     let iter = List.iter
 
     let empty = []
@@ -58,7 +56,7 @@ module Table = struct
 
     let elements x = List.rev x
 
-    end
+  end
 
   (**
    * Symbols.
@@ -88,26 +86,28 @@ module Table = struct
   let get_use t =
     t.t_use_list
 
-  let print_symbol = function
-    | Variable  (_,t,None,_,_)   -> "V",T.print t
-    | Variable  (_,t,Some v,_,_) -> "V *","(" ^ T.print_data v ^ ")" ^ T.print t
-    | Type         t   -> "T",T.print t
-    | Subprogram (_,p,r) -> "S",(
-                               let pdesc = " with "
-                                         ^ string_of_int (List.length p)
-                                         ^ " parameter(s)"
-                               in match r with None   -> "procedure" ^ pdesc
-                                             | Some t -> "function"
-                                                       ^ pdesc
-                                                       ^ " and return type "
-                                                       ^ T.print t
-                              )
-    | Unit         _   -> "U","<unit>"
-
+  let print_symbol x = 
+    match x with
+      | Variable  (_,t,None,_,_)   -> "V",T.print t
+      | Variable  (_,t,Some v,_,_) -> 
+	  "V *","(" ^ T.print_data v ^ ")" ^ T.print t
+      | Type         t   -> "T",T.print t
+      | Subprogram (_,p,r) -> "S",(
+          let pdesc = " with "
+            ^ string_of_int (List.length p)
+            ^ " parameter(s)"
+          in match r with None   -> "procedure" ^ pdesc
+            | Some t -> "function"
+		^ pdesc
+		^ " and return type "
+		^ T.print t
+	)
+      | Unit         _   -> "U","<unit>"
+	  
   let print_symbol_join s =
     let (s1,s2) = print_symbol s in
-    s1 ^ " " ^ s2
-
+      s1 ^ " " ^ s2
+	
   let print_table tbl =
     let out = Buffer.create 0 in
     let print_string x = Buffer.add_string out x in
@@ -124,20 +124,20 @@ module Table = struct
       List.iter print_string ["|" ; pad 6 t ; "|" ; pad 15 i ; "| " ; sym_d];
       print_string "\n"
     in
-    begin match tbl.t_desc with
-      | None -> ()
-      | Some desc -> print_string ("(" ^ desc ^ ")\n"
-                                  ^ (if tbl.t_loc = Newspeak.unknown_loc then ""
-                                     else "@ "
-                                         ^ Newspeak.string_of_loc tbl.t_loc)
-                                  ^ "\n")
-    end;
-    print_string "+------+---------------+---- . . .\n";
-    Symset.iter line_printer tbl.t_tbl;
-    print_string "+------+---------------+---- . . .\n";
-    print_string "\n";
-    Buffer.contents out
-
+      begin match tbl.t_desc with
+	| None -> ()
+	| Some desc -> print_string ("(" ^ desc ^ ")\n"
+                                     ^ (if tbl.t_loc = Newspeak.unknown_loc then ""
+					else "@ "
+                                          ^ Newspeak.string_of_loc tbl.t_loc)
+                                     ^ "\n")
+      end;
+      print_string "+------+---------------+---- . . .\n";
+      Symset.iter line_printer tbl.t_tbl;
+      print_string "+------+---------------+---- . . .\n";
+      print_string "\n";
+      Buffer.contents out
+	
   let create_table scope ?desc _ = { t_tbl      = Symset.empty
                                    ; t_desc     = desc
                                    ; t_loc      = Npkcontext.get_loc ()
@@ -215,9 +215,11 @@ module Table = struct
       | None -> None
       | Some y -> Some (wh,y)
     in
-    match extract_unique ~filter fn' lst with
-      | None   -> error ("Ambiguous " ^ desc ^ " name") 
-      | Some x -> x
+      match extract_unique ~filter fn' lst with
+	| None   -> 
+	    Npkcontext.report_error "Symboltbl.mkcast" 
+	      ("Ambiguous " ^ desc ^ " name") 
+	| Some x -> x
 
   let cast_v ?filter = mkcast "variable"
                       (fun s -> match s with
@@ -336,45 +338,45 @@ module Table = struct
   let tbl_find_variable tbl ?expected_type n =
     let ovl_predicate = 
       match expected_type with
-      | Some t when not (T.is_unknown t)
-          -> fun x ->    T.is_compatible x t
-      | _ -> fun _ -> true
+	| Some t when not (T.is_unknown t) -> 
+	    (fun x -> T.is_compatible x t)
+	| _ -> (fun _ -> true)
     in
-    begin
-    Npkcontext.print_debug ( "Find_variable "
-                           ^ n
-                           ^ " : expected type is "
-                           ^ match expected_type with None   -> "None"
-                                                    | Some t -> T.print t
-                           )
-    end;
-    try
-      let (s,sym) =
-        cast_v ~filter:(function
-                        | (_,(Variable (_,x,_,_,_)))      -> ovl_predicate x
-                        | (_,(Subprogram(_, [], Some x))) -> ovl_predicate x
-                        | _ -> true
-                        ) (find_symbols tbl n)
-      in
-      let (n,t,v,r) = match sym with
-        | Variable (n,x,      v, false, r) -> (n, x, v, r)
-        | Variable (_,x, Some v, true , _) ->
-              raise (Variable_no_storage (x, T.get_enum_litt_value x v))
-        | Subprogram (_,[], Some rt)     ->
-              raise (Parameterless_function (s, rt))
-        | _ -> Npkcontext.report_error "find_variable" "unreachable"
-      in
-      s,(n,t,v,(match v with Some _ -> true | None -> r))
-    with
-    | Parameterless_function (Lexical, rt) ->
-        raise (Parameterless_function (tbl.t_scope, rt))
-
-
+      begin
+	Npkcontext.print_debug ( "Find_variable "
+				 ^ n
+				 ^ " : expected type is "
+				 ^ match expected_type with None   -> "None"
+                                   | Some t -> T.print t
+                               )
+      end;
+      try
+	let (s,sym) =
+          cast_v ~filter:(function
+                            | (_,(Variable (_,x,_,_,_)))      -> ovl_predicate x
+                            | (_,(Subprogram(_, [], Some x))) -> ovl_predicate x
+                            | _ -> true
+                         ) (find_symbols tbl n)
+	in
+	let (n,t,v,r) = 
+	  match sym with
+            | Variable (n,x,      v, false, r) -> (n, x, v, r)
+            | Variable (_,x, Some v, true , _) ->
+		raise (Variable_no_storage (x, T.get_enum_litt_value x v))
+            | Subprogram (_,[], Some rt)     ->
+		raise (Parameterless_function (s, rt))
+            | _ -> Npkcontext.report_error "find_variable" "unreachable"
+	in
+	  s,(n,t,v,(match v with Some _ -> true | None -> r))
+      with
+	| Parameterless_function (Lexical, rt) ->
+            raise (Parameterless_function (tbl.t_scope, rt))
+	  
   let tbl_find_unit t id =
     match (find_symbols t id) with
-    | [_,Unit x] -> Some x
-    | _ -> None
-
+      | [_,Unit x] -> Some x
+      | _ -> None
+	  
 (******************************************************************************
  *                                                                            *
  *                            Builtin tables                                  *
@@ -541,7 +543,9 @@ let add_renaming_decl s (current, new_name) new_args old_name  =
 	in
 	let bindings =  match founds with
 	    hd::[] -> snd hd
-	  | _ -> error ("Too many bining s for "^ new_name )
+	  | _ -> 
+	      Npkcontext.report_error "Symbtbl.add_renaming_decl" 
+		("Too many bining s for "^ new_name )
 	in
 	  s.s_renaming <- ((current, new_name) ,
 			   ((old_name, new_args)::
@@ -582,15 +586,16 @@ let enter_context ?name ?desc (s:t) =
             begin match name with
               | None   -> ()
               | Some n -> begin
-                            if (Tree.height s.s_stack <> 1) then
-                              error "Adding some unit outside the library";
-                              let top = Tree.top s.s_stack in
-                              top.t_tbl <- Symset.add (Lexical
-                                                      ,n
-                                                      ,Newspeak.unknown_loc
-                                                      ,Unit new_context)
-                                                      top.t_tbl;
-                          end
+                  if (Tree.height s.s_stack <> 1) then begin
+		    Npkcontext.report_error "Symbtbl.enter_context" 
+		      "Adding some unit outside the library"
+		  end;
+                  let top = Tree.top s.s_stack in
+                    top.t_tbl <- 
+		      Symset.add 
+		      (Lexical, n, Newspeak.unknown_loc, Unit new_context)
+                      top.t_tbl
+                end
             end;
             new_context;
           end
@@ -677,7 +682,9 @@ let find_variable s ?expected_type name =
   in
     find name
 
-let report_variable_not_found (_, n) = error ("Cannot find variable '"^n^"'")
+let report_variable_not_found (_, n) = 
+  Npkcontext.report_error "Symboltbl.report_variable_not_found" 
+    ("Cannot find variable '"^n^"'")
 
 let find_variable_with_error_report s ?expected_type name =
   try find_variable s ?expected_type name
@@ -704,24 +711,22 @@ let rec find_type s (package, n) =
   with Not_found -> 
     s_find "type" tbl_find_type s ?package n
 
-(*  try
-    s_find "type" tbl_find_type s ?package n
-  with Not_found -> error ("Cannot find type '" ^ n ^ "'")
-*)
-
-
 let rec find_subprogram s ?(silent=false) (pack,n) norm_args xpect t_find =
   let find_one_renaming  ((p_opt, n_a), params_opt) = 
-    if (equal_keyrenaming  (p_opt, n_a) (pack,n)) then
-      error  ("program '" ^ n ^ "'" ^"can not be resolved")
-    else
+    if (equal_keyrenaming  (p_opt, n_a) (pack,n)) then begin
+      Npkcontext.report_error "Symboltbl.find_subprogram" 
+	("program '" ^ n ^ "'" ^"can not be resolved")
+    end else begin
       let (sc,(act_name,_, top)) =
 	find_subprogram s ~silent (p_opt, n_a) norm_args  xpect t_find 
       in
 	match params_opt with 
 	    Some formals ->  (sc,(act_name, formals, top))
-	  | None  ->  error  ("program renamed'" ^ n ^ 
-			"'" ^"can not find previous formal parameters")
+	  | None ->
+	      Npkcontext.report_error "Symboltbl.find_subprogram" 
+		("program renamed'" ^ n ^ 
+		   "'" ^"can not find previous formal parameters")
+    end
   in
   let res = ref[] in 
 
@@ -740,9 +745,10 @@ let rec find_subprogram s ?(silent=false) (pack,n) norm_args xpect t_find =
 	let nb_solution = List.length !res in 
 	  if (compare  nb_solution 0 = 0) then
 	    raise Not_found
-	  else if (compare nb_solution 1 > 0) then
-	    error ("More than one program match spec:'" ^ n ^ "'")
-	  else
+	  else if (compare nb_solution 1 > 0) then begin
+	    Npkcontext.report_error "Symboltbl.multiple_renaming"
+	      ("More than one program match spec:'" ^ n ^ "'")
+	  end else
 	    List.hd (!res)
 
     with Not_found -> 
@@ -776,10 +782,14 @@ let rec find_subprogram s ?(silent=false) (pack,n) norm_args xpect t_find =
 		    done;
 		    match !res with
 			Some prog ->  prog
-		      | _ ->  if silent then
-			  raise Not_found
-			else
-			  error ("Cannot find subprogram '" ^ n ^ "'")
+		      | _ ->  
+(* TODO: try to remove silent *)
+			  if silent then raise Not_found
+			  else begin
+			    Npkcontext.report_error 
+			      "Symboltbl.multiple_renaming" 
+			      ("Cannot find subprogram '" ^ n ^ "'")
+			  end
 	      end
 	  | None -> 
 	      begin
@@ -801,20 +811,22 @@ let rec find_subprogram s ?(silent=false) (pack,n) norm_args xpect t_find =
 		    done;
 		    match !res with
 			Some prog ->  prog
-		      | _ ->   if silent then
-			  raise Not_found
-			else
-			  error ("Cannot find subprogram '" ^ n ^ "'")
+		      | _ -> 
+			  if silent then raise Not_found
+			  else begin
+			    Npkcontext.report_error 
+			      "Symboltbl.multiple_renaming" 
+			      ("Cannot find subprogram '" ^ n ^ "'")
+			  end
 	      end
       with Not_found ->
 	if silent then
 	  raise Not_found
-	else
-	  error ("Cannot find subprogram '" ^ n ^ "'")
-
-
-
-
+	else begin
+	  Npkcontext.report_error 
+	    "Symboltbl.multiple_renaming" 
+	    ("Cannot find subprogram '" ^ n ^ "'")
+	end
 
 let is_operator_overloaded s n =
   try 
@@ -854,11 +866,13 @@ let replace_type s n new_t =
     match (Symset.elements olds) with 
 	[ (wh, m, lc, _)] ->
 	  tabl.t_tbl <- Symset.add (wh, m, lc, Type new_t) removed; 
-      | _ ->  error ("Replacing enumeration type failed "^n^
-		       "too many candidate found ("^
-		       (string_of_int(List.length(Symset.elements olds)))
-		    ^")"
-		    )
+      | _ -> 
+	  Npkcontext.report_error "Symboltbl.replace_type"
+	    ("Replacing enumeration type failed "^n^
+	       "too many candidate found ("^
+	       (string_of_int(List.length(Symset.elements olds)))
+	     ^")"
+	    )
 	  
 
 (*for Enumeration type redefining using the 'use' clause*)
@@ -886,7 +900,9 @@ let replace_typ_enum s (name,data) oldt newt  =
 	[(wh, m, lc, Variable (str,_,_, no_st, ro))] -> 
 	    t.t_tbl <- Symset.add (wh, m, lc, 
 		Variable (str, newt , Some data, no_st, ro)) others
-	| _ ->  error ("Replacing enumeration Value  failed")
+	| _ -> 
+	    Npkcontext.report_error "Symboltbl" 
+	      ("Replacing enumeration Value  failed")
 	  
 
   
