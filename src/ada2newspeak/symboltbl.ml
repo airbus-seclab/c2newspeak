@@ -681,8 +681,10 @@ let rec find_variable s ?silent ?expected_type name =
 	     raise Not_found 
 	   end
   with Not_found ->
-    (fun (x,(n,y,_,z)) -> (x,(n,y,z)))
-      (find_variable_value ?silent s ?expected_type name) 
+    let (x, (n, y, _, z)) = 
+      find_variable_value ?silent s ?expected_type name 
+    in
+      (x, (n, y, z))
 
 
 let rec find_type s (package, n) = 
