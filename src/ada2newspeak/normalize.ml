@@ -147,8 +147,9 @@ let rec resolve_selected ?expected_type n =
  let resolve_variable pkg id =
     begin
       try
-	let (sc,(act_id, t, ro)) = Sym.find_variable ?expected_type
-                                             gtbl (pkg,id) in
+	let (sc,(act_id, t, ro)) = 
+	  Sym.find_variable ?expected_type gtbl false (pkg,id) 
+	in
 	  SelectedVar(sc,act_id,t,ro)
       with
       | Sym.Parameterless_function (sc,rt) -> SelectedFCall( sc , id , rt)
@@ -161,7 +162,7 @@ let rec resolve_selected ?expected_type n =
       begin
         try
           let (_,(act_id,t,_)) =
-            Sym.find_variable ~silent:true gtbl (None, pfx)
+            Sym.find_variable gtbl true (None, pfx)
           in
           let (off, tf) = T.record_field t fld in
           let lv = Ast.Var (Sym.Lexical, act_id, t) in
@@ -326,7 +327,7 @@ let rec normalize_exp ?expected_type exp =
 	      "Lval (SName (ParExp(Var n, params), fld)) case "
 	in
 	  try
-	    let (_,(_, t,_)) = Sym.find_variable gtbl (None,n) in
+	    let (_,(_, t,_)) = Sym.find_variable gtbl false (None,n) in
 	    let tc = fst (T.extract_array_types t) in
 	      if not (T.is_record tc) then 
 		Npkcontext.report_error "normalize_exp"
@@ -659,7 +660,7 @@ and normalize_fcall (n, params) expectedtype =
 	(*To do double checked because conversion de tablo
 	  contraint/non contraint cf 8.2 *)
 	begin
-	  let (sc,(act_id, t,_)) = Sym.find_variable gtbl n in
+	  let (sc,(act_id, t,_)) = Sym.find_variable gtbl false n in
 	  let tc = fst (T.extract_array_types t) in
 	  let params' = List.map snd params in
 	  let lv = Ast.Var (sc, act_id, t) in
@@ -672,7 +673,9 @@ and normalize_fcall (n, params) expectedtype =
 	    *)
 	  match n with 
 	    | Some f, fld -> 
-		let (sc,(act_name, t,_)) = Sym.find_variable gtbl (None,f) in
+		let (sc,(act_name, t,_)) = 
+		  Sym.find_variable gtbl false (None,f) 
+		in
 		  if (T.is_record t) then 
 		    let (off, tf) = T.record_field t fld in	
 		      if (T.is_array tf) then 
@@ -849,9 +852,11 @@ and add_representation_clause id aggr loc =
       List.map (fun (i, exp) ->
         let orgn_val =
           try
-            let (_,(_,_,x,_)) = Sym.find_variable_value ~expected_type:t
-                                                      gtbl (None,i)
-                            in x
+            let (_,(_,_,x,_)) = 
+	      Sym.find_variable_value ~expected_type:t
+                gtbl (None,i)
+            in 
+	      x
           with Sym.Variable_no_storage (_,x) -> Some x
         in
         let original = match orgn_val with
@@ -1334,7 +1339,7 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 	| ArrayRange n -> begin
             let n = make_name_of_lval n in
             let n = mangle_sname n in
-            let (_,(_,t,_)) = Sym.find_variable gtbl n in
+            let (_,(_,t,_)) = Sym.find_variable gtbl false n in
               ( fst (T.attr_get t "first")
                   , fst (T.attr_get t "last"))
           end

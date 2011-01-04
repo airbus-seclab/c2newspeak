@@ -95,9 +95,8 @@ val type_ovl_intersection :
 exception Parameterless_function of scope * AdaTypes.t
 exception Variable_no_storage    of AdaTypes.t * AdaTypes.data_t
 
-(* TODO: try to remove ?silent option *)
 val find_variable :    t
-                    -> ?silent:bool
+                    -> bool (* TODO: try to remove this bool*)
                     -> ?expected_type: AdaTypes.t
                     -> string option * string
          -> scope * (string * AdaTypes.t * bool)

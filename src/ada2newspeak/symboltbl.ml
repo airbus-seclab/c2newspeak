@@ -657,32 +657,32 @@ let find_variable_value s ?(silent = false) ?expected_type (package,n) =
   try
     s_find "variable" (fun tbl n -> tbl_find_variable tbl ?expected_type n)
       s ?package n
-  with Not_found -> if silent
-                    then raise Not_found
-                    else begin
-		      error ("Cannot find variable '" ^ n ^ "'"
-                             ^ (match expected_type with
-                                  | None   -> ""
-                                  | Some _ -> " with this expected type")
-			    )
-		    end
+  with Not_found -> 
+    if silent
+    then raise Not_found
+    else begin
+      error ("Cannot find variable '" ^ n ^ "'"
+             ^ (match expected_type with
+                  | None   -> ""
+                  | Some _ -> " with this expected type")
+	    )
+    end
 		      
-let rec find_variable s ?silent ?expected_type name =
+let rec find_variable s silent ?expected_type name =
   try
-    let x = snd (List.find (fun (key, _) -> 
-	equal_keyrenaming key name ) s.s_renaming)
+    let (_, x) = 
+      (List.find (fun (key, _) -> equal_keyrenaming key name) s.s_renaming)
     in
       match x with 
-	  (nam_assoc, _)::[]  -> find_variable s ?silent ?expected_type nam_assoc
-	    
-	|  _ -> begin
+	  (nam_assoc, _)::[] -> find_variable s silent ?expected_type nam_assoc
+	|  _ ->
 	     Npkcontext.report_warning "find_variable"
-	       ( "Already renamed '"^(snd name)^"': not implemented for variable"); 
-	     raise Not_found 
-	   end
+	       ( "Already renamed '"^(snd name)
+		 ^"': not implemented for variable"); 
+	     raise Not_found
   with Not_found ->
     let (x, (n, y, _, z)) = 
-      find_variable_value ?silent s ?expected_type name 
+      find_variable_value ~silent:silent s ?expected_type name 
     in
       (x, (n, y, z))
 
