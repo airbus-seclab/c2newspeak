@@ -69,15 +69,18 @@ let build_paths_from callgraph f =
 let print_paths (heads, callgraph) =
   let visited = ref Set.empty in
   let rec print_path margin f =
-    if Set.mem f !visited then begin
-      Utils.print_info (margin^f^"...");
-    end else begin
-      visited := Set.add f !visited;
-      Utils.print_info (margin^f);
-      let calls = try Hashtbl.find callgraph f with Not_found -> Set.empty in
-      let print_call g = print_path (margin^"  ") g in
-	Set.iter print_call calls
-    end
+    let function_visited = Set.mem f !visited in
+    let calls = try Hashtbl.find callgraph f with Not_found -> Set.empty in
+    let suffix =
+      if function_visited && not (Set.is_empty calls) then "..."
+      else ""
+    in
+      Utils.print_info (margin^f^suffix);
+      if not function_visited then begin
+	visited := Set.add f !visited;
+	let print_subpath g = print_path (margin^"  ") g in
+	  Set.iter print_subpath calls
+      end
   in
     List.iter (print_path "") heads
 
