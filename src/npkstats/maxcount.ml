@@ -1,7 +1,7 @@
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans, Olivier Levillain
+  Copyright (C) 2007, 201  Charles Hymans, Olivier Levillain, Sarah Zennou
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -24,6 +24,11 @@
 
   Olivier Levillain
   email: olivier.levillain@penjili.org
+
+  Sarah Zennou
+  EADS Innovation Works - SE/IS
+  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
+  email: sarah(dot)zennou(at)@eads(dot)net
 *)
 
 open Lowspeak
@@ -116,9 +121,10 @@ let count debug prog =
             end
           else 
             begin
-              fset := f::!fset;
+	      let b = Hashtbl.mem prog.fundecs f in
+              if b then fset := f::!fset;
               let info_f = process_call f in
-                fset := List.tl !fset;
+                if b then fset := List.tl !fset;
                 add_stats info info_f
             end
       | Call _ -> 
