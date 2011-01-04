@@ -305,12 +305,12 @@ module Table = struct
          match pos_list, spec with
            |  [], _  -> (* end of positional parameters *)
 		List.for_all ( function x -> 
-		try    
-		  let typo  = Hashtbl.find argtbl x.formal_name in
-		    T.is_compatible typo (make_subt x) 
-		with Not_found -> true
+		  try    
+		    let typo  = Hashtbl.find argtbl x.formal_name in
+		      T.is_compatible typo (make_subt x) 
+		  with Not_found -> true
 			     ) spec
-
+		  
            | tp::pt, s::st ->
 	       let subtyp = make_subt s in
 	 	 ( T.is_compatible tp subtyp) &&
@@ -467,7 +467,6 @@ let is_ada_pck p = List.exists (fun x -> compare x p = 0)
 
 
 let add_use is_with s p =
- 
   if (is_with || is_ada_pck p ||  (current s = Some p)) then
     tbl_add_use (top s) p
       else
@@ -553,7 +552,9 @@ let add_renaming_decl s (current, new_name) new_args old_name  =
       (* Else (and only in this case) add it*)
       begin
 	Npkcontext.print_debug ( "renaming_declaration : "
-				 ^ new_name
+				 ^(match current with
+				       Some e -> e | _ -> "?")
+				 ^ ("."^new_name)
 				 ^ " --> "
 				 ^ (match (fst old_name) with
 				      | None   -> ""
@@ -628,7 +629,7 @@ let s_find_abs _desc f s p n =
 let s_find desc finder s ?package n =
   match package with
     | Some p -> s_find_abs desc finder s p n
-    | None   ->
+    | None  ->
         begin
          try
            find_rec s.s_stack (fun t ->
@@ -642,13 +643,13 @@ let s_find desc finder s ?package n =
              while (!context <> [] && !res = None) do
                try
                  let p = (List.hd !context) in
-                 res := Some (s_find_abs desc finder s p n);
-               with Not_found -> ();
-               context := List.tl !context;
+	           res := Some (s_find_abs desc finder s p n);
+               with Not_found ->
+		 context := List.tl !context;
              done;
              match !res with
-             | None -> raise Not_found
-             | Some (p,v) -> (p,v)
+             | None ->raise Not_found 
+             | Some (p,v) -> (p,v) 
            end
        end
 
@@ -707,9 +708,7 @@ let rec find_type s (package, n) =
 *)
 
 
-
-
-let rec find_subprogram s ?(silent = false) (pack,n) norm_args xpect t_find =
+let rec find_subprogram s ?(silent=false) (pack,n) norm_args xpect t_find =
   let find_one_renaming  ((p_opt, n_a), params_opt) = 
     if (equal_keyrenaming  (p_opt, n_a) (pack,n)) then
       error  ("program '" ^ n ^ "'" ^"can not be resolved")
@@ -719,11 +718,11 @@ let rec find_subprogram s ?(silent = false) (pack,n) norm_args xpect t_find =
       in
 	match params_opt with 
 	    Some formals ->  (sc,(act_name, formals, top))
-	   
 	  | None  ->  error  ("program renamed'" ^ n ^ 
-				"'" ^"can not find previous formal parameters")
+			"'" ^"can not find previous formal parameters")
   in
   let res = ref[] in 
+
   let multiple_renaming x = 
     try
       let new_spec = find_one_renaming x  in
@@ -745,23 +744,76 @@ let rec find_subprogram s ?(silent = false) (pack,n) norm_args xpect t_find =
 	    List.hd (!res)
 
     with Not_found -> 
-      (*No need for tbl_find_subprogram here*)
+      (*Maybe in use clause then recursive call (renaming...) *)
       try 
 	match pack with 
 	    Some pck -> 
-	      s_find "subprogram"
-		(tbl_find_subprogram norm_args xpect t_find) s ~package:(pck) n 
-		
-	  | _ -> 
-	      s_find "subprogram" 
-		(tbl_find_subprogram norm_args xpect t_find) s n  
-		
+	      begin
+		try 
+		  s_find 
+		    "subprogram"
+		    (tbl_find_subprogram norm_args xpect t_find) 
+		    s ~package:(pck) n 
+		with Not_found -> (*It HAS TO BE be in use clause*)
+		  let context_orig = ref (s_get_use s) in
+		  let context = ref (List.find_all 
+			  ( fun x -> (compare x pck <> 0) &&
+			             (compare x "standard" <> 0) ) !context_orig
+				    ) 
+		  in
+		  
+		  let res = ref None in
+		    while (!context <> [] && !res = None) do	  
+		      try
+			let p = (List.hd !context) in
+			  res :=
+			    Some (find_subprogram s ~silent (Some p, n) 
+				    norm_args  xpect t_find);
+		      with Not_found ->
+			context := List.tl !context;
+		    done;
+		    match !res with
+			Some prog ->  prog
+		      | _ ->  if silent then
+			  raise Not_found
+			else
+			  error ("Cannot find subprogram '" ^ n ^ "'")
+	      end
+	  | None -> 
+	      begin
+		try 
+		  s_find
+		    "subprogram" 
+		    (tbl_find_subprogram norm_args xpect t_find) s n  
+		with Not_found -> (*It HAS TO BE be in use clause*)
+		  let context = ref (s_get_use s) in
+		  let res = ref None in
+		    while (!context <> [] && !res = None) do
+		      try
+			let p = (List.hd !context) in
+			  res :=
+			    Some (find_subprogram s ~silent (Some p, n) 
+				    norm_args  xpect t_find);
+		      with Not_found ->
+			context := List.tl !context;
+		    done;
+		    match !res with
+			Some prog ->  prog
+		      | _ ->   if silent then
+			  raise Not_found
+			else
+			  error ("Cannot find subprogram '" ^ n ^ "'")
+	      end
       with Not_found ->
 	if silent then
 	  raise Not_found
 	else
 	  error ("Cannot find subprogram '" ^ n ^ "'")
-	
+
+
+
+
+
 let is_operator_overloaded s n =
   try 
     begin
@@ -770,7 +822,6 @@ let is_operator_overloaded s n =
     end
   with Not_found -> 
     List.exists (fun ((_, key), _) -> compare  key n = 0) s.s_renaming
-
 
 let scope t = t.t_scope
 

@@ -582,7 +582,8 @@ and normalize_binop bop e1 e2 xpec =
 	      	    in 
 
 		    let t = match top with	
-		      | None -> Npkcontext.report_error "normalize_"
+		      | None -> Npkcontext.report_error 
+			  "normalize_binop"
 	      		  "Expected function, got procedure"
 	      		    
 		      | Some top -> top
@@ -969,9 +970,11 @@ and normalize_sub_program_spec subprog_spec ~addparam =
     match subprog_spec with
 	(* TODO: remove this unique case *)
       | Subprogram(name,param_list,return_type) -> 
-          let norm_name = normalize_ident_cur name in
-	  let norm_param_list = List.map normalize_params_cur param_list in
-	    (* Param type must be preceded by the package name see test t405*)
+	  let norm_name = normalize_ident_cur name in
+	  let norm_param_list = 
+	    List.map normalize_params_cur param_list in
+	    (* Param type must be preceded by 
+	       the package name see test t405*)
           let t = Ada_utils.may subtyp_to_adatyp return_type in
             Sym.add_subprogram gtbl name norm_param_list t;
 	    let arguments = 
@@ -1017,7 +1020,8 @@ and normalize_basic_decl item loc =
                                       (fun x -> Sym.add_variable gtbl x loc t
                                       ) ident_list;
                                       Ast.Constant
-	    | _ ->   Npkcontext.report_error "Exit" "Normalize: ObjectDecl Constant"
+	    | _ ->   Npkcontext.report_error "Exit"
+		"Normalize: ObjectDecl Constant"
       end
       in
 	List.map ( fun ident -> 
@@ -1294,10 +1298,8 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 	Sym.find_subprogram gtbl (add_p n) norm_typs None
 	     ( fun x -> Symboltbl.find_type gtbl x ) 
       in	 
-	
       let effective_args = make_arg_list norm_args spec in
-
-	  [Ast.ProcedureCall( sc, act_name, effective_args), loc]
+	[Ast.ProcedureCall( sc, act_name, effective_args), loc]
   | LvalInstr((Var _|SName (Var _,_)) as lv) ->
       normalize_instr (LvalInstr (ParExp(lv, [])),loc)
   | LvalInstr _ -> Npkcontext.report_error "normalize_instr"
