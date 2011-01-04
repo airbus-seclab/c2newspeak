@@ -87,8 +87,8 @@ type scope = Lexical | In_package of string
  * Find the intersection of possible types.
  * Used for example to resolve overloading in binary operations.
  *)
-val type_ovl_intersection : 
-  t -> string -> string -> AdaTypes.t option
+val get_possible_common_type: 
+  t -> AdaSyntax.lval -> AdaSyntax.lval -> AdaTypes.t option
 
 (** Find data.  *)
 
@@ -100,10 +100,9 @@ val find_variable :    t
                     -> string option * string
          -> scope * (string * AdaTypes.t * bool)
 
-val find_variable_with_error_report :    t
-                    -> ?expected_type: AdaTypes.t
-                    -> string option * string
-         -> scope * (string * AdaTypes.t * bool)
+val find_variable_with_error_report:
+  t -> ?expected_type: AdaTypes.t -> string option * string
+  -> scope * (string * AdaTypes.t * bool)
 
 
 (* TODO: try to remove all optional arguments *)
@@ -113,9 +112,7 @@ val find_variable_value:
   -> string option * string
   -> scope * (string * AdaTypes.t * (AdaTypes.data_t option) * bool)
 
-val find_type     :    t
-                    -> string option * string
-         -> scope * AdaTypes.t
+val find_type: t -> string option * string -> scope * AdaTypes.t
 
 (* TODO: try to remove ?silent option *)
 val find_subprogram : t
@@ -178,3 +175,5 @@ val s_get_use         : t -> string list
 val add_renaming_decl : 
   t -> string option * string -> (AdaSyntax.param list) option 
   -> string option * string -> unit
+
+val make_name_of_lval: AdaSyntax.lval -> string list

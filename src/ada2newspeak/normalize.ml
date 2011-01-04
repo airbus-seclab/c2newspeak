@@ -80,12 +80,6 @@ let add_p (pk, o) =
     | None -> Sym.current gtbl, o
     | Some _ -> pk,o
   
-let rec make_name_of_lval lv =
-  match lv with
-    | Var x -> [x]
-    | SName (pf, tl) -> make_name_of_lval pf @ [tl]
-    | _ -> invalid_arg "make_name_of_lval"
-	
 let subtyp_to_adatyp gtbl n = 
   let n' = mangle_sname n in
   try
@@ -352,15 +346,16 @@ let rec normalize_exp ?expected_type exp =
         end
     | Unary (uop, exp)    -> normalize_uop uop exp
     | Binary(bop, e1, e2) -> normalize_binop bop e1 e2  expected_type
-    | Qualified(lv, exp) -> let stn = make_name_of_lval lv in
-                            let t = subtyp_to_adatyp stn in
-                                fst (normalize_exp ~expected_type:t exp),t
+    | Qualified(lv, exp) -> 
+	let stn = Symboltbl.make_name_of_lval lv in
+        let t = subtyp_to_adatyp stn in
+	let (e, _) = normalize_exp ~expected_type:t exp in
+          (e, t)
     | Attribute (lv , "address", None) ->
         let (nlv, tlv) = normalize_lval lv in
         Ast.AddressOf (nlv, tlv), T.system_address
-    | Attribute (lv, attr, Some exp) ->
-        begin
-          let st = make_name_of_lval lv in
+    | Attribute (lv, attr, Some exp) -> begin
+          let st = Symboltbl.make_name_of_lval lv in
           let t = subtyp_to_adatyp st in
           let one = Ast.CInt (Newspeak.Nat.one) in
           match attr with
@@ -380,9 +375,8 @@ let rec normalize_exp ?expected_type exp =
             | _      -> Npkcontext.report_error "normalize"
                           ("No such function-attribute : '" ^ attr ^ "'")
         end
-    | Attribute (lv, attr, None) ->
-        begin
-          let st = make_name_of_lval lv in
+    | Attribute (lv, attr, None) -> begin
+          let st = Symboltbl.make_name_of_lval lv in
           let t = subtyp_to_adatyp st in
           let (exp,t') = T.attr_get t attr in
           let (exp',_) = normalize_exp exp in
@@ -551,17 +545,11 @@ and normalize_binop bop e1 e2 xpec =
 	  let n = Ada_utils.make_operator_name bop in	    
 	  let expected_type =
 	    match (e1, e2) with
-		    | Lval l1 , Lval l2 -> begin
-			try
-			  let v1 = make_name_of_lval l1 in
-			  let v2 = make_name_of_lval l2 in
-			    Sym.type_ovl_intersection gtbl
-			      (ListUtils.last v1)
-			      (ListUtils.last v2)
-			with _ -> None
-		      end
-		    | _ , Qualified (lvn,_) -> let n = make_name_of_lval lvn in
-			Some (subtyp_to_adatyp n)
+		    | Lval l1, Lval l2 -> 
+			Sym.get_possible_common_type gtbl l1 l2
+		    | _ , Qualified (lvn,_) -> 
+			let n = Symboltbl.make_name_of_lval lvn in
+			  Some (subtyp_to_adatyp n)
 		    | _ -> None
 	  in
 	    	 
@@ -636,7 +624,7 @@ and normalize_uop uop exp =
 
 and normalize_fcall (n, params) expectedtype =
   (* Maybe this indexed expression is an array-value *)
-  let n = make_name_of_lval n in
+  let n = Symboltbl.make_name_of_lval n in
   let n = mangle_sname n in
     try
       let norm_args = List.map normalize_arg params in
@@ -1080,9 +1068,9 @@ and normalize_basic_decl item loc =
 	match actuals with 
 	    (Some "source", Lval src)::(Some "target", Lval tgt)::[] -> 
 	      begin
-		let src_t =  make_name_of_lval src in	  
-		let tgt_t =  make_name_of_lval tgt in
-		let r_t = Ada_utils.may subtyp_to_adatyp(Some tgt_t) in		  
+		let src_t = Symboltbl.make_name_of_lval src in	  
+		let tgt_t = Symboltbl.make_name_of_lval tgt in
+		let r_t = Ada_utils.may subtyp_to_adatyp(Some tgt_t) in
 		let source = {
 		  formal_name = "SOURCE";
 		  mode  = In;
@@ -1293,7 +1281,7 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 	)
 	  
   | LvalInstr(ParExp(lv, params)) ->
-      let n = make_name_of_lval lv in
+      let n = Symboltbl.make_name_of_lval lv in
       let n = mangle_sname n in
 	(*use to be after find_sub*)
       let norm_args = List.map normalize_arg params in
@@ -1337,14 +1325,14 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
       let (exp1, exp2) = match range with
 	| DirectRange (min, max) -> (min, max)
 	| ArrayRange n -> begin
-            let n = make_name_of_lval n in
+            let n = Symboltbl.make_name_of_lval n in
             let n = mangle_sname n in
             let (_,(_,t,_)) = Sym.find_variable_with_error_report gtbl n in
               ( fst (T.attr_get t "first")
                   , fst (T.attr_get t "last"))
           end
 	| SubtypeRange lv -> begin
-            let st = make_name_of_lval lv in
+            let st = Symboltbl.make_name_of_lval lv in
             let t = subtyp_to_adatyp st in
               ( fst (T.attr_get t "first")
                   , fst (T.attr_get t "last"))
@@ -1353,7 +1341,7 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
       let sub_typ_ind =  match range with 
 	  DirectRange _   
 	| ArrayRange _    ->   (["standard";"integer"], None)
-	| SubtypeRange lv -> (make_name_of_lval lv, None)   
+	| SubtypeRange lv -> (Symboltbl.make_name_of_lval lv, None)   
       in
      	(*enum_case is different due to potential redefiniton 
 	  of value with Enumeration clause use*)
@@ -1401,7 +1389,7 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 	      *)
 	      SubtypeRange lv  ->  
 		begin
-		  let names = make_name_of_lval lv in
+		  let names = Symboltbl.make_name_of_lval lv in
 		  let ada =  subtyp_to_adatyp names in 
 		    match (T.extract_symbols ada, T.compute_int_constr ada) with 
 

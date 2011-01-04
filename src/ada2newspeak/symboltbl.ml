@@ -892,7 +892,13 @@ let replace_typ_enum s (name,data) oldt newt  =
 let add_subprogram s n v rt =
   add_subprogram (top s) n v rt (scope (top s))
 
-let type_ovl_intersection s n1 n2 =
+let rec make_name_of_lval lv =
+  match lv with
+    | Var x -> [x]
+    | SName (pf, tl) -> make_name_of_lval pf @ [tl]
+    | _ -> invalid_arg "make_name_of_lval"
+
+let get_possible_common_type s lval1 lval2 =
   let inter l1 l2 =
     let sym_eq (_,x) (_,y) = match (x,y) with
       | Variable (_,t1,_,_,_), Variable (_,t2,_,_,_) -> t1 = t2
@@ -901,8 +907,10 @@ let type_ovl_intersection s n1 n2 =
       List.filter (fun x -> List.exists (fun y -> sym_eq x y) l1) l2
   in   
   let all_find_symbols stack name = 
-    let symb1 = Tree.fold (fun rf it ->
-	List.append rf (find_symbols it name)) [] stack.s_stack in
+    let symb1 = 
+      Tree.fold (fun rf it ->
+		   List.append rf (find_symbols it name)) [] stack.s_stack 
+    in
     let context = ref (s_get_use stack) in 
     let res = ref [] in
       while (!context <> []) do
@@ -914,30 +922,33 @@ let type_ovl_intersection s n1 n2 =
       done;
       List.append symb1 !res
   in
-  let s1 = all_find_symbols s n1 in
-  let s2 = all_find_symbols s n2 in
-   
-  let inte = inter s1 s2 in
-  let print_set set = "{"
-                    ^ String.concat ", " (List.map (fun (_,x) ->
-                                  print_symbol_join x)
-                      set)
-                    ^ "}"
-  in
-  Npkcontext.print_debug ( "Type_ovl_intersection : result = "
-                         ^ print_set inte
-                         ^ (if inte <> [] then ""
-                            else
-                              " , L = " ^ print_set s1 ^
-                              " , R = " ^ print_set s2
-                           )
-                         );
-    if inte = [] then 
-      Some (T.new_unknown "from empty context intersection") 
-    else
-      try
-	match snd (cast_v inte) with
-	  | Variable (_,r,_,_,_) -> Some r
-	  | _ -> invalid_arg "type_ovl_inter"
-      with Not_found -> None
+    try
+      let n1 = ListUtils.last (make_name_of_lval lval1) in
+      let n2 = ListUtils.last (make_name_of_lval lval2) in
+      let s1 = all_find_symbols s n1 in
+      let s2 = all_find_symbols s n2 in
 	
+      let inte = inter s1 s2 in
+      let print_set set = "{"
+	^ String.concat ", " (List.map (fun (_,x) ->
+					  print_symbol_join x)
+				set)
+	^ "}"
+      in
+	Npkcontext.print_debug ( "Type_ovl_intersection : result = "
+				 ^ print_set inte
+				 ^ (if inte <> [] then ""
+				    else
+				      " , L = " ^ print_set s1 ^
+					" , R = " ^ print_set s2
+				   )
+                               );
+	if inte = [] 
+	then Some (T.new_unknown "from empty context intersection") 
+	else begin
+	  match snd (cast_v inte) with
+	    | Variable (_,r,_,_,_) -> Some r
+	    | _ -> None
+	end
+    with _ -> None
+      
