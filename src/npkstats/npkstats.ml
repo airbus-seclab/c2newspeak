@@ -1,7 +1,7 @@
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans, Olivier Levillain
+  Copyright (C) 2007-2011  Charles Hymans, Olivier Levillain, Sarah Zennou
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -24,6 +24,11 @@
 
   Olivier Levillain
   email: olivier.levillain@penjili.org
+
+  Sarah Zennou
+  EADS Innovation Works - SE/IS
+  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
+  email: sarah(dot)zennou(at)eads(dot)net
 *)
 
 open Lowspeak
@@ -72,9 +77,12 @@ let speclist =
   ]
 
 type counters = 
-    { mutable instrs: int; mutable loop: int; mutable array: int;
-      mutable pointer_deref: int; mutable pointer_arith: int;
-      mutable fpointer: int
+    { mutable instrs	   : int; 
+      mutable loop	   : int; 
+      mutable array	   : int;
+      mutable pointer_deref: int; 
+      mutable pointer_arith: int;
+      mutable fpointer	   : int
     }
 
 let init_counters () = 
@@ -82,12 +90,12 @@ let init_counters () =
     fpointer = 0 }
 
 let incr_counters dest src =
-  dest.instrs <- dest.instrs + src.instrs;
-  dest.loop <- dest.loop + src.loop;
-  dest.array <- dest.array + src.array;
+  dest.instrs 	     <- dest.instrs + src.instrs;
+  dest.loop 	     <- dest.loop + src.loop;
+  dest.array 	     <- dest.array + src.array;
   dest.pointer_deref <- dest.pointer_deref + src.pointer_deref;
   dest.pointer_arith <- dest.pointer_arith + src.pointer_arith;
-  dest.fpointer <- dest.fpointer + src.fpointer
+  dest.fpointer      <- dest.fpointer + src.fpointer
 
 let string_of_counters counters b =
   let s1 = "Number of instructions" in
@@ -118,15 +126,15 @@ class collector ptr_sz fun_to_count =
 object (this)
   inherit Lowspeak.visitor
     
-  val mutable globals = 0
-  val mutable bytes = 0
-  val mutable void_fun = 0
+  val mutable globals 	       = 0
+  val mutable bytes 	       = 0
+  val mutable void_fun 	       = 0
 
-  val counters = init_counters ()
-  val funstats = Hashtbl.create 10
-  val globstats = Hashtbl.create 10
+  val counters 		       = init_counters ()
+  val funstats 		       = Hashtbl.create 10
+  val globstats 	       = Hashtbl.create 10
   val mutable current_counters = init_counters ()
-  val callstats = Hashtbl.create 10
+  val callstats 	       = Hashtbl.create 10
  
   method count_call f =
     try
@@ -373,6 +381,7 @@ let process input =
     in
       print_endline (collector#to_string !verbose cout);
       Maxcount.print max_stats cout;
+      Libfuns.collect prog;
       begin
         match cout with 
             None -> ()

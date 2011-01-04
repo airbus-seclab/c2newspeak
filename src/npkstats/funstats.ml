@@ -111,6 +111,7 @@ let print_results funtbl =
       incr counter
   in
       Hashtbl.iter count funtbl;
+    print_endline "======\nFunction statistics";
       if !empty_nb <> 0 
       then print_endline ("Empty functions: "^string_of_int !empty_nb);
       if !pure_nb <> 0 
@@ -126,8 +127,8 @@ let print_results funtbl =
       if !other_nb <> 0 then begin
         print_endline "Remaining functions: ";
         List.iter print_endline !other
-      end
-  
+      end;
+      print_endline "======"
 
 let collect prog = 
   let funtbl = Hashtbl.create 100 in

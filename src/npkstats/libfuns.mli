@@ -1,4 +1,4 @@
-/*
+(*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
   Copyright (C) 2011  Sarah Zennou
@@ -21,13 +21,5 @@
   EADS Innovation Works - SE/IS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: sarah(dot)zennou(at)eads(dot)net
-*/
-
-void libfun(void);
-void libfun2(void);
-
-void main() {
-  void (*fp) (void);
-  fp = libfun;
-  libfun2();
-}
+*)
+val collect: Lowspeak.t -> unit
