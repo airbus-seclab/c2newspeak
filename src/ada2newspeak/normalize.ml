@@ -29,7 +29,7 @@ open Syntax_ada
 open Ada_utils
 
 module Nat = Newspeak.Nat
-module  T  = Ada_types
+module  T  = AdaTypes
 module TC  = Typecheck
 module Sym = Symboltbl
 

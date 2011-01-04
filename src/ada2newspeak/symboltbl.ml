@@ -23,7 +23,7 @@
 *)
 open Syntax_ada
 
-module T = Ada_types
+module T = AdaTypes
 
 let error x =
   Npkcontext.report_error "Symbol table" x

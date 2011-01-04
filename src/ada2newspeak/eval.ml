@@ -26,7 +26,7 @@
 *)
 
 module Nat = Newspeak.Nat
-module  T  = Ada_types
+module  T  = AdaTypes
 
 open Ast
 
