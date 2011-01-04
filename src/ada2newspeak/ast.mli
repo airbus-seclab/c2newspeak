@@ -39,16 +39,16 @@ type binary_op =
 | Power
 
 type lval =
-  | Var          of Symboltbl.scope * string * Ada_types.t
+  | Var          of Symboltbl.scope * string * AdaTypes.t
   | ArrayAccess  of lval
                   * expression list
   | RecordAccess of lval
                   * int         (* offset *)
-                  * Ada_types.t (* Field type *)
+                  * AdaTypes.t (* Field type *)
   | PtrDeref     of lval
-                  * Ada_types.t
+                  * AdaTypes.t
 
-and expression = exp_value * Ada_types.t
+and expression = exp_value * AdaTypes.t
 
 and exp_value =
   | CInt         of Newspeak.Nat.t
@@ -64,12 +64,12 @@ and exp_value =
                   * expression
                   * expression
   | AddressOf    of lval
-                  * Ada_types.t
+                  * AdaTypes.t
   | FunctionCall of Symboltbl.scope * string
                   * argument list
-                  * Ada_types.t (* return type *)
+                  * AdaTypes.t (* return type *)
 
-and argument = Ada_types.t * arg_mode
+and argument = AdaTypes.t * arg_mode
 
 and arg_mode = 
   | In    of expression
@@ -83,7 +83,7 @@ type iteration_scheme =
 type object_state =
   | Variable
   | Constant
-  | StaticVal of Ada_types.data_t (*constante statique*)
+  | StaticVal of AdaTypes.data_t (*constante statique*)
 
 type block = (instruction * Newspeak.location) list
 
@@ -110,7 +110,7 @@ and declarative_part = (declarative_item * Newspeak.location) list
 
 and param = {
   formal_name   : string;
-  param_type    : Ada_types.t;
+  param_type    : AdaTypes.t;
 }
 
 and body =
@@ -125,12 +125,12 @@ and  declarative_item =
 
 and basic_declaration =
   | ObjectDecl      of string
-                     * Ada_types.t
+                     * AdaTypes.t
                      * object_state
                      * block option
   | SpecDecl        of spec
   | NumberDecl      of string
-                     * Ada_types.data_t
+                     * AdaTypes.data_t
 
 and  library_item =
   | Spec of spec
@@ -141,10 +141,10 @@ and spec =
   |    PackageSpec of package_spec
 
 and sub_program_spec = {
-  name: Syntax_ada.name;
+  name: AdaSyntax.name;
   arguments: param list;
 (* TODO: think about it, but isn't ret redundant with out argument? *)
-  return_type: Ada_types.t option
+  return_type: AdaTypes.t option
 }
 
 and package_spec = string

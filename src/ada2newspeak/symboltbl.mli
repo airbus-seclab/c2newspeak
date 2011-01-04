@@ -87,63 +87,70 @@ type scope = Lexical | In_package of string
  * Find the intersection of possible types.
  * Used for example to resolve overloading in binary operations.
  *)
-val type_ovl_intersection : t
-                          -> string
-                          -> string
-           -> Ada_types.t option
+val type_ovl_intersection : 
+  t -> string -> string -> AdaTypes.t option
 
 (** Find data.  *)
 
-exception Parameterless_function of scope * Ada_types.t
-exception Variable_no_storage    of Ada_types.t * Ada_types.data_t
+exception Parameterless_function of scope * AdaTypes.t
+exception Variable_no_storage    of AdaTypes.t * AdaTypes.data_t
 
 val find_variable :    t
-                    -> ?silent:bool
-                    -> ?expected_type:Ada_types.t
+                    -> ?expected_type: AdaTypes.t
                     -> string option * string
-         -> scope * (string * Ada_types.t * bool)
+         -> scope * (string * AdaTypes.t * bool)
 
-val find_variable_value :    t
-                    -> ?silent:bool
-                    -> ?expected_type:Ada_types.t
+val find_variable_with_error_report :    t
+                    -> ?expected_type: AdaTypes.t
                     -> string option * string
-         -> scope * (string * Ada_types.t * (Ada_types.data_t option) * bool)
+         -> scope * (string * AdaTypes.t * bool)
+
+
+(* TODO: try to remove all optional arguments *)
+
+val find_variable_value:
+  t -> ?expected_type: AdaTypes.t
+  -> string option * string
+  -> scope * (string * AdaTypes.t * (AdaTypes.data_t option) * bool)
 
 val find_type     :    t
                     -> string option * string
-         -> scope * Ada_types.t
+         -> scope * AdaTypes.t
 
+(* TODO: try to remove ?silent option *)
 val find_subprogram : t
-                    -> ?silent:bool
+                    -> ?silent: bool
                     -> string option * string
-                    -> (string option * Ada_types.t) list
-                    ->  Ada_types.t option
-                    -> ( string option * string -> scope * Ada_types.t)
-    -> scope * (string * Syntax_ada.param list * Ada_types.t option)
+                    -> (string option * AdaTypes.t) list
+                    ->  AdaTypes.t option
+                    -> ( string option * string -> scope * AdaTypes.t)
+    -> scope * (string * AdaSyntax.param list * AdaTypes.t option)
 
 val is_operator_overloaded : t -> string -> bool
 
 (** Add data.  *)
-val add_type     : t -> string -> Newspeak.location -> Ada_types.t -> unit
+val add_type     : t -> string -> Newspeak.location -> AdaTypes.t -> unit
 
+(* TODO: try to minimize interface *)
 (*WG**)
-val replace_type : t -> string ->  Ada_types.t -> unit
+val replace_type : t -> string ->  AdaTypes.t -> unit
 
-val replace_typ_enum : t -> (string*Ada_types.data_t )-> Ada_types.t -> Ada_types.t -> unit
+val replace_typ_enum : 
+  t -> (string * AdaTypes.data_t) -> AdaTypes.t -> AdaTypes.t -> unit
 
 
-
+(* TODO: remove optional arguments *)
 val add_variable : t -> string -> Newspeak.location
-                     -> ?value:Ada_types.data_t
+                     -> ?value:AdaTypes.data_t
                      -> ?no_storage:bool
                      -> ?ro:bool
-                     -> Ada_types.t
+                     -> AdaTypes.t
                        -> unit
 
 val add_subprogram : t
                 -> string
-                -> Syntax_ada.param list
-                -> Ada_types.t option
+                -> AdaSyntax.param list
+                -> AdaTypes.t option
       -> unit
 
 val add_use : bool -> t -> string -> unit
@@ -168,4 +175,6 @@ val is_ada_pck :  string -> bool
 
 val s_get_use         : t -> string list
 
-val add_renaming_decl : t ->  string option * string->  (Syntax_ada.param list) option ->  string option * string -> unit
+val add_renaming_decl : 
+  t -> string option * string -> (AdaSyntax.param list) option 
+  -> string option * string -> unit

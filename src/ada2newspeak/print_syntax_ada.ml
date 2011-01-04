@@ -22,7 +22,7 @@
 
 *)
 
-open Syntax_ada
+open AdaSyntax
 
 (* Fonction transformant une liste [e1 e2 ... en ]
    en string de la forme

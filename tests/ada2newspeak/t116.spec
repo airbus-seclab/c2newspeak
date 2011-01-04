@@ -1,1 +1,1 @@
-Fatal error: t116.adb:11#10: Cannot find variable 'z' with this expected type
+Fatal error: t116.adb:11#10: Cannot find variable 'z'

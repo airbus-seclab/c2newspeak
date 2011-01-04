@@ -68,14 +68,14 @@ val new_unknown : string -> t
 val new_derived    : t -> t
 
 (** Constrained subtype. *)
-val new_constr     : t -> Syntax_ada.contrainte -> t
+val new_constr     : t -> AdaSyntax.contrainte -> t
 
 (** Subtype deriving from a enumerated using representation clause. *)
 val new_enum     : t -> (string * int) list  -> t
 (**
  * Plain integer range.
  *)
-val new_range      : Syntax_ada.contrainte -> t
+val new_range      : AdaSyntax.contrainte -> t
 
 (** Enumerated type. *)
 val new_enumerated : string list -> t
@@ -180,7 +180,7 @@ val print_data : data_t -> string
  *)
 
 (** Get an attribute for a given type.  *)
-val attr_get :  t -> string -> Syntax_ada.expression * t
+val attr_get :  t -> string -> AdaSyntax.expression * t
 
 (** The type for integer constants. *)
 val universal_integer : t

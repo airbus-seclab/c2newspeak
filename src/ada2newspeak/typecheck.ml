@@ -24,7 +24,7 @@
 
 open Ast
 
-module T = Ada_types
+module T = AdaTypes
 
 let error = Npkcontext.report_error "Typecheck"
 

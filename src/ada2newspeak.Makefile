@@ -32,21 +32,9 @@ newspeak.FILES=\
 	temps config eBigInt newspeak npkcontext lowspeak npk2lpk \
 	npkil cir cir2npkil linker x2newspeak
 
-ada2newspeak.FILES=  \
-	params 		   \
-	syntax_ada         \
-	ada_types          \
-	symboltbl          \
-	ada_utils          \
-	print_syntax_ada   \
-	ast                \
-	typecheck          \
-	eval               \
-	parser             \
-	lexer              \
-	file_parse         \
-	normalize          \
-	firstpass          \
+ada2newspeak.FILES=\
+	params adaSyntax adaTypes symboltbl ada_utils print_syntax_ada \
+	ast typecheck eval parser lexer	file_parse normalize firstpass \
 	ada2newspeak
 
 FILES=version utils/listUtils utils/tree utils/standardApplication \

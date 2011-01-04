@@ -25,11 +25,11 @@
 
 *)
 
-open Syntax_ada
+open AdaSyntax
 open Ada_utils
 
 module Nat = Newspeak.Nat
-module  T  = Ada_types
+module  T  = AdaTypes
 module TC  = Typecheck
 module Sym = Symboltbl
 
@@ -147,8 +147,9 @@ let rec resolve_selected ?expected_type n =
  let resolve_variable pkg id =
     begin
       try
-	let (sc,(act_id, t, ro)) = Sym.find_variable ?expected_type
-                                             gtbl (pkg,id) in
+	let (sc,(act_id, t, ro)) = 
+	  Sym.find_variable_with_error_report ?expected_type gtbl (pkg,id) 
+	in
 	  SelectedVar(sc,act_id,t,ro)
       with
       | Sym.Parameterless_function (sc,rt) -> SelectedFCall( sc , id , rt)
@@ -156,34 +157,31 @@ let rec resolve_selected ?expected_type n =
       	
     end
   in
-  match n with
-  | SName(Var pfx, fld) ->
-      begin
-        try
-          let (_,(act_id,t,_)) =
-            Sym.find_variable ~silent:true gtbl (None, pfx)
-          in
-          let (off, tf) = T.record_field t fld in
-          let lv = Ast.Var (Sym.Lexical, act_id, t) in
-          SelectedRecord (lv , off, tf)
-     	with Not_found -> resolve_variable (Some pfx) fld
-      end
-  | Var id ->  resolve_variable None id
-
-  | SName (SName (Var _, _) as pf, z) -> begin
-      match (resolve_selected pf) with
-        | SelectedFCall _ 
-        | SelectedVar   _ 
-        | SelectedConst _ -> Npkcontext.report_error "resolve_selected"
-                                    "bad type for selected value field"
-        | SelectedRecord (lv, off0, tf0) ->
-            let (off,tf) = T.record_field tf0 z in
-            let lv = Ast.RecordAccess (lv,off0,tf0) in
-            SelectedRecord (lv, off, tf)
-    end
-  | _ -> Npkcontext.report_error "normalize"
-                    "Chain of selected_names too long"
-
+   match n with
+     | SName (Var pfx, fld) -> begin
+         try
+           let (_, (act_id, t, _)) = Sym.find_variable gtbl (None, pfx) in
+           let (off, tf) = T.record_field t fld in
+           let lv = Ast.Var (Sym.Lexical, act_id, t) in
+             SelectedRecord (lv , off, tf)
+     	 with Not_found -> resolve_variable (Some pfx) fld
+       end
+     | Var id ->  resolve_variable None id
+	 
+     | SName (SName (Var _, _) as pf, z) -> begin
+	 match (resolve_selected pf) with
+           | SelectedFCall _ 
+           | SelectedVar   _ 
+           | SelectedConst _ -> Npkcontext.report_error "resolve_selected"
+               "bad type for selected value field"
+           | SelectedRecord (lv, off0, tf0) ->
+               let (off,tf) = T.record_field tf0 z in
+               let lv = Ast.RecordAccess (lv,off0,tf0) in
+		 SelectedRecord (lv, off, tf)
+       end
+     | _ -> Npkcontext.report_error "normalize"
+         "Chain of selected_names too long"
+	   
 (**************************************************
  *                                                *
  *             Body vs spec functions             *
@@ -326,7 +324,9 @@ let rec normalize_exp ?expected_type exp =
 	      "Lval (SName (ParExp(Var n, params), fld)) case "
 	in
 	  try
-	    let (_,(_, t,_)) = Sym.find_variable gtbl (None,n) in
+	    let (_,(_, t,_)) = 
+	      Sym.find_variable_with_error_report gtbl (None,n) 
+	    in
 	    let tc = fst (T.extract_array_types t) in
 	      if not (T.is_record tc) then 
 		Npkcontext.report_error "normalize_exp"
@@ -582,7 +582,8 @@ and normalize_binop bop e1 e2 xpec =
 	      	    in 
 
 		    let t = match top with	
-		      | None -> Npkcontext.report_error "normalize_"
+		      | None -> Npkcontext.report_error 
+			  "normalize_binop"
 	      		  "Expected function, got procedure"
 	      		    
 		      | Some top -> top
@@ -658,7 +659,9 @@ and normalize_fcall (n, params) expectedtype =
 	(*To do double checked because conversion de tablo
 	  contraint/non contraint cf 8.2 *)
 	begin
-	  let (sc,(act_id, t,_)) = Sym.find_variable gtbl n in
+	  let (sc,(act_id, t,_)) = 
+	    Sym.find_variable_with_error_report gtbl n 
+	  in
 	  let tc = fst (T.extract_array_types t) in
 	  let params' = List.map snd params in
 	  let lv = Ast.Var (sc, act_id, t) in
@@ -671,7 +674,9 @@ and normalize_fcall (n, params) expectedtype =
 	    *)
 	  match n with 
 	    | Some f, fld -> 
-		let (sc,(act_name, t,_)) = Sym.find_variable gtbl (None,f) in
+		let (sc,(act_name, t,_)) = 
+		  Sym.find_variable_with_error_report gtbl (None,f) 
+		in
 		  if (T.is_record t) then 
 		    let (off, tf) = T.record_field t fld in	
 		      if (T.is_array tf) then 
@@ -848,9 +853,10 @@ and add_representation_clause id aggr loc =
       List.map (fun (i, exp) ->
         let orgn_val =
           try
-            let (_,(_,_,x,_)) = Sym.find_variable_value ~expected_type:t
-                                                      gtbl (None,i)
-                            in x
+            let (_,(_,_,x,_)) = 
+	      Sym.find_variable_value ~expected_type:t gtbl (None,i)
+            in 
+	      x
           with Sym.Variable_no_storage (_,x) -> Some x
         in
         let original = match orgn_val with
@@ -969,9 +975,11 @@ and normalize_sub_program_spec subprog_spec ~addparam =
     match subprog_spec with
 	(* TODO: remove this unique case *)
       | Subprogram(name,param_list,return_type) -> 
-          let norm_name = normalize_ident_cur name in
-	  let norm_param_list = List.map normalize_params_cur param_list in
-	    (* Param type must be preceded by the package name see test t405*)
+	  let norm_name = normalize_ident_cur name in
+	  let norm_param_list = 
+	    List.map normalize_params_cur param_list in
+	    (* Param type must be preceded by 
+	       the package name see test t405*)
           let t = Ada_utils.may subtyp_to_adatyp return_type in
             Sym.add_subprogram gtbl name norm_param_list t;
 	    let arguments = 
@@ -1017,7 +1025,8 @@ and normalize_basic_decl item loc =
                                       (fun x -> Sym.add_variable gtbl x loc t
                                       ) ident_list;
                                       Ast.Constant
-	    | _ ->   Npkcontext.report_error "Exit" "Normalize: ObjectDecl Constant"
+	    | _ ->   Npkcontext.report_error "Exit"
+		"Normalize: ObjectDecl Constant"
       end
       in
 	List.map ( fun ident -> 
@@ -1294,10 +1303,8 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 	Sym.find_subprogram gtbl (add_p n) norm_typs None
 	     ( fun x -> Symboltbl.find_type gtbl x ) 
       in	 
-	
       let effective_args = make_arg_list norm_args spec in
-
-	  [Ast.ProcedureCall( sc, act_name, effective_args), loc]
+	[Ast.ProcedureCall( sc, act_name, effective_args), loc]
   | LvalInstr((Var _|SName (Var _,_)) as lv) ->
       normalize_instr (LvalInstr (ParExp(lv, [])),loc)
   | LvalInstr _ -> Npkcontext.report_error "normalize_instr"
@@ -1332,7 +1339,7 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 	| ArrayRange n -> begin
             let n = make_name_of_lval n in
             let n = mangle_sname n in
-            let (_,(_,t,_)) = Sym.find_variable gtbl n in
+            let (_,(_,t,_)) = Sym.find_variable_with_error_report gtbl n in
               ( fst (T.attr_get t "first")
                   , fst (T.attr_get t "last"))
           end
@@ -1413,14 +1420,16 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 			 in
 			   (*no 'classical' incremention possible, 
 			     bornes are known: unrolling*)
-			 let (init, tail) = if is_rev then
-			   let rev = List.rev sub_enums in
-			     Syntax_ada.CInt (Newspeak.Nat.of_int (snd (List.hd rev)))
-			       , List.tl rev
-			 else
-			   Syntax_ada.CInt (
-			     Newspeak.Nat.of_int(snd (List.hd sub_enums)))
-			     ,  List.tl sub_enums
+			 let (init, tail) = 
+			   if is_rev then begin
+			     let rev = List.rev sub_enums in
+			       AdaSyntax.CInt (Newspeak.Nat.of_int (snd (List.hd rev)))
+				 , List.tl rev
+			   end else begin
+			     AdaSyntax.CInt (
+			       Newspeak.Nat.of_int(snd (List.hd sub_enums)))
+			       ,  List.tl sub_enums
+			   end
 			 in
 			   
 			 let dp = [BasicDecl (ObjectDecl ( 

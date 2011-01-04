@@ -22,10 +22,11 @@
 
 *)
 
-val sub_program_spec_to_string : Syntax_ada.sub_program_spec -> string
+(* TODO: remove this module and put it in AdaSyntax *)
+val sub_program_spec_to_string : AdaSyntax.sub_program_spec -> string
 
-val exp_to_string : Syntax_ada.expression -> string
+val exp_to_string : AdaSyntax.expression -> string
 
-val ast_to_string : Syntax_ada.programme -> string
+val ast_to_string : AdaSyntax.programme -> string
 
-val print_ast : Syntax_ada.programme -> unit
+val print_ast : AdaSyntax.programme -> unit

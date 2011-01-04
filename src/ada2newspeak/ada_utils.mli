@@ -38,7 +38,7 @@ val nat_of_bool : bool -> Newspeak.Nat.t
  * Check a compilation unit against the name of the file around it.
  *)
 val check_compil_unit_name :
-  Syntax_ada.compilation_unit -> string -> bool
+  AdaSyntax.compilation_unit -> string -> bool
 
 (**
  * Provides a default value.
@@ -48,10 +48,10 @@ val check_compil_unit_name :
 val with_default : 'a option -> 'a -> 'a
 
 (** Converts a qualified name into a dotted string.  *)
-val name_to_string : Syntax_ada.name -> string
+val name_to_string : AdaSyntax.name -> string
 
 (** Create a function name for an overloaded operator *)
-val make_operator_name : Syntax_ada.binary_op -> string
+val make_operator_name : AdaSyntax.binary_op -> string
 
 (**
  * Prepend a special string to an operator name.

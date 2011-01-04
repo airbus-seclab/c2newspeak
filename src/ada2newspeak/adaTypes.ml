@@ -25,7 +25,7 @@
  * Module definitions/inclusions *
  *********************************)
 
-module A = Syntax_ada
+module A = AdaSyntax
 
 let (%+) = Newspeak.Nat.add
 let (%-) = Newspeak.Nat.sub
@@ -52,7 +52,7 @@ let data_compare x y =
 (* "subtype" in RM *)
 type t = {
   base         : base_t;
-  range        : Syntax_ada.contrainte option;
+  range        : AdaSyntax.contrainte option;
 }
 
 (* "type" in RM *)

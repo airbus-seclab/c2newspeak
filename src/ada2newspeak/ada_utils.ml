@@ -23,9 +23,9 @@
 *)
 
 
-open Syntax_ada
+open AdaSyntax
 module Nat = Newspeak.Nat
-module  T  = Ada_types
+module  T  = AdaTypes
 
 let nat_of_bool b =
   if b then Newspeak.Nat.one
