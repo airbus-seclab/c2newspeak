@@ -36,5 +36,5 @@
  * Call the parser on a file.
  * The only parameter is a string, which is the name of the file to parse.
  *)
-val parse: string -> Syntax_ada.compilation_unit
+val parse: string -> AdaSyntax.compilation_unit
 

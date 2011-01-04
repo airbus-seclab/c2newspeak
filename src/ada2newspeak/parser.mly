@@ -30,7 +30,7 @@
 *) */
 
 %{
-open Syntax_ada
+open AdaSyntax
 open Ada_utils
 
 let check_ident i1 i2 =
@@ -149,7 +149,7 @@ let extract_name = function
 %nonassoc   ABS NOT
 
 %start s
-%type <Syntax_ada.compilation_unit> s
+%type <AdaSyntax.compilation_unit> s
 
 %type <string list*Newspeak.location> name
 %%

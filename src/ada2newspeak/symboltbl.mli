@@ -120,7 +120,7 @@ val find_subprogram : t
                     -> (string option * AdaTypes.t) list
                     ->  AdaTypes.t option
                     -> ( string option * string -> scope * AdaTypes.t)
-    -> scope * (string * Syntax_ada.param list * AdaTypes.t option)
+    -> scope * (string * AdaSyntax.param list * AdaTypes.t option)
 
 val is_operator_overloaded : t -> string -> bool
 
@@ -145,7 +145,7 @@ val add_variable : t -> string -> Newspeak.location
 
 val add_subprogram : t
                 -> string
-                -> Syntax_ada.param list
+                -> AdaSyntax.param list
                 -> AdaTypes.t option
       -> unit
 
@@ -171,4 +171,6 @@ val is_ada_pck :  string -> bool
 
 val s_get_use         : t -> string list
 
-val add_renaming_decl : t ->  string option * string->  (Syntax_ada.param list) option ->  string option * string -> unit
+val add_renaming_decl : 
+  t -> string option * string -> (AdaSyntax.param list) option 
+  -> string option * string -> unit

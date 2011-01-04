@@ -23,7 +23,7 @@
 *)
 
 
-open Syntax_ada
+open AdaSyntax
 module Nat = Newspeak.Nat
 module  T  = AdaTypes
 

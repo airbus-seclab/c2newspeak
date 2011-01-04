@@ -31,7 +31,7 @@ open Ada_utils
 
 let parse fname =
   Npkcontext.print_debug ("Parsing " ^ fname ^ "...");
-  let (ast:Syntax_ada.compilation_unit) = File_parse.parse fname in
+  let (ast:AdaSyntax.compilation_unit) = File_parse.parse fname in
     Npkcontext.forget_loc ();
     if (!Npkcontext.verb_ast) then begin
       print_endline "Abstract Syntax Tree";

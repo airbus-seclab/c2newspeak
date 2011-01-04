@@ -141,7 +141,7 @@ and spec =
   |    PackageSpec of package_spec
 
 and sub_program_spec = {
-  name: Syntax_ada.name;
+  name: AdaSyntax.name;
   arguments: param list;
 (* TODO: think about it, but isn't ret redundant with out argument? *)
   return_type: AdaTypes.t option

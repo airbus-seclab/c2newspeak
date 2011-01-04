@@ -21,7 +21,7 @@
   email: etienne.millon AT gmail . com
 
 *)
-open Syntax_ada
+open AdaSyntax
 
 module T = AdaTypes
 
@@ -65,7 +65,7 @@ module Table = struct
    *)
   type symbol =
     | Type       of T.t
-    | Subprogram of (string * (Syntax_ada.param list) * T.t option)
+    | Subprogram of (string * (AdaSyntax.param list) * T.t option)
     | Unit       of table
     | Variable   of string
                   * T.t
@@ -419,7 +419,7 @@ type t = {         s_stack    : table Tree.t
 	   (*; mutable s_with     : string list*)
          ; mutable s_renaming : ( (string option * string) *
 				   ((string option * string) * 
-				    (Syntax_ada.param list) option
+				    (AdaSyntax.param list) option
 				   ) list
 				 ) list
          }

@@ -25,7 +25,7 @@
 
 *)
 
-open Syntax_ada
+open AdaSyntax
 open Ada_utils
 
 module Nat = Newspeak.Nat
@@ -1415,14 +1415,16 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 			 in
 			   (*no 'classical' incremention possible, 
 			     bornes are known: unrolling*)
-			 let (init, tail) = if is_rev then
-			   let rev = List.rev sub_enums in
-			     Syntax_ada.CInt (Newspeak.Nat.of_int (snd (List.hd rev)))
-			       , List.tl rev
-			 else
-			   Syntax_ada.CInt (
-			     Newspeak.Nat.of_int(snd (List.hd sub_enums)))
-			     ,  List.tl sub_enums
+			 let (init, tail) = 
+			   if is_rev then begin
+			     let rev = List.rev sub_enums in
+			       AdaSyntax.CInt (Newspeak.Nat.of_int (snd (List.hd rev)))
+				 , List.tl rev
+			   end else begin
+			     AdaSyntax.CInt (
+			       Newspeak.Nat.of_int(snd (List.hd sub_enums)))
+			       ,  List.tl sub_enums
+			   end
 			 in
 			   
 			 let dp = [BasicDecl (ObjectDecl ( 

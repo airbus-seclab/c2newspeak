@@ -27,7 +27,7 @@
 
 open Ada_utils
 
-let parse (fname:string): Syntax_ada.compilation_unit =
+let parse (fname:string): AdaSyntax.compilation_unit =
   let cin =
     try open_in fname
     with Sys_error _ -> Npkcontext.report_error "File_parse.parse"

@@ -32,7 +32,7 @@
 module C   = Cir
 module N   = Newspeak
 module Nat = Newspeak.Nat
-module A   = Syntax_ada
+module A   = AdaSyntax
 module T   = AdaTypes
 module Sym = Symboltbl
 

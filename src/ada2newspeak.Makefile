@@ -33,17 +33,8 @@ newspeak.FILES=\
 	npkil cir cir2npkil linker x2newspeak
 
 ada2newspeak.FILES=\
-	params syntax_ada adaTypes symboltbl \
-	ada_utils          \
-	print_syntax_ada   \
-	ast                \
-	typecheck          \
-	eval               \
-	parser             \
-	lexer              \
-	file_parse         \
-	normalize          \
-	firstpass          \
+	params adaSyntax adaTypes symboltbl ada_utils print_syntax_ada \
+	ast typecheck eval parser lexer	file_parse normalize firstpass \
 	ada2newspeak
 
 FILES=version utils/listUtils utils/tree utils/standardApplication \
