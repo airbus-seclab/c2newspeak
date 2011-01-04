@@ -668,23 +668,26 @@ let find_variable_value s ?(silent = false) ?expected_type (package,n) =
 	    )
     end
 		      
-let rec find_variable s silent ?expected_type name =
-  try
-    let (_, x) = 
-      (List.find (fun (key, _) -> equal_keyrenaming key name) s.s_renaming)
-    in
-      match x with 
-	  (nam_assoc, _)::[] -> find_variable s silent ?expected_type nam_assoc
-	|  _ ->
-	     Npkcontext.report_warning "find_variable"
-	       ( "Already renamed '"^(snd name)
-		 ^"': not implemented for variable"); 
-	     raise Not_found
-  with Not_found ->
-    let (x, (n, y, _, z)) = 
-      find_variable_value ~silent:silent s ?expected_type name 
-    in
-      (x, (n, y, z))
+let find_variable s silent ?expected_type name =
+  let rec find name =
+    try
+      let (_, x) = 
+	(List.find (fun (key, _) -> equal_keyrenaming key name) s.s_renaming)
+      in
+	match x with 
+	    (nam_assoc, _)::[] -> find nam_assoc
+	  |  _ ->
+	       Npkcontext.report_warning "find_variable"
+		 ( "Already renamed '"^(snd name)
+		   ^"': not implemented for variable"); 
+	       raise Not_found
+    with Not_found ->
+      let (x, (n, y, _, z)) = 
+	find_variable_value ~silent:silent s ?expected_type name 
+      in
+	(x, (n, y, z))
+  in
+    find name
 
 
 let rec find_type s (package, n) = 
