@@ -22,4 +22,4 @@
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: sarah(dot)zennou(at)eads(dot)net
 *)
-val collect: Lowspeak.t -> unit
+val collect: Lowspeak.t -> out_channel option -> unit

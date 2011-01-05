@@ -26,12 +26,19 @@
 module L = Lowspeak
 module S = Set.Make(String)
 
-let print funs =
+let print funs cout =
   if not (S.is_empty funs) then
     let s = S.fold (fun fid s -> s ^"\n"^fid) funs "" in
-      print_endline ("Library functions potentially called:"^s)
+      print_endline ("Library functions potentially called:"^s);
+      match cout with
+	  None -> ()
+	| Some cout ->
+	    let s = 
+	      S.fold (fun fid s -> s^"\n"^"<libfun val=\""^fid^"\"></libfun>") funs ""
+	    in
+	      output_string cout s
 
-let collect prog =
+let collect prog cout =
 
   let libfuns = ref S.empty in
   let add fid =
@@ -70,4 +77,4 @@ let collect prog =
     process_blk blk
   in
     Hashtbl.iter process_fun prog.L.fundecs;
-    print !libfuns;
+    print !libfuns cout;
