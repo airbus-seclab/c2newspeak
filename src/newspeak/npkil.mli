@@ -174,9 +174,6 @@ val string_of_tmp_size: tmp_size_t -> string
 
 val string_of_lval: lval -> string
 
-(* TODO: remove this function*)
-val compare_typs : typ -> typ -> bool
-
 exception Uncomparable
 
 (* More precise type 
@@ -195,4 +192,4 @@ val cast: Newspeak.scalar_t -> exp -> Newspeak.scalar_t -> exp
    declarations decls. The order of the declaration must be carefully
    checked because in Newspeak, the variables are identified by their
    positions in the declaration stacks, not by their names *)
-val append_decls: (string * typ * location) list -> blk -> blk
+(*val append_decls: (string * typ * location) list -> blk -> blk*)

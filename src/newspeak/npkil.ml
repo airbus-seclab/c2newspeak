@@ -370,34 +370,6 @@ let is_mp_typ t1 t2 =
   in
     is_mp_typs_aux t1 t2
 
-let compare_typs t1 t2 =
-  let rec compare_typs_aux t1 t2 =
-    match (t1, t2) with
-	(Scalar sc1, Scalar sc2) -> sc1 = sc2
-
-      | (Array (t1, None), Array (t2, _))
-      | (Array (t1, _), Array (t2, None)) ->
-	  compare_typs_aux t1 t2
-
-      | (Array (t1, Some l1), Array (t2, Some l2)) ->
-	  (compare_typs_aux t1 t2) && (l1 = l2)
-    
-      | (Region (f1, n1), Region (f2, n2)) ->
-	  (compare_fields f1 f2) && (n1 = n2)
-	    
-      | _ -> false
-
-  and compare_fields f1 f2 =
-    match (f1, f2) with
-	([], []) -> true
-      | ((o1, t1)::f1, (o2, t2)::f2) ->
-	  (compare_fields f1 f2)
-	  && (o1 = o2) && (compare_typs_aux t1 t2)
-      | _ -> false
-  in
-    
-    compare_typs_aux t1 t2
-
 let write out_name prog = 
   Npkcontext.print_debug ("Writing "^(out_name)^"...");
   let ch_out = open_out_bin out_name in
@@ -461,11 +433,6 @@ let cast t e t' =
     | _ -> 
 	Npkcontext.report_error "Npkil.cast"
 	  ("invalid cast "^(string_of_cast t t'))
-
-let rec append_decls d body =
-  match d with
-      (x, t, loc)::tl -> (Decl (x, t, append_decls tl body), loc)::[]
-    | [] -> body
 
 let rec negate e =
   match e with
