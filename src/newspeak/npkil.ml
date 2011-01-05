@@ -143,8 +143,6 @@ let zero_f = Const (CFloat (0., "0."))
 
 let make_int_coerce t e = UnOp (Coerce (Newspeak.domain_of_typ t), e)
 
-let exp_of_int x = Const (CInt (Nat.of_int x))
-
 module Int_map = 
   Map.Make (struct type t = int let compare = Pervasives.compare end)
 
