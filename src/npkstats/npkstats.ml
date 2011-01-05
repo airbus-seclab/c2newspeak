@@ -381,7 +381,7 @@ let process input =
     in
       print_endline (collector#to_string !verbose cout);
       Maxcount.print max_stats cout;
-      Libfuns.collect prog;
+      Libfuns.collect prog cout;
       begin
         match cout with 
             None -> ()

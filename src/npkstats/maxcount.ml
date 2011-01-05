@@ -44,8 +44,8 @@ type t = bool * stats
 
 let add_stats st1 st2 =
   { 
-    nb_vars = st1.nb_vars + st2.nb_vars;
-    sz_vars = st1.sz_vars + st2.sz_vars;
+    nb_vars    = st1.nb_vars + st2.nb_vars;
+    sz_vars    = st1.sz_vars + st2.sz_vars;
     call_depth = st1.call_depth + st2.call_depth;
     loop_depth = st1.loop_depth + st2.loop_depth;
   }
@@ -72,12 +72,12 @@ let count_call st = { st with call_depth = st.call_depth + 1 }
 let rec_fun = ref ""
 
 let count debug prog =
-  let fid_addrof = Lowspeak.collect_fid_addrof prog in
+  let fid_addrof   = Lowspeak.collect_fid_addrof prog in
   let unknown_funs = ref [] in
-  let exact = ref true in
-  let fun_tbl = Hashtbl.create 100 in
-  let current_loc = ref Newspeak.unknown_loc in
-  let fset = ref [] in
+  let exact 	   = ref true in
+  let fun_tbl 	   = Hashtbl.create 100 in
+  let current_loc  = ref Newspeak.unknown_loc in
+  let fset 	   = ref [] in
 
   let rec process_call f =
     try Hashtbl.find fun_tbl f
@@ -149,16 +149,16 @@ let count debug prog =
     (!exact, stats)
       
 let print (exact, st) xout =
-  let symb = if exact then "" else "<= " in
-  let nb = string_of_int st.nb_vars in
-  let sz = string_of_int st.sz_vars in
+  let symb 	 = if exact then "" else "<= " in
+  let nb 	 = string_of_int st.nb_vars in
+  let sz 	 = string_of_int st.sz_vars in
   let call_depth = string_of_int st.call_depth in
   let loop_depth = string_of_int st.loop_depth in
-  let s1 = "Maximum number of variables on the stack" in
-  let s2 = "Maximum height of the stack (bytes)" in
-  let s3 = "Maximum depth of function calls" in
-  let s4 = "Maximum depth of imbricated loops" in
-  let s5 = "At least one recursive function" in
+  let s1 	 = "Maximum number of variables on the stack" in
+  let s2 	 = "Maximum height of the stack (bytes)" in
+  let s3 	 = "Maximum depth of function calls" in
+  let s4 	 = "Maximum depth of imbricated loops" in
+  let s5 	 = "At least one recursive function" in
     print_endline (s1^": "^symb^nb);
     print_endline (s2^": "^symb^sz);
     print_endline (s3^": "^symb^call_depth);

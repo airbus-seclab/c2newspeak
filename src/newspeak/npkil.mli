@@ -155,13 +155,6 @@ val zero_f : exp
     integer bounds of type t *)
 val make_int_coerce : sign_t * size_t -> exp -> exp
 
-
-(** [make_belongs len e] wraps e into a belongs (0, len - 1) *)
-(*val make_belongs : int -> exp -> exp*)
-
-(** [exp_of_int i] wraps i into a Newspeak expression *)
-val exp_of_int : int -> exp
-
 val negate : exp -> exp
 
 val dump_npko : t -> unit
@@ -173,9 +166,6 @@ val string_of_typ : typ -> string
 val string_of_tmp_size: tmp_size_t -> string
 
 val string_of_lval: lval -> string
-
-(* TODO: remove this function*)
-val compare_typs : typ -> typ -> bool
 
 exception Uncomparable
 
@@ -190,9 +180,3 @@ val read: string -> t
 val string_of_cast: Newspeak.scalar_t -> Newspeak.scalar_t -> string
 
 val cast: Newspeak.scalar_t -> exp -> Newspeak.scalar_t -> exp
-
-(* Generates a Newspeak statement by wrapping a block body with
-   declarations decls. The order of the declaration must be carefully
-   checked because in Newspeak, the variables are identified by their
-   positions in the declaration stacks, not by their names *)
-val append_decls: (string * typ * location) list -> blk -> blk

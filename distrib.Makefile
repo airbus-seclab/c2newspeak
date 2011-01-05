@@ -43,7 +43,7 @@ CLEANFILES=*~ bin/* lib/*~ lib/sys/*~ doc/*.html doc/*~ src/version.cmo src/*~ \
            bisect-report.xml bisect-report/*
 
 #rules
-.PHONY: clean doc lib
+.PHONY: clean doc lib bisect-report
 
 all: bin $(COMPONENTS) doc lib
 
