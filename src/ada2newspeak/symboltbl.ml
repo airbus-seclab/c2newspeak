@@ -453,6 +453,13 @@ let is_ada_pck p = List.exists (fun x -> compare x p = 0)
 
 
 let add_use is_with s p =
+  (*if (compare p "trigonometric" = 0) then
+    Npkcontext.report_error "Symboltbl.add_use"
+    ( let (s,i,_j)  =  Npkcontext.get_loc() in
+			 s^" "^(string_of_int i)
+		     )
+  ;*)
+
   if (is_with || is_ada_pck p ||  (current s = Some p)) then
     tbl_add_use (top s) p
       else
@@ -468,7 +475,7 @@ let s_get_use s =
   match s.s_cpkg with
   | None   ->    ctx
   | Some p -> p::ctx
-
+	
 (**
  * Find some data in a stack.
  * Applies f to every table of s, from top to bottom.
@@ -493,7 +500,7 @@ let find_rec s f =
  * 
 *)
 
-let equal_keyrenaming  (p1, n1) (p2, n2) = 
+let eq_renaming  (p1, n1) (p2, n2) = 
      ( compare n1 n2 = 0) &&
      (match p1, p2 with 
 	    Some a, Some b -> compare a b = 0 
@@ -516,13 +523,13 @@ let add_renaming_decl s (current, new_name) new_args old_name  =
     else
       (*Multiple renaming is possible*)    
       if (List.exists (fun (key, _) -> 
-	equal_keyrenaming key (current, new_name)) s.s_renaming)
+	eq_renaming key (current, new_name)) s.s_renaming)
       then
       begin
 	Npkcontext.report_warning "add_renaming_decl"
 	  ( "Already renamed '"^ new_name ^ "' but added");
 	let founds, removeds =  List.partition ( fun (key,_) -> 
-	  equal_keyrenaming key (current, new_name)) s.s_renaming 
+	  eq_renaming key (current, new_name)) s.s_renaming 
 	in
 	let bindings =  match founds with
 	    hd::[] -> snd hd
@@ -650,7 +657,7 @@ let find_variable s ?expected_type name =
   let rec find name =
     try
       let (_, x) = 
-	List.find (fun (key, _) -> equal_keyrenaming key name) s.s_renaming
+	List.find (fun (key, _) -> eq_renaming key name) s.s_renaming
       in
 	match x with 
 	    (nam_assoc, _)::[] -> find nam_assoc
@@ -680,7 +687,7 @@ let find_variable_value s ?expected_type name =
 let rec find_type s (package, n) = 
   try
     let x = snd ( List.find (fun (key, _) -> 
-		  equal_keyrenaming key (package,n) ) s.s_renaming)
+		  eq_renaming key (package,n) ) s.s_renaming)
     in  
       match x with 
 	  (nam_assoc, _)::[]  ->  begin
@@ -694,34 +701,83 @@ let rec find_type s (package, n) =
   with Not_found -> 
     s_find "type" tbl_find_type s ?package n
 
-let rec find_subprogram s ?(silent=false) (pack,n) norm_args xpect t_find =
+
+
+
+let rec find_subprogram_aux  s ?(silent=false) (pack,n) n_args xpect t_find use  =
   let find_one_renaming  ((p_opt, n_a), params_opt) = 
-    if (equal_keyrenaming  (p_opt, n_a) (pack,n)) then begin
+    if (eq_renaming  (p_opt, n_a) (pack,n)) then 
       Npkcontext.report_error "Symboltbl.find_subprogram" 
 	("program '" ^ n ^ "'" ^"can not be resolved")
-    end else begin
+    else 
       let (sc,(act_name,_, top)) =
-	find_subprogram s ~silent (p_opt, n_a) norm_args  xpect t_find 
+	find_subprogram_aux s ~silent (p_opt, n_a) n_args  xpect t_find false
       in
 	match params_opt with 
 	    Some formals ->  (sc,(act_name, formals, top))
-	  | None ->
-	      Npkcontext.report_error "Symboltbl.find_subprogram" 
-		("program renamed'" ^ n ^ 
-		   "'" ^"can not find previous formal parameters")
-    end
+	  | None -> Npkcontext.report_error "Symboltbl.find_subprogram" 
+	      ("program renamed'" ^ n ^ 
+		 "'" ^"can not find previous formal parameters")
   in
   let res = ref[] in 
-
+  
   let multiple_renaming x = 
     try
       let new_spec = find_one_renaming x  in
 	res:=new_spec::(!res)
     with _ -> ()
   in
+
+    (*Looking in use is used in order to look for function in use clause;
+    it is only one level deep *)
+  let looking_in_use pack use_enabled  tbl_find s find_auxiliary =  
+    let find_pck n  = 
+      match pack with 
+	  Some p ->  s_find "subprogram" tbl_find s ~package:(p) n
+	| _ ->       s_find "subprogram" tbl_find  s n
+     in
+     let context_orig = ref (s_get_use s) in
+     let context = match pack with 
+	 Some p -> ref (List.find_all ( fun x -> 
+		(compare x p <> 0) && ( compare x "standard" <> 0) 
+				      ) !context_orig 
+		       ) 
+       | _ -> context_orig
+     in 
+       try (find_pck n)
+       with 
+	   Not_found ->
+	     try
+               if use_enabled then
+		 let res = ref None in
+		   while (!context <> [] && !res = None) do	  
+		     try
+		       let p = (List.hd !context) in
+			 res := Some (find_auxiliary (Some p, n));
+		     with Not_found -> 
+		       context := List.tl !context;
+		   done;
+		   match !res with
+		       Some prog ->  prog
+		     | _ ->  
+			 if silent then raise Not_found
+			 else 
+			   Npkcontext.report_error 
+			     "Symboltbl" 
+			     ("Cannot find subprogram '" ^ n ^ "'")
+			     
+	       else raise Not_found
+	     with Not_found ->
+	       if silent then
+		 raise Not_found
+	       else 
+		 Npkcontext.report_error  "Symboltbl.multiple_renaming" 
+		   ("Cannot find subprogram '" ^ n ^ "'")   
+  in
+    (*Beginning of the function *)
     try 
       let names = snd (
-	List.find (fun (key, _) -> equal_keyrenaming key (pack,n)) 
+	List.find (fun (key, _) -> eq_renaming key (pack,n)) 
 	  s.s_renaming) 
       in
 	List.iter multiple_renaming names;
@@ -733,83 +789,18 @@ let rec find_subprogram s ?(silent=false) (pack,n) norm_args xpect t_find =
 	      ("More than one program match spec:'" ^ n ^ "'")
 	  end else
 	    List.hd (!res)
-
+	      
     with Not_found -> 
-      (*Maybe in use clause then recursive call (renaming...) *)
-      try 
-	match pack with 
-	    Some pck -> 
-	      begin
-		try 
-		  s_find 
-		    "subprogram"
-		    (tbl_find_subprogram norm_args xpect t_find) 
-		    s ~package:(pck) n 
-		with Not_found -> (*It HAS TO BE be in use clause*)
-		  let context_orig = ref (s_get_use s) in
-		  let context = ref (List.find_all 
-			  ( fun x -> (compare x pck <> 0) &&
-			             (compare x "standard" <> 0) ) !context_orig
-				    ) 
-		  in
-		  
-		  let res = ref None in
-		    while (!context <> [] && !res = None) do	  
-		      try
-			let p = (List.hd !context) in
-			  res :=
-			    Some (find_subprogram s ~silent (Some p, n) 
-				    norm_args  xpect t_find);
-		      with Not_found ->
-			context := List.tl !context;
-		    done;
-		    match !res with
-			Some prog ->  prog
-		      | _ ->  
-(* TODO: try to remove silent *)
-			  if silent then raise Not_found
-			  else begin
-			    Npkcontext.report_error 
-			      "Symboltbl.multiple_renaming" 
-			      ("Cannot find subprogram '" ^ n ^ "'")
-			  end
-	      end
-	  | None -> 
-	      begin
-		try 
-		  s_find
-		    "subprogram" 
-		    (tbl_find_subprogram norm_args xpect t_find) s n  
-		with Not_found -> (*It HAS TO BE be in use clause*)
-		  let context = ref (s_get_use s) in
-		  let res = ref None in
-		    while (!context <> [] && !res = None) do
-		      try
-			let p = (List.hd !context) in
-			  res :=
-			    Some (find_subprogram s ~silent (Some p, n) 
-				    norm_args  xpect t_find);
-		      with Not_found ->
-			context := List.tl !context;
-		    done;
-		    match !res with
-			Some prog ->  prog
-		      | _ -> 
-			  if silent then raise Not_found
-			  else begin
-			    Npkcontext.report_error 
-			      "Symboltbl.multiple_renaming" 
-			      ("Cannot find subprogram '" ^ n ^ "'")
-			  end
-	      end
-      with Not_found ->
-	if silent then
-	  raise Not_found
-	else begin
-	  Npkcontext.report_error 
-	    "Symboltbl.multiple_renaming" 
-	    ("Cannot find subprogram '" ^ n ^ "'")
-	end
+      let tbl_find = 	(tbl_find_subprogram n_args xpect t_find) in
+      let recursive_call = (fun x -> 
+		find_subprogram_aux s ~silent x n_args  xpect t_find false)
+      in
+	looking_in_use pack  use tbl_find s recursive_call
+	
+	    
+let find_subprogram s ?(silent=false) (pack,n) norm_args xpect t_find =
+  find_subprogram_aux s ~silent:(silent) (pack,n) norm_args xpect t_find true
+
 
 let is_operator_overloaded s n =
   try 
