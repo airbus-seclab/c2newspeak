@@ -629,11 +629,12 @@ and normalize_fcall (n, params) expectedtype =
     try
       let norm_args = List.map normalize_arg params in
       let norm_typs = List.map (fun (s,(_,t)) -> (s,t)) norm_args in
-      let (sc,(act_name,spec,top)) = 
+    
+	let (sc,(act_name,spec,top)) = 
 	Sym.find_subprogram 
 	  ~silent:true gtbl (add_p n) norm_typs 
 	  expectedtype (fun x -> Symboltbl.find_type gtbl x) 
-      in
+	in
       let t = match top with
 	| None -> Npkcontext.report_error "normalize_fcall"
             "Expected function, got procedure"
@@ -981,7 +982,9 @@ and normalize_sub_program_spec subprog_spec ~addparam =
 	      
 and normalize_basic_decl item loc =
   match item with
-  | UseDecl use_clause -> Sym.add_use (Hashtbl.mem spec_tbl use_clause) gtbl use_clause; []
+    | UseDecl use_clause -> 
+	Sym.add_use (Hashtbl.mem spec_tbl use_clause) gtbl use_clause; 
+	[]
   | ObjectDecl(ident_list,subtyp_ind,def, Variable) -> 
       let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
       let t = merge_types norm_subtyp_ind in
