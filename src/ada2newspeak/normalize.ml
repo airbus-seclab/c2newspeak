@@ -94,22 +94,24 @@ let subtyp_to_adatyp gtbl n =
     end
 
 let merge_types gtbl (tp, cstr) =
-  let t = subtyp_to_adatyp gtbl tp in
-   if (T.is_unknown t) then
-    Npkcontext.report_warning "merge_types"
-      ("merged subtype indication into unknown type (" ^ T.get_reason t ^ ")");  
-    
-    let t = 
-      match T.extract_symbols t with 
-	  Some enums ->  
-	    if (T.is_boolean t) then t else T.new_enum t enums 
-	| _ ->  t
-    in
-      
-      match cstr with
-	| None -> t
-	| Some c -> T.new_constr t c
-
+  match tp with 
+      [] -> (*Hack only for the for x in  1..z case, no integer*)
+	T.universal_integer 
+    | _ ->
+	let t = subtyp_to_adatyp gtbl tp in
+	  if (T.is_unknown t) then
+	    Npkcontext.report_warning "merge_types"
+	      ("merged subtype indication into unknown type (" ^ T.get_reason t ^ ")");  
+	  let t = 
+	    match T.extract_symbols t with 
+		Some enums ->  
+		  if (T.is_boolean t) then t else T.new_enum t enums 
+	      | _ ->  t
+	  in      
+	    match cstr with
+	      | None -> t
+	      | Some c -> T.new_constr t c
+		  
 let subtyp_to_adatyp st = subtyp_to_adatyp gtbl st
 let merge_types sti = merge_types gtbl sti
 
@@ -589,7 +591,7 @@ and normalize_binop bop e1 e2 xpec =
 	    else
 	      let tc = TC.type_of_binop bop' t1 t2  in
 		Ast.Binary (bop', (e1',t1), (e2',t2)), tc
-		  
+	    
 		      
 and make_abs (exp,t) =
   let x = (exp,t) in
@@ -985,42 +987,42 @@ and normalize_basic_decl item loc =
     | UseDecl use_clause -> 
 	Sym.add_use (Hashtbl.mem spec_tbl use_clause) gtbl use_clause; 
 	[]
-  | ObjectDecl(ident_list,subtyp_ind,def, Variable) -> 
-      let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
-      let t = merge_types norm_subtyp_ind in
-      List.iter (fun x -> Sym.add_variable gtbl x loc t) ident_list;
-      List.map (fun ident ->
-        Ast.ObjectDecl ( ident
-                       , t
-                       , Ast.Variable
-                       , build_init_stmt (ident, def, loc)
-                       )
-      ) ident_list
-  | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
-      let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
-      let t = merge_types norm_subtyp_ind in
-      let status = begin
-        match exp with
-        | Aggregate _ -> 
-            List.iter (fun x -> Sym.add_variable gtbl x loc t) ident_list;
-	    Ast.Constant
-        | _ ->  
-	  try
-            let normexp = normalize_exp ~expected_type:t exp in
- 	    let value = Eval.eval_static normexp gtbl in
-              List.iter (fun x -> Sym.add_variable gtbl x loc t ~value)
-                        ident_list;
-	       Ast.StaticVal value
-          with
-            | Eval.NonStaticExpression -> List.iter
-                                      (fun x -> Sym.add_variable gtbl x loc t
-                                      ) ident_list;
-                                      Ast.Constant
-	    | _ ->   Npkcontext.report_error "Exit"
-		"Normalize: ObjectDecl Constant"
-      end
-      in
-	List.map ( fun ident -> 
+    | ObjectDecl(ident_list, subtyp_ind, def, Variable) -> 
+	let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
+	let t = merge_types norm_subtyp_ind in
+	  List.iter (fun x -> Sym.add_variable gtbl x loc t) ident_list;
+	  List.map (fun ident ->
+		      Ast.ObjectDecl ( ident
+					 , t
+					   , Ast.Variable
+					     , build_init_stmt (ident, def, loc)
+				     )
+		   ) ident_list
+    | ObjectDecl(ident_list,subtyp_ind, Some(exp), Constant) ->
+	let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
+	let t = merge_types norm_subtyp_ind in
+	let status = begin
+          match exp with
+            | Aggregate _ -> 
+		List.iter (fun x -> Sym.add_variable gtbl x loc t) ident_list;
+		Ast.Constant
+            | _ ->  
+		try
+		  let normexp = normalize_exp ~expected_type:t exp in
+ 		  let value = Eval.eval_static normexp gtbl in
+		    List.iter (fun x -> Sym.add_variable gtbl x loc t ~value)
+                      ident_list;
+		    Ast.StaticVal value
+		with
+		  | Eval.NonStaticExpression -> List.iter
+                      (fun x -> Sym.add_variable gtbl x loc t
+                      ) ident_list;
+                      Ast.Constant
+		  | _ ->   Npkcontext.report_error "Exit"
+		      "Normalize: ObjectDecl Constant"
+	end
+	in
+	  List.map ( fun ident -> 
 		     Ast.ObjectDecl( ident, t, status
 				    , build_init_stmt (ident, Some exp, loc)
 				   )
@@ -1320,10 +1322,13 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
       [Ast.If( normalize_exp ~expected_type:T.boolean exp
              , normalize_block ?return_type instr_then
              , normalize_block ?return_type instr_else), loc]
+
   | Loop(NoScheme,instrs) -> [Ast.Loop(Ast.NoScheme,
                                 normalize_block ?return_type instrs),loc]
+
   | Loop(While(exp), instrs) -> [Ast.Loop(Ast.While(normalize_exp exp),
                    normalize_block ?return_type instrs), loc]
+
   | Loop(For(iter, range, is_rev), block) -> begin
       let (exp1, exp2) = match range with
 	| DirectRange (min, max) -> (min, max)
@@ -1341,17 +1346,24 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
                   , fst (T.attr_get t "last"))
           end
       in
-      let sub_typ_ind =  match range with 
-	  DirectRange _   
-	| ArrayRange _    ->   (["standard";"integer"], None)
-	| SubtypeRange lv -> (Symboltbl.make_name_of_lval lv, None)   
+      let lv_typopt, sub_typ_ind =  match range with 
+	  DirectRange (CInt _, Lval (Var str)) 
+	| DirectRange (Lval (Var str) , CInt _) -> 
+	    (*Very hacky, in order to get Univ_int, see merge_types*)
+	    Some str, ([], None)
+	| DirectRange (Lval _ , CInt _)
+	| DirectRange (CInt _, Lval _) -> 
+	    Npkcontext.report_error "normalize Loop(For(iter" "not handled yet"
+	| DirectRange _
+	| ArrayRange _    ->   None, (["standard";"integer"], None)
+	| SubtypeRange lv ->   None, (Symboltbl.make_name_of_lval lv, None)   
       in
      	(*enum_case is different due to potential redefiniton 
 	  of value with Enumeration clause use*)
 
       let basic_loop () = 
 	(*The while loop is possible with a counter incremention*)
-	let dp = [BasicDecl (ObjectDecl ( 
+(*	let dp = [BasicDecl (ObjectDecl ( 
 			       [iter]
 				 , sub_typ_ind
 				   , Some (if is_rev then exp2 else exp1)
@@ -1361,10 +1373,57 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 		    , loc
 		 ]
 	in
-	  Sym.enter_context gtbl;
-	  let ndp = normalize_decl_part dp in 
-	  let nblock = normalize_block ?return_type block in
-	  let loop = [Ast.Loop ( Ast.While
+*)	
+	Sym.enter_context gtbl;
+	(*	  let ndp = normalize_decl_part dp in *)
+
+(*_________________*)
+	
+	let ndp = 
+	  let t = 
+	    match sub_typ_ind with 
+		( [], None ) -> begin
+		  match lv_typopt with 
+		      Some lv -> 
+			snd (normalize_exp (Lval (Var lv)))
+		    | _ -> Npkcontext.report_error 
+			"basic_loop" "unreachable case"
+		end 
+	      | _ -> merge_types (normalize_subtyp_ind sub_typ_ind)
+	  in
+	  let init = if is_rev then exp2 else exp1 in 
+	  let status = 
+	    match init with
+		Aggregate _ ->  
+		  Npkcontext.report_error "Loop declarative part" 
+		    "Aggregate not handled"
+	      | _ ->
+		  try	
+		    let normexp = normalize_exp ~expected_type:t init in
+		    let value = Eval.eval_static normexp gtbl in
+		      Npkcontext.set_loc loc;
+		      Sym.add_variable gtbl iter loc t ~value;
+			Ast.StaticVal value
+		  with
+		      Eval.NonStaticExpression ->
+			Npkcontext.report_warning "NonStaticExpression"
+		     	  "Normalize: ObjectDecl Constant";
+			Sym.add_variable gtbl iter loc t;
+			Ast.Constant
+		    | _ -> Npkcontext.report_error "Exit"
+			"Normalize: ObjectDecl Constant"
+	  in	    
+	    [Ast.BasicDecl ( Ast.ObjectDecl( iter, t, status
+			    , build_init_stmt (iter, Some init, loc)
+					   ) 
+			    
+			  ) , loc
+	    ]
+	in
+	  (*_________________*)
+	  
+	let nblock = normalize_block ?return_type block in
+	let loop = [Ast.Loop ( Ast.While
 		( normalize_exp (
 		    if is_rev then 
 		      Binary(Ge,Lval(Var iter),exp1)
@@ -1869,7 +1928,7 @@ and add_extern_spec spec =
       | Ast.ObjectDecl(ident, t, (Ast.Variable | Ast.Constant),_) ->
 	  Sym.add_variable gtbl ident loc t
       | Ast.ObjectDecl(ident, t, Ast.StaticVal value,_) ->
-	  Sym.add_variable gtbl ident loc t ~value;
+	  Sym.add_variable gtbl ident loc t ~value
       | Ast.NumberDecl(ident, value) ->
 	  add_numberdecl ident value loc
       | Ast.SpecDecl _ -> ()

@@ -1,5 +1,6 @@
 (*
-  Ada2Newspeak: compiles Ada code into Newspeak. Newspeak is a minimal language well-suited for static analysis.
+  Ada2Newspeak: compiles Ada code into Newspeak. Newspeak is a minimal 
+  language well-suited for static analysis.
   Copyright (C) 2007  Charles Hymans, Olivier Levillain
 
   This library is free software; you can redistribute it and/or
@@ -792,21 +793,14 @@ let rec is_compatible one another =
         "testing compatibility against unknown type";
        (one.base = another.base)
     || (match (one.base.trait, another.base.trait) with
-        | Signed   _ , Univ_int (*constant return Iniv_Int*)
+        | Signed   _ , Univ_int (*constant return Univ_Int*)
         | Univ_int   , Signed   _
         | Float    _ , Univ_real
         | Univ_real  , Float    _
             -> true
-	| Array _ , Array _ (*t2, ts2*) -> 
+	| Array _ , Array _  -> 
 	    one =  another
- (*t1 = t2) && List.for_all2 (fun x y -> x = y) ts1 ts2*) 
 	    
-	    (* (is_compatible t1 t2) && *)
-	    (*   List.for_all2 (fun x y -> *)
-	    (* 	    (is_compatible x y) && *)
-	    (* 	    (compare (List.length (all_values x))   *)
-	    (* 	    (List.length (all_values y)) = 0) *)
-	    (*    ) ts1 ts2 *)
 	       
         | _ -> false
         )
