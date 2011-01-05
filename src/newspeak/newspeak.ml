@@ -107,16 +107,16 @@ and gdecl = typ * location
 and src_lang = C | ADA
 
 and stmtkind =
-    Set of (lval * exp * scalar_t)
-  | Copy of (lval * lval * size_t)
-  | Guard of exp
-  | Decl of (string * typ * blk)
-  | Select of (blk * blk)
-  | InfLoop of blk
-  | DoWith of (blk * lbl)
-  | Goto of lbl
+    Set	     of (lval * exp * scalar_t)
+  | Copy     of (lval * lval * size_t)
+  | Guard    of exp
+  | Decl     of (string * typ * blk)
+  | Select   of (blk * blk)
+  | InfLoop  of blk
+  | DoWith   of (blk * lbl)
+  | Goto     of lbl
 (* arguments, type, function, return values *)
-  | Call of ((exp * typ) list * funexp * (lval * typ) list)
+  | Call     of ((exp * typ) list * funexp * (lval * typ) list)
   | UserSpec of assertion
 
 and specs = assertion list
@@ -125,27 +125,27 @@ and assertion = spec_token list
 
 and spec_token =
   | SymbolToken of char
-  | IdentToken of string
-  | LvalToken of (lval * typ)
-  | CstToken of cst
+  | IdentToken  of string
+  | LvalToken   of (lval * typ)
+  | CstToken    of cst
 
 and stmt = stmtkind * location
 
 and blk = stmt list
 
 and lval =
-    Local of string
+    Local  of string
   | Global of string
-  | Deref of (exp * size_t)
-  | Shift of (lval * exp)
+  | Deref  of (exp * size_t)
+  | Shift  of (lval * exp)
 
 and exp =
-    Const of cst
-  | Lval of (lval * typ)
-  | AddrOf of lval
+    Const     of cst
+  | Lval      of (lval * typ)
+  | AddrOf    of lval
   | AddrOfFun of (fid * ftyp)
-  | UnOp of (unop * exp)
-  | BinOp of (binop * exp * exp)
+  | UnOp      of (unop * exp)
+  | BinOp     of (binop * exp * exp)
 
 and cst = 
     CInt of Nat.t
@@ -244,18 +244,18 @@ let size_of ptr_sz t =
 
 let domain_of_typ (sign, size) =
     match (sign, size) with
-      (Unsigned, 8) -> (Nat.zero, Nat.of_string "255")
-    | (Signed, 8) -> (Nat.of_string "-128", Nat.of_string "127")
-    | (Unsigned, 16) -> (Nat.zero, Nat.of_string "65535")
-    | (Signed, 16) -> (Nat.of_string "-32768", Nat.of_string "32767")
-    | (Unsigned, 32) -> (Nat.zero, Nat.of_string "4294967295")
-    | (Signed, 32) -> (Nat.of_string "-2147483648", Nat.of_string "2147483647")
-    | (Signed, 64) -> 
+      (Unsigned, 8) 		-> (Nat.zero, Nat.of_string "255")
+    | (Signed, 8) 		-> (Nat.of_string "-128", Nat.of_string "127")
+    | (Unsigned, 16) 		-> (Nat.zero, Nat.of_string "65535")
+    | (Signed, 16) 		-> (Nat.of_string "-32768", Nat.of_string "32767")
+    | (Unsigned, 32) 		-> (Nat.zero, Nat.of_string "4294967295")
+    | (Signed, 32) 		-> (Nat.of_string "-2147483648", Nat.of_string "2147483647")
+    | (Signed, 64) 		-> 
         (Nat.of_string "-9223372036854775808", 
         Nat.of_string "9223372036854775807")
-    | (Unsigned, 64) -> (Nat.zero, Nat.of_string "18446744073709551615")
+    | (Unsigned, 64) 		-> (Nat.zero, Nat.of_string "18446744073709551615")
 (* For bitfields *)
-    | (Signed, n) when n < 64 ->
+    | (Signed, n) when n < 64 	->
         let x = Int64.shift_left Int64.one (n-1) in
         let l = Int64.to_string (Int64.neg x) in
         let u = Int64.to_string (Int64.pred x) in
@@ -263,7 +263,7 @@ let domain_of_typ (sign, size) =
     | (Unsigned, n) when n < 64 ->
         let x = Int64.pred (Int64.shift_left Int64.one n) in
           (Nat.zero, Nat.of_string (Int64.to_string x))
-    | _ -> invalid_arg "Newspeak.domain_of_typ"
+    | _ 			-> invalid_arg "Newspeak.domain_of_typ"
 
 let rec negate exp =
   match exp with
@@ -273,16 +273,6 @@ let rec negate exp =
     | BinOp (Eq t, e1, e2) -> UnOp (Not, BinOp (Eq t, e1, e2))
     | UnOp (Coerce i, e) -> UnOp (Coerce i, negate e)
     | _ -> invalid_arg "Newspeak.negate"
-
-let rec convert_loops _ = invalid_arg "Not implemented yet"
-(* TODO:
-   [extract_while InfLoop(blk1)::(Label(l)::blk2 ) ] try to find a while loop. 
-   If it fails, then it returns None.
-   Else, it returns the while condition in a exp list. It is a list of 
-   booleans which 
-   are evaluated until some of them is false (further booleans are not 
-   evaluated).
-   It also returns two blk, the blk in the loop and the blk after the loop. *)
 
 (*---------*)
 (* Display *)
@@ -307,14 +297,14 @@ let string_of_size_t = string_of_int
 let string_of_sign_t sg =
   match sg with
       Unsigned -> "u"
-    | Signed -> ""
+    | Signed   -> ""
 
 let string_of_scalar s =
   match s with
       Int (sg, sz) -> (string_of_sign_t sg)^"int"^(string_of_size_t sz)
-    | Float sz -> "float" ^ (string_of_size_t sz)
-    | Ptr -> "ptr"
-    | FunPtr -> "fptr"
+    | Float sz 	   -> "float" ^ (string_of_size_t sz)
+    | Ptr 	   -> "ptr"
+    | FunPtr 	   -> "fptr"
 
 let rec string_of_typ t =
   match t with
@@ -378,53 +368,53 @@ let string_of_bounds (l, u) = "["^(Nat.to_string l)^","^(Nat.to_string u)^"]"
 
 let string_of_unop op =
   match op with
-      Belongs r -> "belongs"^(string_of_bounds r)
-    | Coerce r -> "coerce"^(string_of_bounds r)
-    | Focus sz -> "focus"^(string_of_size_t sz)
+      Belongs r        -> "belongs"^(string_of_bounds r)
+    | Coerce r 	       -> "coerce"^(string_of_bounds r)
+    | Focus sz 	       -> "focus"^(string_of_size_t sz)
     | Cast (typ, typ') ->
         "("^(string_of_scalar typ')^" <= "^(string_of_scalar typ)^")"
-    | Not -> "!"
-    | BNot _ -> "~"
-    | PtrToInt i -> "("^(string_of_scalar (Int i))^")"
-    | IntToPtr _ -> "(ptr)"
+    | Not 	       -> "!"
+    | BNot _ 	       -> "~"
+    | PtrToInt i       -> "("^(string_of_scalar (Int i))^")"
+    | IntToPtr _       -> "(ptr)"
           
 let string_of_binop op =
   match op with
-    | Gt _ -> ">"
-    | Eq t -> "==_"^(string_of_scalar t)
-    | PlusI -> "+"
-    | MinusI -> "-"
-    | MultI -> "*"
-    | Mod -> "%"
-    | DivI -> "/"
-    | PlusF _ -> "+."
+    | Gt _     -> ">"
+    | Eq t     -> "==_"^(string_of_scalar t)
+    | PlusI    -> "+"
+    | MinusI   -> "-"
+    | MultI    -> "*"
+    | Mod      -> "%"
+    | DivI     -> "/"
+    | PlusF _  -> "+."
     | MinusF _ -> "-."
-    | MultF _ -> "*."
-    | DivF _ -> "/."
-    | BAnd _ -> "&"
-    | BOr _ -> "|"
-    | BXor _ -> "^"
-    | Shiftlt -> "<<"
-    | Shiftrt -> ">>"
-    | PlusPI -> "+"
-    | MinusPP -> "-"
+    | MultF _  -> "*."
+    | DivF _   -> "/."
+    | BAnd _   -> "&"
+    | BOr _    -> "|"
+    | BXor _   -> "^"
+    | Shiftlt  -> "<<"
+    | Shiftrt  -> ">>"
+    | PlusPI   -> "+"
+    | MinusPP  -> "-"
 
 let rec string_of_lval lv =
   match lv with
-    | Local name -> name
-    | Global name -> name
-    | Deref (e, sz) -> "["^(string_of_exp e)^"]"^(string_of_size_t sz)
+    | Local name     -> name
+    | Global name    -> name
+    | Deref (e, sz)  -> "["^(string_of_exp e)^"]"^(string_of_size_t sz)
     | Shift (lv, sh) -> (string_of_lval lv)^" + "^(string_of_exp sh)
 
 and string_of_args args = string_of_list string_of_exp args
 
 and string_of_exp e =
   match e with
-      Const c -> string_of_cst c
-    | Lval (lv, t) -> (string_of_lval lv)^"_"^(string_of_typ t)
-    | AddrOf lv -> "&("^(string_of_lval lv)^")"
+      Const c 		  -> string_of_cst c
+    | Lval (lv, t) 	  -> (string_of_lval lv)^"_"^(string_of_typ t)
+    | AddrOf lv 	  -> "&("^(string_of_lval lv)^")"
     | AddrOfFun (fid, ft) -> "&_{"^(string_of_ftyp ft)^"}("^fid^")"
-    | BinOp (op, e1, e2) ->
+    | BinOp (op, e1, e2)  ->
         "("^(string_of_exp e1)^" "^(string_of_binop op)^
           " "^(string_of_exp e2)^")"
 
@@ -556,8 +546,8 @@ let string_of_fundec name declaration =
   let str_args = string_of_formal_args declaration.args in
   let str_ret  = string_of_ret declaration.rets in
   let position = string_of_loc_as_prefix declaration.position in
-  let result = str_ret ^ " " ^ position ^ name ^ str_args ^ " {\n" in
-  let result = result^string_of_blk 2 declaration.body^"}\n" in
+  let result   = str_ret ^ " " ^ position ^ name ^ str_args ^ " {\n" in
+  let result   = result^string_of_blk 2 declaration.body^"}\n" in
     result
 
 let dump_fundec name declaration = 
@@ -930,13 +920,13 @@ let rec simplify_stmt actions (x, loc) =
   List.iter (fun a -> a#enter_stmtkind x) actions;
   let x =
     match x with
-      | Set (lv, e, sca) -> 
+      | Set (lv, e, sca) 	 -> 
           Set (simplify_lval actions lv, simplify_exp actions e, sca)
-      | Copy (lv1, lv2, sz) ->
+      | Copy (lv1, lv2, sz) 	 ->
           let lv1 = simplify_lval actions lv1 in
           let lv2 = simplify_lval actions lv2 in
             Copy (lv1, lv2, sz)
-      | Guard b -> Guard (simplify_exp actions b)
+      | Guard b 		 -> Guard (simplify_exp actions b)
       | Call (args, f, ret_vars) ->
           let f' = simplify_funexp actions f in
 	  let args = 
@@ -946,16 +936,16 @@ let rec simplify_stmt actions (x, loc) =
 	    List.map (fun (x, t) -> (simplify_lval actions x, t)) ret_vars 
 	  in
             Call (args, f', ret_vars)
-      | Decl (name, t, body) -> Decl (name, t, simplify_blk actions body)
-      | Select (body1, body2) -> 
+      | Decl (name, t, body) 	 -> Decl (name, t, simplify_blk actions body)
+      | Select (body1, body2) 	 -> 
           Select (simplify_blk actions body1, simplify_blk actions body2)
-      | InfLoop body ->
+      | InfLoop body 		 ->
           let body = simplify_blk actions body in
             InfLoop body
-      | DoWith (body, l) -> 
+      | DoWith (body, l) 	 -> 
           let body = simplify_blk actions body in
             DoWith (body, l)
-      | _ -> x
+      | _ 			 -> x
   in
   let stmt = ref x in
     List.iter (fun x -> stmt := x#process_stmtkind !stmt) actions;
@@ -973,12 +963,12 @@ and simplify_choose_elt actions (cond, body) =
 and simplify_exp actions e =
   let e = 
     match e with
-        Lval (lv, sca) -> Lval (simplify_lval actions lv, sca)
-      | AddrOf lv -> AddrOf (simplify_lval actions lv)
-      | UnOp (o, e) -> UnOp (o, simplify_exp actions e)
+        Lval (lv, sca) 	  -> Lval (simplify_lval actions lv, sca)
+      | AddrOf lv 	  -> AddrOf (simplify_lval actions lv)
+      | UnOp (o, e) 	  -> UnOp (o, simplify_exp actions e)
       | BinOp (o, e1, e2) -> 
           BinOp (o, simplify_exp actions e1, simplify_exp actions e2)
-      | _ -> e
+      | _ 		  -> e
   in
   let e = ref e in
     List.iter (fun x -> e := x#process_exp !e) actions;
@@ -998,8 +988,8 @@ and simplify_lval actions lv =
 and simplify_blk actions blk = 
   match blk with
       hd::tl -> 
-        let hd = simplify_stmt actions hd in
-        let tl = simplify_blk actions tl in
+        let hd 	= simplify_stmt actions hd in
+        let tl 	= simplify_blk actions tl in
         let blk = ref (hd::tl) in
           List.iter (fun x -> blk := x#process_blk !blk) actions;
           !blk
@@ -1010,11 +1000,10 @@ let has_goto lbl x =
 
   and has_goto (x, _) =
   match x with
-      Decl (_, _, body) | InfLoop body
-    | DoWith (body, _) -> blk_has_goto body
-    | Select (body1, body2) -> (blk_has_goto body1) || (blk_has_goto body2)
-    | Goto lbl' -> lbl = lbl'
-    | _ -> false
+      Decl (_, _, body) | InfLoop body | DoWith (body, _) -> blk_has_goto body
+    | Select (body1, body2) 				  -> (blk_has_goto body1) || (blk_has_goto body2)
+    | Goto lbl' 	    				  -> lbl = lbl'
+    | _ 		    				  -> false
   in
     has_goto x
 
@@ -1032,7 +1021,7 @@ let rec normalize_loop blk =
   match blk with
       (DoWith ([InfLoop body, loc], lbl), loc')::tl ->
         let (prefix, suffix) = split_loop lbl body in
-        let body = prefix@[InfLoop (suffix@prefix), loc] in
+        let body 	     = prefix@[InfLoop (suffix@prefix), loc] in
           (DoWith (body, lbl), loc')::(normalize_loop tl)
     | hd::tl -> hd::(normalize_loop tl)
     | [] -> []
@@ -1078,8 +1067,8 @@ and build_fundec builder fd =
 
 and build_typ builder t =
   match t with
-      Scalar t -> Scalar (build_scalar_t builder t)
-    | Array (t, n) ->
+      Scalar t 		  -> Scalar (build_scalar_t builder t)
+    | Array (t, n) 	  ->
         let t = build_typ builder t in
           Array (t, n)
     | Region (fields, sz) ->
@@ -1109,13 +1098,13 @@ and build_ikind builder (sign, sz) =
 
 and build_formal_ftyp builder (args, ret) =
   let build_arg (x, t) = (x, build_typ builder t) in
-  let args = List.map build_arg args in
-  let ret = List.map build_arg ret in
+  let args 	       = List.map build_arg args in
+  let ret 	       = List.map build_arg ret in
     (args, ret)
 
 and build_ftyp builder (args, ret) =
   let args = List.map (build_typ builder) args in
-  let ret = List.map (build_typ builder) ret in
+  let ret  = List.map (build_typ builder) ret in
     (args, ret)
 
 and build_cell builder (o, t, e) =
@@ -1529,10 +1518,10 @@ let simplify opt_checks prog =
 let rec belongs_of_exp x =
   match x with
       Lval (lv, _) | AddrOf lv -> belongs_of_lval lv
-    | UnOp (Belongs b, e) -> (b, e)::(belongs_of_exp e)
-    | UnOp (_, e) -> belongs_of_exp e 
-    | BinOp (_, e1, e2) -> (belongs_of_exp e1)@(belongs_of_exp e2)
-    | _ -> []
+    | UnOp (Belongs b, e)      -> (b, e)::(belongs_of_exp e)
+    | UnOp (_, e) 	       -> belongs_of_exp e 
+    | BinOp (_, e1, e2)        -> (belongs_of_exp e1)@(belongs_of_exp e2)
+    | _ 		       -> []
 
 and belongs_of_lval x =
   match x with

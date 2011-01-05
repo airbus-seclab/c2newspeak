@@ -39,7 +39,8 @@ EXE=c2newspeak npkstrip npkstats npkalc \
     npkfuns npktests npknull simpleai npksolver
 COMPONENTS=newspeak $(EXE)
 
-CLEANFILES=*~ bin/* lib/*~ lib/sys/*~ doc/*.html doc/*~ src/version.cmo src/*~
+CLEANFILES=*~ bin/* lib/*~ lib/sys/*~ doc/*.html doc/*~ src/version.cmo src/*~ \
+           bisect-report.xml bisect-report/*
 
 #rules
 .PHONY: clean doc lib
@@ -76,6 +77,9 @@ bin:
 
 $(COMPONENTS): src/version.ml
 	@$(MAKE) -s -C src -f $@.Makefile $(MAKECMDGOALS)
+
+bisect-report:
+	cd src; bisect-report `find ../tests/ -name "bisect*.out"` -xml-emma ../bisect-report.xml -html ../bisect-report
 
 doc: doc/index.html
 

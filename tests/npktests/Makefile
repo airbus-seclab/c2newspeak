@@ -24,7 +24,10 @@
 # email: charles.hymans@penjili.org
 #
 
+#TODO: use ../common.Makefile?
+
 all:
 	../../bin/npktests
 
 clean:
+	rm -f bisect*.out
