@@ -1346,15 +1346,13 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
                   , fst (T.attr_get t "last"))
           end
       in
+
       let lv_typopt, sub_typ_ind =  match range with 
-	  DirectRange (CInt _, Lval (Var str)) 
-	| DirectRange (Lval (Var str) , CInt _) -> 
-	    (*Very hacky, in order to get Univ_int, see merge_types*)
-	    Some str, ([], None)
-	| DirectRange (Lval _ , CInt _)
-	| DirectRange (CInt _, Lval _) -> 
-	    Npkcontext.report_error "normalize Loop(For(iter" "not handled yet"
-	| DirectRange _
+	  DirectRange (CInt _, CInt _) -> 
+	    None, (["standard";"integer"], None)	      
+	| DirectRange ( l ,CInt _) 
+	| DirectRange (CInt _,  l) 
+	| DirectRange (l, _) ->  Some l, ([], None)
 	| ArrayRange _    ->   None, (["standard";"integer"], None)
 	| SubtypeRange lv ->   None, (Symboltbl.make_name_of_lval lv, None)   
       in
@@ -1363,29 +1361,14 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 
       let basic_loop () = 
 	(*The while loop is possible with a counter incremention*)
-(*	let dp = [BasicDecl (ObjectDecl ( 
-			       [iter]
-				 , sub_typ_ind
-				   , Some (if is_rev then exp2 else exp1)
-				     , Constant
-			     )
-			    )
-		    , loc
-		 ]
-	in
-*)	
 	Sym.enter_context gtbl;
-	(*	  let ndp = normalize_decl_part dp in *)
-
-(*_________________*)
-	
 	let ndp = 
 	  let t = 
 	    match sub_typ_ind with 
 		( [], None ) -> begin
 		  match lv_typopt with 
-		      Some lv -> 
-			snd (normalize_exp (Lval (Var lv)))
+		      Some synt_exp -> 
+			snd (normalize_exp (synt_exp))
 		    | _ -> Npkcontext.report_error 
 			"basic_loop" "unreachable case"
 		end 

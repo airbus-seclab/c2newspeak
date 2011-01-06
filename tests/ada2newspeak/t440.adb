@@ -1,5 +1,3 @@
---TODO: le type la variable de boucle
--- FAUX belongs[-2147483648,2147483647]
 with T440a;
 use T440a;
 package body t440 is
