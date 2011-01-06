@@ -1333,12 +1333,18 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
       let (exp1, exp2) = match range with
 	| DirectRange (min, max) -> (min, max)
 	| ArrayRange n -> begin
-            let n = Symboltbl.make_name_of_lval n in
-            let n = mangle_sname n in
-            let (_,(_,t,_)) = Sym.find_variable_with_error_report gtbl n in
-              ( fst (T.attr_get t "first")
-                  , fst (T.attr_get t "last"))
-          end
+	    let n = Symboltbl.make_name_of_lval n in
+	    let n = mangle_sname n in
+              try 
+		let (_,(_,t,_)) = Sym.find_variable gtbl n in
+		  ( fst (T.attr_get t "first")
+                      , fst (T.attr_get t "last"))
+	      with Not_found -> 
+		(*ArrayRange range can in fact be a type range! *)
+		let t = snd (Sym.find_type gtbl n) in 
+		    ( fst (T.attr_get t "first")
+                      , fst (T.attr_get t "last"))
+	  end
 	| SubtypeRange lv -> begin
             let st = Symboltbl.make_name_of_lval lv in
             let t = subtyp_to_adatyp st in
