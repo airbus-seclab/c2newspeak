@@ -164,10 +164,8 @@ let translate compil_unit =
       (* Comparisons *)
       | Eq, C.Scalar t -> C.Binop (N.Eq t, c1, c2)
       | Gt, C.Scalar t -> C.Binop (N.Gt t, c1, c2)
-
       | And, C.Scalar _ -> translate_and e1 e2
       | Or , C.Scalar _ -> translate_or  e1 e2
-
       | Power , C.Scalar(N.Int _) -> begin
 	  match c2 with
 	      C.Const (C.CInt n) when
@@ -175,7 +173,7 @@ let translate compil_unit =
 		  C.Binop(N.MultI, c1, c1)
 	    | _ -> Npkcontext.report_error 
 		"Firstpass.translate_binop"
-		  "run-time operator not implemented"
+		  "run-time operator not implemented  (Power 1)"
 	end
 
       | Power , C.Scalar(N.Float sz) -> begin
@@ -185,16 +183,22 @@ let translate compil_unit =
 		  C.Binop(N.MultF sz, c1, c1)
 	    | _ -> Npkcontext.report_error 
 		"Firstpass.translate_binop"
-		  "run-time operator not implemented"
+		  "run-time operator not implemented (Power 2)"
 	end
 
-
+     | Mod , _ -> begin
+	 Npkcontext.report_warning "Firstpass.translate_binop"
+           "run-time operator Mod, no check yet";
+	 C.Binop (N.Mod, c1, c2)
+       end
+         
 
       (* | Power TO DO test 2nd postif when fst integer cf p.93*\) *)
-	  
-      | (Power | Mod ) ,_ ->
+      | Power  ,_ ->
           Npkcontext.report_error "Firstpass.translate_binop"
-            "run-time operator not implemented"
+           "run-time operator not implemented (Power 3)"
+
+ 
 
       | _ -> Npkcontext.report_error "Firstpass.translate_binop"
             "invalid operator and argument"

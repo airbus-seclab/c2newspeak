@@ -83,7 +83,7 @@ let add_p (pk, o) =
 let subtyp_to_adatyp gtbl n = 
   let n' = mangle_sname n in
   try
-    snd(Symboltbl.find_type gtbl n')
+    snd (Symboltbl.find_type gtbl n')
   with Not_found -> 
     begin
       Npkcontext.report_warning "ST2AT"
@@ -353,13 +353,21 @@ let rec normalize_exp ?expected_type exp =
         let t = subtyp_to_adatyp stn in
 	let (e, _) = normalize_exp ~expected_type:t exp in
           (e, t)
-    | Attribute (lv , "address", None) ->
-        let (nlv, tlv) = normalize_lval lv in
-        Ast.AddressOf (nlv, tlv), T.system_address
+    | Attribute (lv , "address", None) -> begin
+	try  
+	  let (nlv, tlv) = normalize_lval lv in
+	    (Ast.AddressOf (nlv, tlv), T.system_address)
+	with _ -> 
+	  Npkcontext.report_warning 
+	    "UNSOUND .... normalize_attribute 'address'" 
+	    "UNSOUND .....normalize_attribute 'address' ";
+	  (Ast.CInt (Newspeak.Nat.zero) , T.system_address)
+      end
+        
     | Attribute (lv, attr, Some exp) -> begin
-          let st = Symboltbl.make_name_of_lval lv in
-          let t = subtyp_to_adatyp st in
-          let one = Ast.CInt (Newspeak.Nat.one) in
+        let st = Symboltbl.make_name_of_lval lv in
+        let t = subtyp_to_adatyp st in
+        let one = Ast.CInt (Newspeak.Nat.one) in
           match attr with
             | "succ" -> ( Ast.Binary ( Ast.Plus
                                      , normalize_exp exp
@@ -632,6 +640,7 @@ and normalize_uop uop exp =
      | Not    -> Ast.Not(ne,t), TC.type_of_not t
 
 and normalize_fcall (n, params) expectedtype =
+
   (* Maybe this indexed expression is an array-value *)
   let n = Symboltbl.make_name_of_lval n in
   let n = mangle_sname n in
@@ -1089,7 +1098,9 @@ and normalize_basic_decl item loc =
        (compare(List.hd names) "unchecked_conversion" = 0)) -> 
       begin
 	match actuals with 
-	    (Some "source", Lval src)::(Some "target", Lval tgt)::[] -> 
+	    (Some "source", Lval src)::(Some "target", Lval tgt)::[]
+	  | (None, Lval src)::(None, Lval tgt)::[] -> 
+
 	      begin
 		let src_t = Symboltbl.make_name_of_lval src in	  
 		let tgt_t = Symboltbl.make_name_of_lval tgt in
@@ -1426,9 +1437,7 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 			    
 			  ) , loc
 	    ]
-	in
-	  (*_________________*)
-	  
+	in	  
 	let nblock = normalize_block ?return_type block in
 	let loop = [Ast.Loop ( Ast.While
 		( normalize_exp (
