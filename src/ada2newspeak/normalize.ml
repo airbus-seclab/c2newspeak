@@ -379,11 +379,18 @@ let rec normalize_exp ?expected_type exp =
         end
     | Attribute (lv, attr, None) -> begin
           let st = Symboltbl.make_name_of_lval lv in
-          let t = subtyp_to_adatyp st in
-          let (exp,t') = T.attr_get t attr in
+	  let typ = 
+	    try 
+	      let n = mangle_sname st in
+	      let (_,(_,t,_)) = Sym.find_variable gtbl n in
+		t
+	    with Not_found ->
+              subtyp_to_adatyp st 
+	  in
+          let (exp,t') = T.attr_get typ attr in
           let (exp',_) = normalize_exp exp in
-          (exp',t')
-        end
+	    (exp',t')
+      end
     | Aggregate _ ->
         Npkcontext.report_error "normalize_exp"
           "Array aggregate found without direct lvalue"
@@ -924,14 +931,22 @@ and normalize_params_cur param =
        else
 	 pack::p_typ 	  
   in
+  let add_pack_default p def =
+    match def with 
+	Some (Lval (Var x)) -> Some (Lval ( SName (Var p, x)))
+      | _ -> def
+  in
+      
     match (Sym.current gtbl) with
-      | Some x ->
+      | Some p ->
 	  { 
 	  formal_name  = param.formal_name
 	  ; mode  = param.mode
 	    (*Add package name only if not a Standard type*)
-	  ; param_type = add_pack x param 
-	  ; default_value =  param.default_value
+	  ; param_type = add_pack p param 
+	  ; default_value = add_pack_default 
+	                     p 
+	                     param.default_value
 	}
       | None ->
 	  param
