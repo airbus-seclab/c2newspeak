@@ -816,10 +816,12 @@ and normalize_typ_decl ident typ_decl loc =
 		   Sym.add_variable gtbl i loc new_t ~value ~no_storage:true
                 ) s
       end
+
   | IntegerRange(min, max) ->
       let range = eval_range (min, max) in
       let t = T.new_range range in
       Sym.add_type gtbl ident loc t
+
   | Record r -> begin
                   let r' = List.map
                              (fun (id, st) ->
@@ -1033,7 +1035,8 @@ and normalize_basic_decl item loc =
                       (fun x -> Sym.add_variable gtbl x loc t
                       ) ident_list;
                       Ast.Constant
-		  | _ ->   Npkcontext.report_error "Exit"
+		  | _ ->  
+		      Npkcontext.report_error "Exit"
 		      "Normalize: ObjectDecl Constant"
 	end
 	in
@@ -1413,7 +1416,7 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 			Npkcontext.report_warning "NonStaticExpression"
 		     	  "Normalize: ObjectDecl Constant";
 			Sym.add_variable gtbl iter loc t;
-			Ast.Constant
+			Ast.Variable
 		    | _ -> Npkcontext.report_error "Exit"
 			"Normalize: ObjectDecl Constant"
 	  in	    

@@ -454,13 +454,14 @@ let is_unknown typ =
 (* Number of values in a type *)
 let length_of typ = match (typ.base.trait, typ.range) with
 | Signed       _  , Some r -> sizeof r
+| Signed       r  , None -> sizeof (A.IntegerRangeConstraint r)
 | Univ_int        , Some r -> sizeof r
 | Enumeration vals, _      -> Newspeak.Nat.of_int (List.length vals)
 | Array        _  , _
 | Record       _  , _
 | Float        _  , _
 | Unknown      _  , _
-| Signed       _  , _
+(*| Signed       _  , _ *)
 | Access       _  , _
 | Univ_int        , _
 | Univ_real       , _
@@ -605,7 +606,7 @@ let rec translate t = match t.base.trait with
         match is with
         | [] -> invalid_arg "translate"
         | i0::i ->
-            List.fold_left (fun (ar:Cir.typ) (ind:t) ->
+	    List.fold_left (fun (ar:Cir.typ) (ind:t) ->
               Cir.Array ( ar
                         , Some (Newspeak.Nat.to_int
                                    (length_of ind)
@@ -686,15 +687,15 @@ let rec attr_get typ attr =
     | Enumeration v, "first" -> const_int (snd (List.hd v)), typ
     | Enumeration v, "last"  -> const_int (snd (ListUtils.last v)), typ
     | Array (_,inds) , ("first"|"last"|"length")  ->
-        begin
+	begin
           let ind = match inds with
             | []  -> invalid_arg "attr_get"
             | [x] -> x
             | _ -> Npkcontext.report_error "attr_get"
-                     "Attribute for matrix types"
+                "Attribute for matrix types"
           in
-          if attr = "length" then
-            A.CInt (length_of ind), universal_integer
+            if attr = "length" then
+              A.CInt (length_of ind), universal_integer
           else
             attr_get ind attr
         end
