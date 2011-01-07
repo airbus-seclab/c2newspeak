@@ -1029,7 +1029,7 @@ and normalize_basic_decl item loc =
 	let t = merge_types norm_subtyp_ind in
 	let status = begin
           match exp with
-	      (*TODO:  add a test for this  *)
+	      (*TODO:  add a test for this*)
             | Aggregate _ -> 
 		List.iter (fun x -> Sym.add_variable gtbl x loc t) ident_list;
 		Ast.Constant
@@ -1549,6 +1549,18 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
   let  handle_others r_lv aff prefs_idx lists_idx =
     let res = ref [] in 
@@ -1799,73 +1811,102 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
   let record_case _ =
     let module FieldSet = Set.Make (String) in
     (* (selector*exp) list --> (string*exp) list*exp option *)
-    let (assoc_list,other) = List.fold_left
-      (fun (fvl,others_opt) (selector, value) ->
-      match selector with
-      | AggrField  f -> begin
-                          if (others_opt) <> None then
-                            Npkcontext.report_error "normalize:aggregate"
-                              "'others' clause should be the last one";
-                          (f, value)::fvl,others_opt
-                        end
-      | AggrOthers   -> begin
-                          if (others_opt) <> None then
-                            Npkcontext.report_error "normalize:aggregate"
-                            "There shall be only one 'others' clause";
-                          fvl,Some value
-                        end
-      | _ -> Npkcontext.report_error "normalize:aggregate"
-               "Expected a field name in aggregate"
-    ) ([],None) bare_assoc_list in
-    let other_list = match other with
-      | None           -> []
-      | Some other_exp ->
-          begin
-            let flds = T.all_record_fields t_lv in
-            let mk_set l =
-              List.fold_left (fun x y -> FieldSet.add y x)
-                             FieldSet.empty l
-            in
-            let all_fields = mk_set flds in
-            let defined    = mk_set (List.map fst assoc_list) in
-            let missing_others =
-              FieldSet.elements (FieldSet.diff all_fields defined) in
-            List.map (fun f -> (f, other_exp)) missing_others
-          end
+
+      
+    let filter_aggregate sel_vals =
+      List.fold_left
+	(fun (fvl,others_opt) (selector, value) ->
+	   match selector with
+	     | AggrField  f -> begin
+		 if (others_opt) <> None then
+                   Npkcontext.report_error "normalize:aggregate"
+                     "'others' clause should be the last one";
+		 (f, value)::fvl,others_opt
+               end
+	     | AggrOthers   -> begin
+		 if (others_opt) <> None then
+                   Npkcontext.report_error "normalize:aggregate"
+                     "There shall be only one 'others' clause";
+		 fvl,Some value
+               end
+	     | _ -> Npkcontext.report_error "normalize:aggregate"
+		 "Expected a field name in aggregate"
+	) ([],None) sel_vals
     in
+
+    
+    let (assoc_list,other) = filter_aggregate bare_assoc_list in
+      
+    let getfields_other tlv assoc_flds value_opt =
+      match value_opt with
+	| None           -> []
+	| Some other_exp ->
+            begin
+              let flds = T.all_record_fields tlv in
+              let mk_set l =
+		List.fold_left (fun x y -> FieldSet.add y x)
+                  FieldSet.empty l
+              in
+              let all_fields = mk_set flds in
+              let defined    = mk_set assoc_flds in
+              let missing_others =
+		FieldSet.elements (FieldSet.diff all_fields defined) in
+		List.map (fun f -> (f, other_exp)) missing_others
+            end
+    in
+      
+    let other_list =  getfields_other t_lv  (List.map fst assoc_list) other in
+
+
+
+
+
+
+    let rec  handle_record lv tlv  aggrs = 
       List.flatten 
-   	(List.rev_map (fun (aggr_fld, aggr_val) ->
-	(* id.aggr_fld <- aggr_v *)
-	let (off, tf) = T.record_field t_lv aggr_fld in	
-	  match aggr_val with
-	      Aggregate (NamedAggr ((AggrOthers,   
-		Aggregate (NamedAggr ((AggrOthers, va)::[])))::[])) 
-	    |  Aggregate (NamedAggr ((AggrOthers, va)::[])) when (T.is_array tf) ->
-		   begin
-		     let c, ids = T.extract_array_types tf in
-		     let all_values = List.map (
-		       fun x ->
-			 let vals = T.all_values x in
-			   List.map (fun y -> (Ast.CInt y,x)) vals
-		     ) ids 
-		     in
-		     let record_lv = Ast.RecordAccess (nlv, off, tf) in
-		     let affected = match va with  
-			 CInt _ 
-		       | CFloat _  
-		       | Lval (Var _ ) -> normalize_exp ~expected_type:c va
-		       | _ -> Npkcontext.report_error "normalize:assign aggregate"
-			   "Expected an integer or a float"
-		     in
-		      	 handle_others record_lv affected [] (List.rev all_values)
+   	(List.rev_map (
+	   fun (aggr_fld, aggr_val) ->
+	     (* id.aggr_fld <- aggr_v *)
+	     let (off, tf) = T.record_field tlv aggr_fld in	
+	       match aggr_val with
+		   Aggregate (NamedAggr ((AggrOthers,   
+					  Aggregate (NamedAggr ((AggrOthers, va)::[])))::[])) 
+		 |  Aggregate (NamedAggr ((AggrOthers, va)::[])) when (T.is_array tf) ->
+		      begin
+			let c, ids = T.extract_array_types tf in
+			let all_values = List.map (
+			  fun x ->
+			    let vals = T.all_values x in
+			      List.map (fun y -> (Ast.CInt y,x)) vals
+			) ids 
+			in
+			let record_lv = Ast.RecordAccess (lv, off, tf) in
+			let affected = match va with  
+			    CInt _ 
+			  | CFloat _  
+			  | Lval (Var _ ) -> normalize_exp ~expected_type:c va
+			  | _ -> Npkcontext.report_error "normalize:assign aggregate"
+			      "Expected an integer or a float"
+			in
+		      	  handle_others record_lv affected [] (List.rev all_values)
 	              end
-		 
-	    | _ -> 
-		(*cas ususel *)
-		let v = normalize_exp ~expected_type:tf aggr_val in
-		  [Ast.Assign (Ast.RecordAccess (nlv, off, tf), v), loc]
+			
+		 |  Aggregate (NamedAggr assoc_l) when (T.is_record tf) ->
+		      let record_lv = Ast.RecordAccess (lv, off, tf) in
+		      let (assoc_l,other) = filter_aggregate assoc_l in
+		      let other_l = getfields_other tf (List.map fst assoc_l) other in
+			
+			handle_record record_lv tf (assoc_l @ other_l) 
+	
+		 | _ -> 
+		     (*cas ususel *)
+		     let v = normalize_exp ~expected_type:tf aggr_val in
+		       [Ast.Assign (Ast.RecordAccess (lv, off, tf), v), loc]	    
+	 ) aggrs
 	)
-	   (assoc_list @ other_list) )
+
+    in 
+      handle_record nlv t_lv  (assoc_list @ other_list) 
 	(* end of record_case *)
   in
     if      T.is_array  t_lv then array_case  ()
