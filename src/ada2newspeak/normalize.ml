@@ -934,7 +934,8 @@ and normalize_params_cur param =
                   "chain of selected names is too deep"
 	    
   in
-  (*This function adds packing name info in parameter type label of specifications, requires: type is in standard, and type is not already precised by a package *)
+  (*This function adds packing name info in parameter type label of specifications, 
+    requires: type is in standard, and type is not already precised by a package *)
   let add_pack pack param =  
     let p_typ = param.param_type in
        if (is_basic_or_pref_typ p_typ) then
@@ -1275,46 +1276,81 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
   | NullInstr    -> []
   | ReturnSimple -> [Ast.ReturnSimple, loc]
   | Assign(lv, Aggregate (NamedAggr bare_assoc_list)) ->
-      let (nlv, tlv) = normalize_lval lv in
-      normalize_assign_aggregate nlv tlv bare_assoc_list loc
+      let (nlv, t_lv) = normalize_lval lv in
+      normalize_assign_agr nlv t_lv bare_assoc_list loc
   | Assign(lv, Aggregate (PositionalAggr exp_list)) -> 
-      let (lv', t_lv) = normalize_lval lv in
-      let tc, ti = match T.extract_array_types t_lv with
-	| (c_t, [i]) -> c_t, i
-	| _ -> Npkcontext.report_error "normalize_instr" "unexpected matrix type"
-      in
-      let all_values  = T.all_values ti in
-	List.flatten (
-	  List.map2 (fun type_val exp ->
-		       let k = insert_constant (T.IntVal type_val) in
-			 match exp with 
-			     Aggregate (NamedAggr  assoc_list) when (T.is_record tc) ->   
-			       let nlv = Ast.ArrayAccess (lv', [k]) in
-				 normalize_assign_aggregate nlv tc assoc_list loc
+      let (nlv, t_lv) = normalize_lval lv in
 
-			   | Aggregate (PositionalAggr exps) when (T.is_record tc) ->
-			       (*CHECK tc is a record type t410*)
-			       (*TO DO: for matrix initialization: 
-				 build AggrExp for the selector*)
-			       (* *) 
-			       let nlv = Ast.ArrayAccess (lv', [k]) in
-				 (* let tlv = tc in *)
-			       let fields = T.all_record_fields tc in
-			       let assoc_list = List.map2 (fun x y ->
-							     (AggrField x,y)
-							  ) fields exps 
-			       in 
-  				 normalize_assign_aggregate nlv tc assoc_list loc
-
-			   | Aggregate (PositionalAggr _) | Aggregate (NamedAggr _)  -> 
-			       Npkcontext.report_error "normalize_instr, Assign" 
-				 "array as compound not implemented yet"
-			   | _ -> 
-			       let v = normalize_exp exp in       		  
-				 [Ast.Assign (Ast.ArrayAccess (lv', [k]), v), loc]
-		    ) all_values exp_list
-	)
+	if (T.is_array t_lv) then 
+	  begin
+	    let tc, ti = 
+	      match T.extract_array_types t_lv with
+		| (c_t, [i]) -> c_t, i
+		| _ -> Npkcontext.report_error 
+		    "normalize_instr" 
+		      "unexpected matrix type"
+	    in
+	    let all_values  = T.all_values ti in
+	     List.flatten ( 
+	      List.map2 (
+		fun type_val exp ->
+		  let k = insert_constant (T.IntVal type_val) in
+		    match exp with 
+			Aggregate(NamedAggr assoc_list) when (
+			  T.is_record tc) ->   
+			    let alv = Ast.ArrayAccess (nlv, [k]) in
+			      normalize_assign_agr 
+				alv 
+				tc 
+				assoc_list 
+				loc
+			     
+			| Aggregate (PositionalAggr exps) when (
+			    T.is_record tc) ->
+			    (*CHECK tc is a record type t410*)
+			    (*TO DO: for matrix initialization: 
+			      build AggrExp for the selector*)
+			    let alv = Ast.ArrayAccess (nlv, [k]) in
+			    let fields = T.all_record_fields tc in
+			    let assoc_list = List.map2 (fun x y ->
+							  (AggrField x,y)
+						       ) fields exps 
+			    in 
+  			      normalize_assign_agr 
+				alv 
+				tc 
+				assoc_list 
+				loc
+			   
+		   | Aggregate (PositionalAggr _) 
+		   | Aggregate (NamedAggr _)  -> 
+		       Npkcontext.report_error "normalize_instr, Assign" 
+			 "array as compound not implemented yet"
+		   | _ -> 
+		       let v = normalize_exp exp in 
+			 [Ast.Assign (Ast.ArrayAccess
+			(nlv, [k]), v), loc]
+	      ) all_values exp_list
+	     )
+	  end
+	else if (T.is_record t_lv) then 
+	  begin
+	    let fields = List.map (fun x -> AggrField x)
+	      (T.all_record_fields t_lv)
+	    in
+	      try
+		let assoc_l = List.map2 (fun x y -> (x,y))
+		  fields exp_list
+		in 
+		  normalize_assign_agr nlv t_lv assoc_l loc
+	      with _ -> Npkcontext.report_error "normalize_instr"
+	                                        "List.assoc 2 failed"
+	  end
+	else 
+	  Npkcontext.report_error  "normalize_instr"
+	    "Posit. case UNexpected type "
 	  
+		  
   | LvalInstr(ParExp(lv, params)) ->
       let n = Symboltbl.make_name_of_lval lv in
       let n = mangle_sname n in
@@ -1548,20 +1584,7 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
+and normalize_assign_agr nlv t_lv bare_assoc_list loc =
   let  handle_others r_lv aff prefs_idx lists_idx =
     let res = ref [] in 
     let rec handle_others_aux ps_idx  ls_idx  = 
@@ -1682,7 +1705,7 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
 				let (fld, value) = match el with 
 				    (AggrField f, v) -> (f,v) 
 				  | _ ->  Npkcontext.report_error 
-				      "normalize_assign_aggregate"
+				      "normalize_assign_agr"
 					"Unexpected case case"
 				in
 				let value = normalize_exp value in	
@@ -1693,7 +1716,7 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
 				List.map (fun x -> assign_filed x ) ll
  				  
 			  | Aggregate (NamedAggr ((AggrExp _, _)::[])) ->
-			      Npkcontext.report_error "normalize_assign_aggregate"
+			      Npkcontext.report_error "normalize_assign_agr"
 				"Array with aggregate expression not done yet"
 				
 	      		  | Aggregate(NamedAggr((AggrOthers, only_oth)::[])) -> 
@@ -1703,14 +1726,14 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
 				  | Aggregate(NamedAggr((AggrOthers, z)::[])) -> 
 				      has_only_other z
 				  | _ -> Npkcontext.report_error 
-				      "normalize_assign_aggregate"
+				      "normalize_assign_agr"
 					"only int handled in array with others"
 			      in
 			      let othval = 
 				match (has_only_other only_oth) with
 				    Some i -> normalize_exp i 
 				  | _ -> Npkcontext.report_error 
-				      "normalize_assign_aggregate"
+				      "normalize_assign_agr"
 					"Other case only handled when 
                                            only used with others"
 			      in
@@ -1721,7 +1744,7 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
 				     	let idxes = T.all_values ti' in
 					  idxes::(depiler_type tc')
 				    | _  ->  Npkcontext.report_error 
-					"normalize_assign_aggregate"
+					"normalize_assign_agr"
 					  "Case not handled"
 				else []
 			      in
@@ -1729,7 +1752,7 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
 			      let rec bimapping f l m  = 
 				match l with 
 				    [] ->   Npkcontext.report_error 
-				      "normalize_assign_aggregate" 
+				      "normalize_assign_agr" 
 				      "unexpected empty list case"
 				  | hd::[] -> List.map (f hd) m
 				  | hd::tl ->
@@ -1808,11 +1831,13 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
 	    
     (* end of array_case *)
   in
+
+
+
+
   let record_case _ =
     let module FieldSet = Set.Make (String) in
     (* (selector*exp) list --> (string*exp) list*exp option *)
-
-      
     let filter_aggregate sel_vals =
       List.fold_left
 	(fun (fvl,others_opt) (selector, value) ->
@@ -1911,7 +1936,7 @@ and normalize_assign_aggregate nlv t_lv bare_assoc_list loc =
   in
     if      T.is_array  t_lv then array_case  ()
     else if T.is_record t_lv then record_case ()
-    else Npkcontext.report_error "normalize_assign_aggregate"
+    else Npkcontext.report_error "normalize_assign_agr"
            "Expecting an array or a record as lvalue"
 
 and normalize_block ?return_type ?(force_lval = false) block =
