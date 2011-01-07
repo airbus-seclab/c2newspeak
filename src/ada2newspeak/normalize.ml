@@ -1029,6 +1029,7 @@ and normalize_basic_decl item loc =
 	let t = merge_types norm_subtyp_ind in
 	let status = begin
           match exp with
+	      (*TODO:  add a test for this  *)
             | Aggregate _ -> 
 		List.iter (fun x -> Sym.add_variable gtbl x loc t) ident_list;
 		Ast.Constant
