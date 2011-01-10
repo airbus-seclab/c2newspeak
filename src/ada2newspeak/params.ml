@@ -45,6 +45,7 @@ let ret_ident = "!return"
 (*-----------------*)
 
 let ada_suffix = ".adb"
+let ada_spec_suffix = ".ads"
 let npko_suffix = ".no"
 
 (*------------------------*)

@@ -75,7 +75,35 @@ let compile (fname: string): Npkil.t =
       Sys.chdir dir_name
     end;
     let ast = parse base_name in
-    let norm_tree = normalization fname ast in
+      (*Find a cleaner way to Go into the spec in order to add with Clause*)
+    let spec_name = (Filename.chop_suffix  base_name  
+		       Params.ada_suffix)^Params.ada_spec_suffix 
+    in
+    let spec_clauses = 
+      if (Sys.file_exists spec_name)
+      then 
+	let (spec_cls, _, _) = parse spec_name in
+	  spec_cls
+      else []
+    in
+    let (clauses, libs, locat) = ast in
+    let is_in_clauses cls y = 
+      let eq_clause cl y = 
+	match cl, y with 
+	    AdaSyntax.With(s1, _), AdaSyntax.With(s2, _) 
+	  | AdaSyntax.UseContext s1 , AdaSyntax.UseContext s2 -> compare s1 s2 = 0
+	  | _ -> false 
+      in
+	List.exists (fun x -> eq_clause x y) cls
+    in
+    let update_clauses = 
+      List.fold_left (
+	fun x y -> if ( is_in_clauses x y) then clauses else y::clauses
+      ) clauses spec_clauses  
+    in 
+    let n_ast = (update_clauses, libs, locat) in
+
+    let norm_tree = normalization fname n_ast in
     let prog = firstpass_translate fname norm_tree in
     let tr_prog = translate prog in
       if dir_name <> "." then begin

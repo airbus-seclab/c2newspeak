@@ -38,6 +38,7 @@
 (** {1 File extensions} *)
 
 val ada_suffix : string
+val ada_spec_suffix : string
 val npko_suffix : string
 
 
