@@ -35,5 +35,5 @@ all: $(DIR)
 clean: $(DIR)
 
 $(DIR):
-	@$(MAKE) -s -C $@ $(MAKECMDGOALS)
+	@$(MAKE) -s -C $@
 

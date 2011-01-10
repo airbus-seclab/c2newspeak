@@ -21,13 +21,13 @@
 # Sarah Zennou
 # EADS Innovation Works - SE/IS
 # 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
-# email: charles.hymans@penjili.org
+# email: sarah(dot)zennou(at)eads(dot)net
 #
 
 TARGET=npkmerger
-DIRS=newspeak/ utils/ npkmerger
+DIRS=newspeak/ utils/ npkmerger/
 FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
-      utils/standardApplication newspeak/newspeak npkbugfind/npkmerger
+      utils/standardApplication newspeak/newspeak npkmerger/npkmerger
 LIBX=nums.cmxa str.cmxa
 
 include common.Makefile

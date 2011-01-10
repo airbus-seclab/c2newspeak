@@ -36,7 +36,7 @@ OCAMLDOC=ocamldoc
 #FILES
 EXE=c2newspeak npkstrip npkstats npkalc \
     npkcheck npkbugfind npkdiff ada2newspeak npkpointer npkflow \
-    npkfuns npktests npknull simpleai npksolver 
+    npkfuns npktests npknull simpleai npksolver npkmerger
 COMPONENTS=newspeak $(EXE)
 
 CLEANFILES=*~ bin/* lib/*~ lib/sys/*~ doc/*.html doc/*~ src/version.cmo src/*~ \
@@ -76,7 +76,7 @@ bin:
 	@mkdir bin
 
 $(COMPONENTS): src/version.ml
-	@$(MAKE) -s -C src -f $@.Makefile $(MAKECMDGOALS)
+	$(MAKE) -s -C src -f $@.Makefile 
 
 bisect-report:
 	cd src; bisect-report `find ../tests/ -name "bisect*.out"` -xml-emma ../bisect-report.xml -html ../bisect-report

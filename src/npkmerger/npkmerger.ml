@@ -27,11 +27,13 @@ module N = Newspeak
 
 let check_compatibility prog1 prog2 =
   if prog1.N.src_lang <> prog2.N.src_lang then 
-    raise (Invalid_argument "different source language");
-  if prog1.N.ptr_sz <> prog2.N.src_lang then
+    raise (Invalid_argument "different source languages");
+  if prog1.N.ptr_sz <> prog2.N.ptr_sz then
     raise (invalid_arg "different configuration (pointer size)")
 
-let input     = {mutable fst: string; mutable snd: string} 
+type couple = {mutable fst : string; mutable snd : string}
+let debug = ref false
+let input     = {fst = ""; snd = ""} 
 let speclist  = [("--debug", Arg.Set debug, "prints debug information")]
 let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file1.npk file2.npk"
 
@@ -41,13 +43,13 @@ let anon_fun f =
     if input.snd = "" then input.snd <- f
     else invalid_arg "you can only analyse a pair of files at a time"
  
-let merge p1 p2 = 
+let merge _p1 _p2 = 
  invalid_arg "Npkmerger.merge: to continue"
 
 let process () = 
   let p1 = Newspeak.read input.fst in
   let p2 = Newspeak.read input.snd in
     check_compatibility p1 p2;
-    merge prog1 prog2
+    merge p1 p2
 
 let _ = StandardApplication.launch [] anon_fun usage_msg process
