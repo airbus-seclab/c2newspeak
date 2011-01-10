@@ -34,6 +34,8 @@ all: $(DIR)
 
 clean: $(DIR)
 
+#WARNING: do not remove the $(MAKCMDGOALS) variable, it is useful to propagate
+#the exact rule
 $(DIR):
-	@$(MAKE) -s -C $@
+	@$(MAKE) -s -C $@ $(MAKECMDGOALS)
 

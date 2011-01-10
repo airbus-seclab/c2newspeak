@@ -75,8 +75,15 @@ bin/lib/assert.h:
 bin:
 	@mkdir bin
 
+#WARNING: do not remove the $(MAKECMDGOALS) variable, it is useful to propagate
+#the rule.
+#For instance, both rules 'clean' and 'all' have the prerequisite $(COMPONENTS)
+#When doing make clean, this rule will be called with $(MAKECMDGOALS) 
+#equal to clean
+#Whereas, when doing make all, this rule will be called with $(MAKECMDGOALS) 
+#equal to all
 $(COMPONENTS): src/version.ml
-	$(MAKE) -s -C src -f $@.Makefile 
+	@$(MAKE) -s -C src -f $@.Makefile $(MAKECMDGOALS)
 
 bisect-report:
 	cd src; bisect-report `find ../tests/ -name "bisect*.out"` -xml-emma ../bisect-report.xml -html ../bisect-report
