@@ -21,8 +21,21 @@
 #  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
 #  email: charles.hymans@penjili.org
 
-COMMAND=sh $*.cmd
-TESTS=000
+C2NEWSPEAK=../../bin/c2newspeak
 
-include ../common.Makefile
+COMMAND=$(MAKE) -s $*.CMD
+TESTS=000 001
+.SILENT: $(TESTS)
 
+check: $(TESTS)
+
+000:
+	if $(C2NEWSPEAK) -I 000.c >/dev/null 2>&1; then echo failed; false; else cat 000.spec > 000.bak; true; fi
+	touch 000
+
+001:
+	$(C2NEWSPEAK) -c 000.c && $(C2NEWSPEAK) 000.no
+	touch 001
+
+clean:
+	rm -rf *.bak *.no *.npk $(TESTS)
