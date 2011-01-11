@@ -23,33 +23,39 @@
   email: sarah(dot)zennou(at)eads(dot)net
 *)
 
-module N = Newspeak
+module N      = Newspeak
+let debug     = ref false
+let print     = ref false
+let input     = ref []
+let output    = ref "a.npk"
+let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file1.npk file2.npk ..."
+let speclist  = [
+  ("--debug", Arg.Set debug, "prints debug information");
+  ("--print", Arg.Set print, "prints output");
+  ("-o", Arg.Set_string output, "gives a name to the output (default is "^(!output)^")")]
 
-let check_compatibility prog1 prog2 =
-  if prog1.N.src_lang <> prog2.N.src_lang then 
-    raise (Invalid_argument "different source languages");
-  if prog1.N.ptr_sz <> prog2.N.ptr_sz then
-    raise (invalid_arg "different configuration (pointer size)")
+let check progs =
+  if !debug then print_endline "Checking compatibility of programs...";
+  if List.length progs < 2 then 
+    raise (Invalid_argument "give at least two npk files to merge");
+  let p = List.hd progs in
+  let same p' =
+    p.N.src_lang = p'.N.src_lang && p.N.ptr_sz = p'.N.ptr_sz
+  in
+  if not (List.for_all same (List.tl progs)) then 
+    raise (Invalid_argument "different configurations (pointer size or source language)")
 
-type couple = {mutable fst : string; mutable snd : string}
-let debug = ref false
-let input     = {fst = ""; snd = ""} 
-let speclist  = [("--debug", Arg.Set debug, "prints debug information")]
-let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file1.npk file2.npk"
-
-let anon_fun f = 
-  if input.fst = "" then input.fst <- f
-  else 
-    if input.snd = "" then input.snd <- f
-    else invalid_arg "you can only analyse a pair of files at a time"
+let anon_fun (f: N.fid) = 
+  input := f::!input
  
-let merge _p1 _p2 = 
+let merge _progs = 
+if !debug then print_endline "Merging...";
  invalid_arg "Npkmerger.merge: to continue"
 
 let process () = 
-  let p1 = Newspeak.read input.fst in
-  let p2 = Newspeak.read input.snd in
-    check_compatibility p1 p2;
-    merge p1 p2
+  let progs = List.map Newspeak.read !input in
+    check progs;
+    let p = merge progs in
+    if !print then Newspeak.dump p
 
-let _ = StandardApplication.launch [] anon_fun usage_msg process
+let _ = StandardApplication.launch speclist anon_fun usage_msg process
