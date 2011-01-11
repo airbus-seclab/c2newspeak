@@ -31,8 +31,6 @@
   email: sarah (dot) zennou (at) eads (dot) net
 *)
 
-open Npkcontext
-
 let compile fname =
   let prog = Compiler.compile fname in
     if (!Npkcontext.verb_npko) then begin
@@ -52,7 +50,7 @@ let extract_no fname =
     let no = create_no fname in
     let prog = compile fname in
       Npkil.write no prog;
-      dump_xml_warns ();
+      Npkcontext.dump_xml_warns ();
       no
   end
 
@@ -63,13 +61,13 @@ let execute () =
 	when !Npkcontext.compile_only && (!Npkcontext.output_file <> "") ->
 	  let prog = compile file in
 	    Npkil.write !Npkcontext.output_file prog;
-	    dump_xml_warns ()
+	    Npkcontext.dump_xml_warns ()
 	      
     | files ->
 	let nos = List.map extract_no files in
 	  if not !Npkcontext.compile_only then begin 
 	    Linker.link nos;
-	    dump_xml_warns ()
+	    Npkcontext.dump_xml_warns ()
 	  end
 	    
 let _ =
