@@ -273,11 +273,7 @@ let parse_specification name =
 	res
     end
     else
-      
-
       extract_subprog_spec (File_parse.parse body_name)
-
-
   in
     match spec_ast with
       | (_, Spec(_), _) -> spec_ast

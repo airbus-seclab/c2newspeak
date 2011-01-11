@@ -86,24 +86,30 @@ let compile (fname: string): Npkil.t =
 	  spec_cls
       else []
     in
+
     let (clauses, libs, locat) = ast in
-    let is_in_clauses cls y = 
+      
+    let not_in_clauses cls y = 
       let eq_clause cl y = 
 	match cl, y with 
 	    AdaSyntax.With(s1, _), AdaSyntax.With(s2, _) 
 	  | AdaSyntax.UseContext s1 , AdaSyntax.UseContext s2 -> compare s1 s2 = 0
 	  | _ -> false 
       in
-	List.exists (fun x -> eq_clause x y) cls
+	List.for_all (fun x -> not (eq_clause x y)) cls
     in
-    let update_clauses = 
+         
+    let added_clauses = 
       List.fold_left (
-	fun x y -> if ( is_in_clauses x y) then clauses else y::clauses
-      ) clauses spec_clauses  
+	fun x y -> if ( not_in_clauses clauses y) then  y::x else x
+      ) [] spec_clauses  
     in 
-    let n_ast = (update_clauses, libs, locat) in
+
+    let updated_clauses =   List.append clauses (List.rev added_clauses) in
+    let n_ast = ( updated_clauses, libs, locat) in
 
     let norm_tree = normalization fname n_ast in
+
     let prog = firstpass_translate fname norm_tree in
     let tr_prog = translate prog in
       if dir_name <> "." then begin
