@@ -38,6 +38,7 @@ NPKDIFF=../../bin/npkdiff
 NPKPOINTER=../../bin/npkpointer
 SIMPLEAI=../../bin/simpleai
 NPKSOLVER=../../bin/npksolver
+NPKMERGER=../../bin/npkmerger
 
 ifeq ($(strip $(DIFF)),)
 DIFF=diff $*.spec $*.bak
@@ -45,7 +46,7 @@ endif
 
 TESTS.SPEC=$(addsuffix .spec, $(TESTS))
 CLEANFILES+=$(TESTS) $(addsuffix .bak, $(TESTS)) *.no \
-            result *~ a.npk b.npk *.cmi *.cmo bisect*.out
+            result *~ a.npk b.npk *-a.npk *-b.npk *.cmi *.cmo bisect*.out
 
 .SILENT: $(TESTS)
 .PHONY: $(TESTS.SPEC)

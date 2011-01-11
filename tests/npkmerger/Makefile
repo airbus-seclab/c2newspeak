@@ -1,6 +1,6 @@
 #  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
 #  well-suited for static analysis.
-#  Copyright (C) 2007  Charles Hymans, Olivier Levillain
+#  Copyright (C) 2011 Sarah Zennou
 #  
 #  This library is free software; you can redistribute it and/or
 #  modify it under the terms of the GNU Lesser General Public
@@ -16,26 +16,14 @@
 #  License along with this library; if not, write to the Free Software
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #
-#  Charles Hymans
-#  EADS Innovation Works - SE/CS
+#  Sarah Zennou
+#  EADS Innovation Works - SE/IS
 #  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
-#  email: charles.hymans@penjili.org
+#  email: sarah(dot)zennou(at)eads(dot)net
 
-C2NEWSPEAK=../../bin/c2newspeak
-
-COMMAND=$(MAKE) -s $*.CMD
-TESTS=000 001
-.SILENT: $(TESTS)
-
-check: $(TESTS)
-
-000:
-	if $(C2NEWSPEAK) -I 000.c >/dev/null 2>&1; then echo failed; false; else cat 000.spec > 000.bak; true; fi
-	touch 000
-
-001:
-	$(C2NEWSPEAK) -c 000.c && $(C2NEWSPEAK) 000.no
-	touch 001
-
-clean:
-	rm -rf *.bak *.no *.npk $(TESTS)
+COMMAND=$(C2NEWSPEAK) `[ -e $*.in0 ] && cat $*.in0` $*-a.c -o $*-a.npk > /dev/null 2>&1; \
+	$(C2NEWSPEAK) `[ -e $*.in0 ] && cat $*.in0` $*-b.c -o $*-b.npk > /dev/null 2>&1; \
+        $(NPKMERGER) --print -o $*.npk `[ -e $*.in ] && cat $*.in` $*-a.npk $*-b.npk 
+PREREQ=%-a.c %-b.c
+TESTS=000
+include ../common.Makefile

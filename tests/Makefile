@@ -1,7 +1,7 @@
 #
 # C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
 # well-suited for static analysis.
-# Copyright (C) 2007  Charles Hymans, Olivier Levillain
+# Copyright (C) 2007, 2011  Charles Hymans, Olivier Levillain, Sarah Zennou
 # 
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -23,10 +23,15 @@
 # 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
 # email: charles.hymans@penjili.org
 #
+# Sarah Zennou
+# EADS Innovation Works - SE/IS
+# 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
+# email: sarah(dot)zennou(at)eads(dot)net
+#
 
 DIR=c2newspeak mult-files lowspeak npkstats mem_opt npkcheck \
     npkbugfind npkdiff newspeak npkstrip ada2newspeak npkpointer options \
-    npkflow npkfuns npktests npknull simpleai npksolver npkalc ulimit
+    npkflow npkfuns npktests npknull simpleai npksolver npkalc npkmerger ulimit
 
 .PHONY: $(DIR)
 
