@@ -359,6 +359,11 @@ let system_address = new_derived (universal_integer)
 let integer_first = Newspeak.Nat.of_string "-2147483648"
 let integer_last  = Newspeak.Nat.of_string  "2147483647"
 
+
+let float_first = -3.40282E+38
+let float_last  = 3.40282E+38
+
+
 let integer = new_range (A.IntegerRangeConstraint(integer_first, integer_last))
 
 let boolean = new_enumerated ["true" ; "false"]
@@ -702,19 +707,23 @@ let rec attr_get typ attr =
     | Float digits , "digits" -> const_nat digits, universal_integer
     | Float _ , "safe_small"  -> A.CFloat (min_float), universal_real
     | Float _ , "safe_large"  -> A.CFloat (max_float), universal_real
-    | Float _ , "first"       ->
+    | Float _ , "first"       -> 
         begin
           match typ.range with
           | Some (A.FloatRangeConstraint (x,_)) -> A.CFloat x, universal_real
-          | _ -> Npkcontext.report_error "attr_get"
+          | None -> ( A.CFloat float_first, std_float)
+	  | _ -> Npkcontext.report_error "attr_get"
                      "Unconstrained subtype has no 'first attribute"
         end
     | Float _ , "last"       ->
-        begin
+	begin
           match typ.range with
           | Some (A.FloatRangeConstraint (_,y)) -> A.CFloat y, universal_real
-          | _ -> Npkcontext.report_error "attr_get"
-                     "Unconstrained subtype has no 'last attribute"
+          | None -> ( A.CFloat float_last, std_float)
+	  | _ ->
+	      Npkcontext.report_error "attr_get"
+                "Unconstrained subtype has no 'last attribute"
+	   
         end
     | _             , "size"  -> let sz = Cir.size_of_typ (translate typ) in
                                  const_int sz, universal_integer
@@ -801,7 +810,5 @@ let rec is_compatible one another =
             -> true
 	| Array _ , Array _  -> 
 	    one =  another
-	    
-	       
         | _ -> false
         )

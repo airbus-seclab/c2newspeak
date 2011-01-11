@@ -385,7 +385,7 @@ let rec normalize_exp ?expected_type exp =
             | _      -> Npkcontext.report_error "normalize"
                           ("No such function-attribute : '" ^ attr ^ "'")
         end
-    | Attribute (lv, attr, None) -> begin
+    | Attribute (lv, attr, None) -> begin 
           let st = Symboltbl.make_name_of_lval lv in
 	  let typ = 
 	    try 
@@ -395,9 +395,11 @@ let rec normalize_exp ?expected_type exp =
 	    with Not_found ->
               subtyp_to_adatyp st 
 	  in
-          let (exp,t') = T.attr_get typ attr in
+      
+	  let (exp,t') = T.attr_get typ attr in
           let (exp',_) = normalize_exp exp in
 	    (exp',t')
+	   
       end
     | Aggregate _ ->
         Npkcontext.report_error "normalize_exp"
@@ -516,7 +518,6 @@ and make_arg_list args spec =
 and normalize_arg (id,e) = id,normalize_exp e
 
 and normalize_binop bop e1 e2 xpec =
-
   let direct_op_trans =
     function
       | Plus  -> Ast.Plus  | Minus -> Ast.Minus | Div   -> Ast.Div
@@ -727,7 +728,8 @@ and normalize_fcall (n, params) expectedtype =
       				   ^ T.print arg_t
       				 )
 		;
-		norm_exp, cast_t
+		(*norm_exp, cast_t*)
+		Ast.Cast (arg_t, cast_t, norm_exp), cast_t
 		 
       	  with _ ->  
 	    (*See t437: "=" undefined operator case*)
@@ -1032,15 +1034,19 @@ and normalize_basic_decl item loc =
           match exp with
 	      (*TODO:  add a test for this*)
             | Aggregate _ -> 
-		List.iter (fun x -> Sym.add_variable gtbl x loc t) ident_list;
+		List.iter (fun x -> 
+		  Sym.add_variable gtbl x loc t) ident_list;
 		Ast.Constant
             | _ ->  
 		try
 		  let normexp = normalize_exp ~expected_type:t exp in
- 		  let value = Eval.eval_static normexp gtbl in
-		    List.iter (fun x -> Sym.add_variable gtbl x loc t ~value)
+		  let value = Eval.eval_static normexp gtbl in	  
+		  
+		    List.iter ( fun x ->
+			Sym.add_variable gtbl x loc t ~value
+		  )
                       ident_list;
-		    Ast.StaticVal value
+		      Ast.StaticVal value
 		with
 		  | Eval.NonStaticExpression -> List.iter
                       (fun x -> Sym.add_variable gtbl x loc t

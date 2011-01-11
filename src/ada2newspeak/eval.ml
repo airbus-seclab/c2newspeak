@@ -80,6 +80,36 @@ let eval_static exp tbl =
             | _ -> Npkcontext.report_error "eval_static.exp"
                    "unexpected type for conditional expression"
         end
+
+    | Cast (old_typ , n_typ, e) ->  
+	let res = eval_static_exp (e, old_typ) in
+	let make_cast r new_type = 
+	  match r with 
+	      T.IntVal i -> 
+		if (T.is_float new_type) then begin
+		  Npkcontext.report_warning "Eval eval_static"
+		    "UNSOUND static evaluation of cast";
+		  
+		  print_endline i;
+		  print_endline ((string_of_float (float
+				(Newspeak.Nat.to_int i))));
+
+		  T.FloatVal (float (Newspeak.Nat.to_int i))
+		end
+		else begin  
+		  Npkcontext.report_warning "Eval eval_static"
+		    "Unforeseen case of cast ";
+		  Npkcontext.report_error "eval_static.exp"
+               "unhandled cast case"
+		end
+	    |_ ->  begin  
+		  Npkcontext.report_warning "Eval eval_static"
+		    "Casting T.IntVal  expected to do... ->  "; 
+		 Npkcontext.report_error "eval_static.exp"
+               "unhandled cast case" 
+	       end
+	in
+	  make_cast res n_typ 
     | Lval         _
     | FunctionCall _
     | AddressOf    _ -> raise NonStaticExpression
@@ -91,27 +121,28 @@ let eval_static exp tbl =
   and eval_static_binop op e1 e2 =
     let val1 = eval_static_exp e1 in
     let val2 = eval_static_exp e2 in
-    match (op,val1,val2) with
-    | Plus , T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.add a b)
-    | Minus, T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.sub a b)
-    | Mult , T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.mul a b)
-    | Div  , T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.div a b)
-    | Power, T.IntVal   a, T.IntVal   b -> T.IntVal   (a ^% b)
-    | Plus , T.FloatVal a, T.FloatVal b -> T.FloatVal (a +. b)
-    | Minus, T.FloatVal a, T.FloatVal b -> T.FloatVal (a -. b)
-    | Mult , T.FloatVal a, T.FloatVal b -> T.FloatVal (a *. b)
-    | Div  , T.FloatVal a, T.FloatVal b -> T.FloatVal (a /. b)
-    | Rem  , T.IntVal   a, T.IntVal   b -> T.IntVal   (a %% b)
-    | Mod  , T.IntVal   a, T.IntVal   b -> T.IntVal   (a %: b)
-    | Eq   ,            a,            b -> T.BoolVal (T.data_compare a b = 0)
-    | Gt   ,            a,            b -> T.BoolVal (T.data_compare a b > 0)
-    | And  , T.BoolVal  a, T.BoolVal  b -> T.BoolVal  (a && b)
-    | Or   , T.BoolVal  a, T.BoolVal  b -> T.BoolVal  (a || b)
-    | Power, T.FloatVal a, T.IntVal   b -> T.FloatVal
-                                  (a ** (float_of_int (Nat.to_int b)))
-    | _ -> Npkcontext.report_error "eval_static.binop"
-                                  "invalid operator and argument"
-
+      match (op,val1,val2) with
+      | Plus , T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.add a b)
+      | Minus, T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.sub a b)
+      | Mult , T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.mul a b)
+      | Div  , T.IntVal   a, T.IntVal   b -> T.IntVal (Nat.div a b)
+      | Power, T.IntVal   a, T.IntVal   b -> T.IntVal   (a ^% b)
+      | Plus , T.FloatVal a, T.FloatVal b -> T.FloatVal (a +. b)
+      | Minus, T.FloatVal a, T.FloatVal b -> T.FloatVal (a -. b)
+      | Mult , T.FloatVal a, T.FloatVal b -> T.FloatVal (a *. b)
+      | Div  , T.FloatVal a, T.FloatVal b -> T.FloatVal (a /. b)
+      | Rem  , T.IntVal   a, T.IntVal   b -> T.IntVal   (a %% b)
+      | Mod  , T.IntVal   a, T.IntVal   b -> T.IntVal   (a %: b)
+      | Eq   ,            a,            b -> T.BoolVal (T.data_compare a b = 0)
+      | Gt   ,            a,            b -> T.BoolVal (T.data_compare a b > 0)
+      | And  , T.BoolVal  a, T.BoolVal  b -> T.BoolVal  (a && b)
+      | Or   , T.BoolVal  a, T.BoolVal  b -> T.BoolVal  (a || b)
+      | Power, T.FloatVal a, T.IntVal   b -> T.FloatVal
+          (a ** (float_of_int (Nat.to_int b)))
+      | _ -> 
+	  Npkcontext.report_error "eval_static.binop"
+            "invalid operator and argument"
+	    
   and eval_static_const name expected_type =
     try
       let convert_scope = function

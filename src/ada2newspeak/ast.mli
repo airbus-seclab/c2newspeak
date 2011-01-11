@@ -68,6 +68,7 @@ and exp_value =
   | FunctionCall of Symboltbl.scope * string
                   * argument list
                   * AdaTypes.t (* return type *)
+  | Cast         of AdaTypes.t * AdaTypes.t * exp_value (* old ype, new type, exp *)
 
 and argument = AdaTypes.t * arg_mode
 

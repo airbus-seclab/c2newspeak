@@ -123,7 +123,7 @@ let translate src_lang prog =
       | AddrOfFun (f, ft) -> K.AddrOfFun (f, translate_ftyp ft)
 
       | AddrOf (lv, Array (elt_t, len)) ->
-(* TODO: put use of length_of_array in firstpass!!! *)
+	  (* TODO: put use of length_of_array in firstpass*)
 	  let sz = 
 	    try K.Mult (length_of_array len lv, size_of_typ elt_t) 
 	    with _ -> K.Unknown

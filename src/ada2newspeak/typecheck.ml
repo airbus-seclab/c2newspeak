@@ -69,8 +69,6 @@ let type_of_binop op t1 t2 = match op with
   | Mult | Div -> expect ~desc:"binary multiplying" t1 t2;
       if not (T.is_float t1 || T.is_integer t1) then 
         error "Multiplying operator is not defined -- 4.5.5.(2)";
-                 (*print_endline "-----------------binary mul/div "; 
-		   print_endline (T.print  (T.coerce_types t1 t2)); *)
       T.coerce_types t1 t2
 
   | Rem  | Mod -> expect ~desc:"binary Rem/Mod" t1 t2;
