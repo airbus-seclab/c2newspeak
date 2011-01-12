@@ -467,7 +467,8 @@ asm_statement_list:
 
 asm_statement:
   string_literal                           { $1 }
-| string_literal LPAREN expression RPAREN  { $1 }
+| string_literal LPAREN expression RPAREN  { $1 } 
+| LBRACKET ident_or_tname RBRACKET string_literal LPAREN expression RPAREN { $2^" "^$4 }
 ;;
 
 // TODO: this could be simplified a lot by following the official grammar
