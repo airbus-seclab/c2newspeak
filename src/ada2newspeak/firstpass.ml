@@ -300,7 +300,16 @@ let translate compil_unit =
     | Cast (o, n, e) ->
 	let sc_o = C.scalar_of_typ  (T.translate o) in
 	let sc_n = C.scalar_of_typ  (T.translate  n) in
-	  C.Unop (Npkil.Cast (sc_o, sc_n),  translate_exp (e,o)) 
+	 (* translate -> cir.typ *)
+	 (*  Unop (Npkil.Coerce (Newspeak.domain_of_typ k), e) *)
+	  match sc_o, sc_n with 
+	       (Newspeak.Int _, Newspeak.Int k) -> 
+		 	C.Unop (Npkil.Coerce (Newspeak.domain_of_typ k), 
+				translate_exp (e,o)
+			       )
+	    | _ -> C.Unop ( Npkil.Cast (sc_o, sc_n),  
+			    translate_exp (e,o)
+			  ) 
 
   (**
    * Make a C assignment.
