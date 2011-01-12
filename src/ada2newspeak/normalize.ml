@@ -717,7 +717,9 @@ and normalize_fcall (n, params) expectedtype =
       		  "Cast only handled for single variable"
 	      ;
       	      let param =  List.hd params in
-      	      let (_,( norm_exp, arg_t))= normalize_arg param in
+		(*Il y a cast, la valeur castée ne doit 
+		  pas etre checke cf t457*)
+      	      let  (norm_exp, arg_t)= normalize_exp (snd param) in
       		
 		if (not (T.is_compatible cast_t arg_t))
 		then 
@@ -1223,16 +1225,20 @@ and build_init_stmt (x,exp,loc) =
 	    then begin
 	      Npkcontext.report_error "Eval"
 		"Integer exponents should be strictly positive."
-	    end else Nat.of_big_int (EBigInt.power_big_int_positive_big_int a b)
+	    end 
+	    else Nat.of_big_int (
+	      EBigInt.power_big_int_positive_big_int a b)
 	in
 	let power powep = 
-	  let (exp, typ) = normalize_exp ~expected_type:t_lv powep in 
+	  let (exp, typ) = 
+	    normalize_exp ~expected_type:t_lv powep in 
 	    match exp with  
-		Ast.Binary (Ast.Power, (Ast.CInt x,_),(Ast.CInt y, _)) -> 
+ 		Ast.Binary( Ast.Power, (Ast.CInt x,_), (Ast.CInt y,_))-> 
 		  (Ast.CInt (ne_pas_dupliquer x y), typ)
-	      | Ast.Binary (Ast.Power, (Ast.CFloat x,_),( Ast.CInt y,_)) ->
+	      | Ast.Binary( Ast.Power, (Ast.CFloat x,_), (Ast.CInt y,_))->
 		  (Ast.CFloat (x ** (float_of_int(Nat.to_int y))), typ)
-	      | _ ->  Npkcontext.report_error "build_init_stmt" "Impossible case"
+	      | _ -> Npkcontext.report_error "build_init_stmt" 
+		                             "Impossible case"
 	in
 	  match def with 
 	      Binary (Power, _, _) ->
@@ -1256,7 +1262,8 @@ and build_init_stmt (x,exp,loc) =
 		  else Npkcontext.report_error "build_init_stmt"
 		    "Unary minus defined for integer and floating-point types"
 		in
-		let e' = Ast.Binary(Ast.Minus, (zero,t_exp), (power_def,t_exp)) in
+		let e' = Ast.Binary(Ast.Minus, (zero,t_exp), 
+				    (power_def,t_exp)) in
 		  if (not (T.is_compatible t_lv t_exp)) then
 		    begin
 		      Npkcontext.report_error "normalize_instr"

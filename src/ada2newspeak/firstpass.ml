@@ -303,12 +303,12 @@ let translate compil_unit =
 	 (* translate -> cir.typ *)
 	 (*  Unop (Npkil.Coerce (Newspeak.domain_of_typ k), e) *)
 	  match sc_o, sc_n with 
-	       (Newspeak.Int _, Newspeak.Int k) -> 
-		 	C.Unop (Npkil.Coerce (Newspeak.domain_of_typ k), 
-				translate_exp (e,o)
-			       )
+	       (Newspeak.Int _, Newspeak.Int _) -> 
+		 (*	C.Unop (Npkil.Coerce (Newspeak.domain_of_typ k),  *)
+		   translate_exp (e,n)
+		 (* ) *)
 	    | _ -> C.Unop ( Npkil.Cast (sc_o, sc_n),  
-			    translate_exp (e,o)
+			    translate_exp (e,n)
 			  ) 
 
   (**

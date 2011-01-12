@@ -711,7 +711,7 @@ let rec attr_get typ attr =
         begin
           match typ.range with
           | Some (A.FloatRangeConstraint (x,_)) -> A.CFloat x, universal_real
-          | None -> ( A.CFloat float_first, std_float)
+          | None -> ( A.CFloat float_first, typ)
 	  | _ -> Npkcontext.report_error "attr_get"
                      "Unconstrained subtype has no 'first attribute"
         end
@@ -719,7 +719,7 @@ let rec attr_get typ attr =
 	begin
           match typ.range with
           | Some (A.FloatRangeConstraint (_,y)) -> A.CFloat y, universal_real
-          | None -> ( A.CFloat float_last, std_float)
+          | None -> (A.CFloat float_last, typ)
 	  | _ ->
 	      Npkcontext.report_error "attr_get"
                 "Unconstrained subtype has no 'last attribute"

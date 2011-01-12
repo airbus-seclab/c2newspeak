@@ -89,13 +89,9 @@ let eval_static exp tbl =
 		if (T.is_float new_type) then begin
 		  Npkcontext.report_warning "Eval eval_static"
 		    "UNSOUND static evaluation of cast";
-		  
-		  print_endline i;
-		  print_endline ((string_of_float (float
-				(Newspeak.Nat.to_int i))));
-
 		  T.FloatVal (float (Newspeak.Nat.to_int i))
-		end
+		end 
+		else if (T.is_integer new_type) then T.IntVal  i
 		else begin  
 		  Npkcontext.report_warning "Eval eval_static"
 		    "Unforeseen case of cast ";
@@ -104,7 +100,7 @@ let eval_static exp tbl =
 		end
 	    |_ ->  begin  
 		  Npkcontext.report_warning "Eval eval_static"
-		    "Casting T.IntVal  expected to do... ->  "; 
+		    "Casting T.IntVal expected to do... ->  "; 
 		 Npkcontext.report_error "eval_static.exp"
                "unhandled cast case" 
 	       end
