@@ -1676,6 +1676,7 @@ and normalize_assign_agr nlv t_lv bare_assoc_list loc =
 	| (tc, [ti]) -> begin (*code deplace cf plus bas*)
 	    
 	    let other_list = match others_opt with
+
 	      | None         -> []
 	      | Some oth_exp ->
 		  begin
@@ -1707,27 +1708,16 @@ and normalize_assign_agr nlv t_lv bare_assoc_list loc =
 	      List.rev (
 		  List.flatten (
 		    List.map (
+
 		      fun (aggr_k, aggr_v) ->(* id[aggr_k] <- aggr_v *)
 			
 			let key  = normalize_exp aggr_k in
 			  
 			match aggr_v with
-			    Aggregate (NamedAggr (ll)) when (are_all_flds ll) ->
-			      let array_lv = Ast.ArrayAccess (nlv, [key]) in 
-			      let assign_filed  el  = 
-				let (fld, value) = match el with 
-				    (AggrField f, v) -> (f,v) 
-				  | _ ->  Npkcontext.report_error 
-				      "normalize_assign_agr"
-					"Unexpected case case"
-				in
-				let value = normalize_exp value in	
-				let (off, tf) = T.record_field tc fld in
-				  Ast.Assign (Ast.RecordAccess
-						(array_lv, off, tf), value), loc
-			      in
-				List.map (fun x -> assign_filed x ) ll
- 				  
+			    Aggregate (NamedAggr ll) when (are_all_flds ll) ->
+ 			      let array_lv = Ast.ArrayAccess (nlv, [key]) in
+				normalize_assign_agr array_lv tc ll loc
+
 			  | Aggregate (NamedAggr ((AggrExp _, _)::[])) ->
 			      Npkcontext.report_error "normalize_assign_agr"
 				"Array with aggregate expression not done yet"
