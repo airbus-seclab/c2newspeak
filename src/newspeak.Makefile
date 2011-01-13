@@ -28,7 +28,7 @@
 INSTALL.FILES=newspeak/temps.cmi newspeak/config.cmi newspeak/eBigInt.cmi \
 	      newspeak/newspeak.cmi \
 	      utils/standardApplication.cmi newspeak/npkcontext.cmi \
-              newspeak/lowspeak.cmi newspeak/npk2lpk.cmi \
+              newspeak/lowspeak.cmi newspeak/npk2lpk.cmi newspeak/npkil.cmi \
 	      newspeak.cma newspeak.cmxa newspeak.a
 
 all: $(INSTALL.FILES)
@@ -36,7 +36,7 @@ all: $(INSTALL.FILES)
 
 FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
       newspeak/newspeak utils/standardApplication \
-      newspeak/npkcontext newspeak/lowspeak newspeak/npk2lpk
+      newspeak/npkcontext newspeak/lowspeak newspeak/npk2lpk newspeak/npkil
 FILES.CMO=$(addsuffix .cmo,$(FILES))
 FILES.CMX=$(addsuffix .cmx,$(FILES))
 
@@ -48,7 +48,8 @@ newspeak.a newspeak.cmxa: $(FILES.CMX)
 	@echo "Building library            "newspeak.cmx
 	$(OCAMLOPT) -a $(FILES.CMX) -o newspeak.cmxa
 
-CLEANFILES=newspeak.a newspeak.cma newspeak.cmxa newspeak/newspeak.cmo
+CLEANFILES=newspeak.a newspeak.cma newspeak.cmxa newspeak/newspeak.cmo \
+           newspeak/npkil.cmo
 
 TARGET=newspeak
 DIRS=utils/ newspeak/

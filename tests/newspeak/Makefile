@@ -23,18 +23,16 @@
 
 COMMAND=./$*_check $*.npk
 PREREQ=%_check %.npk
-TESTS=t000 t001 t002 t004 t005 t006
+TESTS=t000 t001 t002 t004 t005 t006 t007
 EXEC=$(addsuffix _check, $(TESTS))
-CLEANFILES=t002.npk t003.npk t005.npk *_check *.exe t006.npk
+CLEANFILES=t002.npk t003.npk t005.npk *_check *.exe t006.npk a.out
 
 include ../common.Makefile
 
 .SILENT: $(EXEC)
 
 $(EXEC): %_check: %.ml
-	ocamlc -I ../../bin -I ../../src/newspeak -I ../../cil/obj str.cma \
-		../../src/newspeak/config.ml ../../bin/newspeak.cma \
-		../../src/newspeak/npkcontext.ml ../../src/newspeak/npk2lpk.ml $*.ml -o $*_check
+	ocamlc -I ../../bin str.cma ../../bin/newspeak.cma $*.ml -o $*_check
 
 %.npk: %.c
 	@$(C2NEWSPEAK) $*.c -o $*.npk
