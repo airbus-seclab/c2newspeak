@@ -356,25 +356,6 @@ let rec normalize_exp ?expected_type exp =
 	      | _ -> Npkcontext.report_error "normalize_exp" "not a Lval"
 	end
 	  
-	(* begin   *)
-	(*   let nlv, t =  *)
-	(*     try *)
-	(*       match  (normalize_exp (Lval ( SName ( ParExp(Var n, params), fld )))) *)
-	(*       with  (Ast.Lval lval,  t) -> lval, t *)
-	(* 	| _ ->  Npkcontext.report_error "normalize_exp" "not a Lval" *)
-	(*     with Not_found  ->   *)
-	(*       Npkcontext.report_error "normalize_exp not found"  *)
-	(* 	"Lval (SName ( SName ( ParExp(Var n, params), fld ), fld2 )) case " *)
-	(*   in *)
-	(*     if not (T.is_record t) then  *)
-	(*       Npkcontext.report_error "normalize_exp" *)
-      	(* 	"Not a record: unexpected case" *)
-	(*     ; *)
-	(*     let (off, tf) = T.record_field t fld2 in *)
-	(*       Ast.Lval(Ast.RecordAccess (nlv , off, tf)), tf *)
-	(* end *)
-	  
-
     | Lval lv ->  
         begin
           match resolve_selected ?expected_type lv with
@@ -1223,6 +1204,10 @@ and normalize_lval ?(force = false) ?expected_type synt_lv =
 	  match exp with
 	      Ast.Lval(Ast.RecordAccess _ as record_access), tf -> 
 		 record_access, tf
+
+	    | Ast.BlkExp ( [instr, loc], ( Ast.Lval lvalue, _)), t ->
+		Ast.BlkLval ([instr, loc], lvalue ), t
+		
 	    | _ -> Npkcontext.report_error 
 		"normalize_lval" "Unexpected case"
       end

@@ -277,6 +277,12 @@ let translate compil_unit =
             let (xlv, _) = translate_lv lv in
             let xt = T.translate t in
             C.Deref (C.Lval (xlv, xt), xt), t
+	      
+	| BlkLval ( block, lv ) -> 
+	    let trans_blk   = translate_block block in
+	    let trans_lv, t = translate_lv lv in
+	      C.BlkLv (trans_blk, trans_lv, false), t
+
 
   and translate_exp (exp,typ) :C.exp =
     match exp with
@@ -332,18 +338,25 @@ let translate compil_unit =
   and translate_affect lv exp loc =
     let (tr_lv,subtyp_lv) = translate_lv lv in
     let tr_exp = translate_exp exp in
-      match tr_exp with 
-	  (*Lift the artificially declared expression *)
-	  C.BlkExp ( [(C.Block (dcl::(aff::[]), None), _loc)], t_exp, false) ->
-	    C.Block (
-	              dcl::(aff::[make_affect tr_lv t_exp subtyp_lv loc])
+      match tr_exp, tr_lv  with
+	  C.BlkExp ( [(C.Block (dcle::(affe::[]), None), _)], tt_exp, false) ,
+	  C.BlkLv  ( [(C.Block (dcll::(affl::[]), None), _)], tt_lv , false)  ->
+	    C.Block ( dcll::(dcle::(affl::(affe::
+		         [make_affect tt_lv tt_exp subtyp_lv loc])))
 		    , None
-	    ), loc
+		    ), loc
+	      
+	| C.BlkExp ( [(C.Block (dcle::(affe::[]), None), _)], tt_exp, false), _ ->
+	    C.Block ( dcle::(affe::[make_affect tr_lv tt_exp subtyp_lv loc])
+		    , None
+		    ), loc
+	      
+	|  _ , C.BlkLv ( [(C.Block (dcll::(affl::[]), None), _)], tt_lv, false) ->
+	    C.Block ( dcll::(affl::[make_affect tt_lv tr_exp subtyp_lv loc])
+		    , None
+		    ), loc
+
 	| _ -> make_affect tr_lv tr_exp subtyp_lv loc
-
-
-
-	    
 
 
   (**

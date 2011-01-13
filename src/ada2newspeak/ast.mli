@@ -46,7 +46,8 @@ type lval =
                   * int         (* offset *)
                   * AdaTypes.t (* Field type *)
   | PtrDeref     of lval
-                  * AdaTypes.t
+                  * AdaTypes.t 
+  | BlkLval       of block * lval
 
 and expression = exp_value * AdaTypes.t
 
