@@ -36,7 +36,7 @@ let compile fname =
     if (!Npkcontext.verb_npko) then begin
       print_endline "Newspeak Object output";
       print_endline "----------------------";
-      Npkil.dump_npko prog;
+      Npkil.dump prog;
       print_newline ();
     end;
     prog

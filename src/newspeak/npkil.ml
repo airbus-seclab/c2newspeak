@@ -233,10 +233,8 @@ and string_of_fn f =
       FunId fid -> (string_of_fid fid)^"()"
     | FunDeref exp -> "["^(string_of_exp exp)^"]"
 
-(* TODO: remove pretty option here and Npkcontext *)
-let dump_npko prog = 
+let dump prog = 
   let cur_fun = ref "" in
-
   let lbl_index = ref 0 in
 
   let string_of_lbl l = "lbl"^(string_of_int l) in

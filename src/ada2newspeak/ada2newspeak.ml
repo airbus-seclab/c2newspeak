@@ -119,7 +119,7 @@ let compile (fname: string): Npkil.t =
       if (!Npkcontext.verb_npko) then begin
 	print_endline "Newspeak Object output";
 	print_endline "----------------------";
-	Npkil.dump_npko tr_prog;
+	Npkil.dump tr_prog;
 	print_newline ();
       end;
       tr_prog
