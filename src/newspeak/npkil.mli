@@ -157,7 +157,7 @@ val make_int_coerce : sign_t * size_t -> exp -> exp
 
 val negate : exp -> exp
 
-val dump_npko : t -> unit
+val dump: t -> unit
 
 val string_of_unop: unop -> string
 

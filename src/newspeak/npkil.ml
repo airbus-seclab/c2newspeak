@@ -230,13 +230,17 @@ and string_of_exp e =
 	  
 and string_of_fn f =
   match f with
-      FunId fid -> (string_of_fid fid)^"()"
+      FunId fid -> (string_of_fid fid)
     | FunDeref exp -> "["^(string_of_exp exp)^"]"
 
-(* TODO: remove pretty option here and Npkcontext *)
-let dump_npko prog = 
-  let cur_fun = ref "" in
+let rec string_of_exp_list l =
+  match l with
+      [] -> ""
+    | e::[] -> string_of_exp e
+    | e::tl -> string_of_exp e ^ ", " ^ string_of_exp_list tl
 
+let dump prog = 
+  let cur_fun = ref "" in
   let lbl_index = ref 0 in
 
   let string_of_lbl l = "lbl"^(string_of_int l) in
@@ -276,7 +280,9 @@ let dump_npko prog =
 
       | Goto l -> print_endline ("goto "^(string_of_lbl l)^";")
 	    
-      | Call (_, _, f, _) -> print_endline ((string_of_fn f)^";")
+      | Call (args, _, f, _) -> 
+	  let args = string_of_exp_list args in
+	    print_endline ((string_of_fn f)^"("^args^");")
 	    
       | Guard b -> print_endline ("guard("^(string_of_exp b)^");")
 

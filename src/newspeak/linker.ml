@@ -360,15 +360,12 @@ let merge npkos =
   in
 
   let merge npko =
-    (* TODO: merge these two operations into one *)
     let prog = Npkil.read npko in
       Hashtbl.iter add_global prog.globals;
       init := prog.init@(!init);
       Hashtbl.iter add_fundef prog.fundecs;
       src_lang := prog.src_lang
   in
-    if (npkos = []) 
-    then Npkcontext.report_error "Linker.merge" "empty file list";
     List.iter merge npkos;
     (glb_decls, !fundefs, !src_lang, !init)
 
