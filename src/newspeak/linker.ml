@@ -367,8 +367,6 @@ let merge npkos =
       Hashtbl.iter add_fundef prog.fundecs;
       src_lang := prog.src_lang
   in
-    if (npkos = []) 
-    then Npkcontext.report_error "Linker.merge" "empty file list";
     List.iter merge npkos;
     (glb_decls, !fundefs, !src_lang, !init)
 
