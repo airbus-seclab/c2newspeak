@@ -360,7 +360,6 @@ let merge npkos =
   in
 
   let merge npko =
-    (* TODO: merge these two operations into one *)
     let prog = Npkil.read npko in
       Hashtbl.iter add_global prog.globals;
       init := prog.init@(!init);
