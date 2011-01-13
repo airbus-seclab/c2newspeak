@@ -337,23 +337,42 @@ let rec normalize_exp ?expected_type exp =
 	end
 	  
     | Lval (SName ( SName ( ParExp(Var n, params), fld ), fld2 )) -> 
-	begin  
-	  let nlv, t = 
-	    try
-	      match  (normalize_exp (Lval ( SName ( ParExp(Var n, params), fld ))))
-	      with  (Ast.Lval lval,  t) -> lval, t
-		| _ ->  Npkcontext.report_error "normalize_exp" "not a Lval"
-	    with Not_found  ->  
-	      Npkcontext.report_error "normalize_exp not found" 
-		"Lval (SName ( SName ( ParExp(Var n, params), fld ), fld2 )) case "
-	  in
-	    if not (T.is_record t) then 
-	      Npkcontext.report_error "normalize_exp"
-      		"Not a record: unexpected case"
-	    ;
-	    let (off, tf) = T.record_field t fld2 in
-	      Ast.Lval(Ast.RecordAccess (nlv , off, tf)), tf
+	begin
+	  let n_exp = normalize_exp(Lval(SName(ParExp(Var n,params),fld))) in
+	    match n_exp  with  
+		(Ast.Lval nlv,  t) ->  
+		  let (off, tf) = T.record_field t fld2 in
+		    Ast.Lval(Ast.RecordAccess (nlv , off, tf)), tf
+		      
+	      | Ast.BlkExp ( [instr, loc], ( Ast.Lval lvalue, t)), _t ->
+		  let (off, tf) = T.record_field t fld2 in
+		  let expr = Ast.Lval (Ast.RecordAccess (lvalue, off, tf)) in
+		    Ast.BlkExp ( [instr, loc], (expr, tf)), tf
+		      
+	      | Ast.BlkExp _,_ ->  Npkcontext.report_error
+		  "normalize_exp" 
+		    "not a Record: unexpected case"
+		    
+	      | _ -> Npkcontext.report_error "normalize_exp" "not a Lval"
 	end
+	  
+	(* begin   *)
+	(*   let nlv, t =  *)
+	(*     try *)
+	(*       match  (normalize_exp (Lval ( SName ( ParExp(Var n, params), fld )))) *)
+	(*       with  (Ast.Lval lval,  t) -> lval, t *)
+	(* 	| _ ->  Npkcontext.report_error "normalize_exp" "not a Lval" *)
+	(*     with Not_found  ->   *)
+	(*       Npkcontext.report_error "normalize_exp not found"  *)
+	(* 	"Lval (SName ( SName ( ParExp(Var n, params), fld ), fld2 )) case " *)
+	(*   in *)
+	(*     if not (T.is_record t) then  *)
+	(*       Npkcontext.report_error "normalize_exp" *)
+      	(* 	"Not a record: unexpected case" *)
+	(*     ; *)
+	(*     let (off, tf) = T.record_field t fld2 in *)
+	(*       Ast.Lval(Ast.RecordAccess (nlv , off, tf)), tf *)
+	(* end *)
 	  
 
     | Lval lv ->  

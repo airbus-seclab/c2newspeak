@@ -332,7 +332,19 @@ let translate compil_unit =
   and translate_affect lv exp loc =
     let (tr_lv,subtyp_lv) = translate_lv lv in
     let tr_exp = translate_exp exp in
-    make_affect tr_lv tr_exp subtyp_lv loc
+      match tr_exp with 
+	  (*Lift the artificially declared expression *)
+	  C.BlkExp ( [(C.Block (dcl::(aff::[]), None), _loc)], t_exp, false) ->
+	    C.Block (
+	              dcl::(aff::[make_affect tr_lv t_exp subtyp_lv loc])
+		    , None
+	    ), loc
+	| _ -> make_affect tr_lv tr_exp subtyp_lv loc
+
+
+
+	    
+
 
   (**
    * Translate a [Syntax_ada.block].
