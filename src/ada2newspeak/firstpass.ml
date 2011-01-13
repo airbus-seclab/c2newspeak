@@ -311,9 +311,10 @@ let translate compil_unit =
 			    translate_exp (e,n)
 			  ) 
       end
-    | BlkExp _ ->   Npkcontext.report_error "Firstpass.translate_exp"
-            "BlkExp .........;;"
-
+    | BlkExp (block , exp) -> (*with exp Ast.Lval (Ast.RecordAccess_)*)
+	let trans_blk = translate_block block in
+	let trans_exp = translate_exp exp in
+	  C.BlkExp (trans_blk, trans_exp, false)
 
   (**
    * Make a C assignment.

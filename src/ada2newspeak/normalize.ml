@@ -311,18 +311,31 @@ let rec normalize_exp ?expected_type exp =
   
     | Lval (SName (ParExp(Var n, params), fld)) -> 
 	begin
-	  match (normalize_fcall(Var n, params) expected_type ) with
-	      (Ast.Lval lval, t) ->
-		let (off, tf) = T.record_field t fld in
-		  Ast.Lval(Ast.RecordAccess (lval , off, tf)), tf
-		    
-	          (*	|  Ast.FunctionCall _, _ -> 
-			Ast.BlkExp ( Ast.Block ([] , []),  )
-		  *)	     
-	    | _ ->  Npkcontext.report_error " Normalize_exp"
-		" Result of fcall not handled"
+	  (*The None here might be error in tbl_find_subprogram*)
+	  let fcall = normalize_fcall(Var n, params) None in
+	    match fcall with
+		(Ast.Lval lval, t) ->
+		  let (off, tf) = T.record_field t fld in
+		    Ast.Lval(Ast.RecordAccess (lval , off, tf)), tf
+		      
+	      |  Ast.FunctionCall (_sc, fid, _args, _rett), t -> 	
+		   let (off, tf) = T.record_field t fld in
+		   let x = Temps.to_string 0 (Temps.Value_of fid) in
+		   let loc = Npkcontext.get_loc () in 
+		     Sym.add_variable gtbl x loc t;
+		     let bd     = Ast.ObjectDecl (x, t, Ast.Variable, None) in 
+		     let lv_aff = Ast.Var ( Sym.Lexical, x, t) in
+		     let exp_aff = fst fcall, t in 
+		     let affect = [Ast.Assign ( lv_aff, exp_aff ), loc] in 
+		     let instr = Ast.Block ([Ast.BasicDecl bd, loc], affect) in
+		     let lv = Ast.Var (Sym.Lexical, x, t) in
+		     let expr   = Ast.Lval (Ast.RecordAccess (lv , off, tf)) in
+		       Ast.BlkExp ( [instr, loc], (expr, tf)), tf
+			 
+	      | _ ->  Npkcontext.report_error " Normalize_exp"
+		  " Result of fcall not handled"
 	end
-
+	  
     | Lval (SName ( SName ( ParExp(Var n, params), fld ), fld2 )) -> 
 	begin  
 	  let nlv, t = 
@@ -669,6 +682,7 @@ and normalize_fcall (n, params) expectedtype =
 		    
       let effective_args = make_arg_list norm_args spec in
 	Ast.FunctionCall(sc, act_name, effective_args, t),t
+
     with Not_found ->
       try 
 	(*To do double checked because conversion de tablo
@@ -1452,7 +1466,7 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 	  of value with Enumeration clause use*)
 
       let basic_loop () = 
-	(*The while loop is possible with a counter incremention*)
+	(*TODO For while loop a counter incremention is not enough *)
 	Sym.enter_context gtbl;
 	let ndp = 
 	  let t = 

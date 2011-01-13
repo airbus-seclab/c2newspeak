@@ -69,7 +69,7 @@ and exp_value =
                   * argument list
                   * AdaTypes.t (* return type *)
   | Cast         of AdaTypes.t * AdaTypes.t * exp_value (* old ype, new type, exp *)
-  | BlkExp       of instruction * exp_value
+  | BlkExp       of block * expression
 
 and argument = AdaTypes.t * arg_mode
 

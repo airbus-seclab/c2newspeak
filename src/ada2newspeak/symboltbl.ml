@@ -702,8 +702,6 @@ let rec find_type s (package, n) =
     s_find "type" tbl_find_type s ?package n
 
 
-
-
 let rec find_subprogram_aux  s ?(silent=false) (pack,n) n_args xpect t_find use  =
   let find_one_renaming  ((p_opt, n_a), params_opt) = 
     if (eq_renaming  (p_opt, n_a) (pack,n)) then 
