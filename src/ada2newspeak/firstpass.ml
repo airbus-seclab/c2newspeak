@@ -297,7 +297,7 @@ let translate compil_unit =
     | AddressOf (lv, _) ->
         let (lv', tlv) = translate_lv lv in
         C.AddrOf(lv', T.translate tlv)
-    | Cast (o, n, e) ->
+    | Cast (o, n, e) -> begin
 	let sc_o = C.scalar_of_typ  (T.translate o) in
 	let sc_n = C.scalar_of_typ  (T.translate  n) in
 	 (* translate -> cir.typ *)
@@ -310,6 +310,10 @@ let translate compil_unit =
 	    | _ -> C.Unop ( Npkil.Cast (sc_o, sc_n),  
 			    translate_exp (e,n)
 			  ) 
+      end
+    | BlkExp _ ->   Npkcontext.report_error "Firstpass.translate_exp"
+            "BlkExp .........;;"
+
 
   (**
    * Make a C assignment.

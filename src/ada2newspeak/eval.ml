@@ -108,7 +108,8 @@ let eval_static exp tbl =
 	  make_cast res n_typ 
     | Lval         _
     | FunctionCall _
-    | AddressOf    _ -> raise NonStaticExpression
+    | AddressOf    _ 
+    | BlkExp  _        -> raise NonStaticExpression
 
   (**
    * Evaluate statically a binary expression.

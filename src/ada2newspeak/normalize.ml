@@ -309,33 +309,18 @@ let rec normalize_exp ?expected_type exp =
 	let nlv, tlv = normalize_lval lv in
           Ast.Lval (nlv), tlv
   
-    (* TODO : improve this code for t412 *)
     | Lval (SName (ParExp(Var n, params), fld)) -> 
-	begin  
-	  let lv = 
-	    try
-	      match (normalize_fcall(Var n, params) expected_type ) with
-		  (Ast.Lval lval, _) -> lval
-		| _ ->  Npkcontext.report_error "normalize_exp" "not a Lval"
-	    with Not_found  ->  
-	      Npkcontext.report_error "normalize_exp (not found in fcall)" 
-		"Lval (SName (ParExp(Var n, params), fld)) case "
-	  in
-	    try
-	      let (_,(_, t,_)) = 
-		Sym.find_variable_with_error_report gtbl (None,n) 
-	      in
-	      let tc = fst (T.extract_array_types t) in
-		if not (T.is_record tc) then 
-		  Npkcontext.report_error "normalize_exp"
-      		    "Not a record: unexpected case"
-		;
-		let (off, tf) = T.record_field tc fld in
-		  Ast.Lval(Ast.RecordAccess (lv , off, tf)), tf
+	begin
+	  match (normalize_fcall(Var n, params) expected_type ) with
+	      (Ast.Lval lval, t) ->
+		let (off, tf) = T.record_field t fld in
+		  Ast.Lval(Ast.RecordAccess (lval , off, tf)), tf
 		    
-	    with Not_found -> Npkcontext.report_error "normalize_exp"
-      	      ("Not found in expression 'T(i).f' : T is not found"^
-		 " maybe a function case not implemented yet ")
+	          (*	|  Ast.FunctionCall _, _ -> 
+			Ast.BlkExp ( Ast.Block ([] , []),  )
+		  *)	     
+	    | _ ->  Npkcontext.report_error " Normalize_exp"
+		" Result of fcall not handled"
 	end
 
     | Lval (SName ( SName ( ParExp(Var n, params), fld ), fld2 )) -> 

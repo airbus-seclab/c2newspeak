@@ -69,6 +69,7 @@ and exp_value =
                   * argument list
                   * AdaTypes.t (* return type *)
   | Cast         of AdaTypes.t * AdaTypes.t * exp_value (* old ype, new type, exp *)
+  | BlkExp       of instruction * exp_value
 
 and argument = AdaTypes.t * arg_mode
 
@@ -77,16 +78,16 @@ and arg_mode =
   | Out   of lval
   | InOut of lval
 
-type iteration_scheme =
+and iteration_scheme =
   | NoScheme
   | While of expression
 
-type object_state =
+and object_state =
   | Variable
   | Constant
   | StaticVal of AdaTypes.data_t (*constante statique*)
 
-type block = (instruction * Newspeak.location) list
+and block = (instruction * Newspeak.location) list
 
 and instruction =
   | Assign        of lval
