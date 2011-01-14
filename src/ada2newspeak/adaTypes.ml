@@ -248,6 +248,12 @@ let extract_array_types t =
   | _            -> Npkcontext.report_error "extract_array_types"
                       "assertion (is_array) failed"
 
+let extract_array_range t =
+  match (extract_array_types t) with
+      (_, [i]) -> i
+    | _      -> Npkcontext.report_error "extract_array_range"
+        "assertion unique indexes failed"
+
 let get_reason t =
   match t.base.trait with
   | Unknown r -> r

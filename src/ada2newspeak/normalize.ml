@@ -430,10 +430,9 @@ let rec normalize_exp ?expected_type exp =
 	      let n = mangle_sname st in
 	      let (_,(_,t,_)) = Sym.find_variable gtbl n in
 		t
-	    with Not_found ->
-              subtyp_to_adatyp st 
+	    with Not_found -> 
+	      subtyp_to_adatyp st 
 	  in
-      
 	  let (exp,t') = T.attr_get typ attr in
           let (exp',_) = normalize_exp exp in
 	    (exp',t')
@@ -1476,34 +1475,33 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
                   , fst (T.attr_get t "last"))
           end
       in
-
-      let lv_typopt, sub_typ_ind =  match range with 
-	  DirectRange (CInt _, CInt _) -> 
-	    None, (["standard";"integer"], None)	      
-	| DirectRange ( l ,CInt _) 
-	| DirectRange (CInt _,  l) 
-	| DirectRange (l, _) ->  Some l, ([], None)
-	| ArrayRange _    ->   None, (["standard";"integer"], None)
-	| SubtypeRange lv ->   None, (Symboltbl.make_name_of_lval lv, None)   
+    
+      let toto = 
+	match range with 
+	    DirectRange (CInt _, CInt _) ->       
+	      merge_types (normalize_subtyp_ind (["standard";"integer"], None))
+	  | DirectRange ( l ,CInt _) 
+	  | DirectRange (CInt _,  l) 
+	  | DirectRange (l, _) -> snd (normalize_exp l)
+	  | ArrayRange n  -> begin
+	      let nn = Symboltbl.make_name_of_lval n in
+	      let mn = mangle_sname nn in
+		try 
+		  let (_,(_,t,_)) = Sym.find_variable gtbl mn in  
+		    T.extract_array_range t 
+		with Not_found -> 
+		  
+		  merge_types (normalize_subtyp_ind (nn, None))
+	    end
+	  | SubtypeRange lv ->  
+	      merge_types (normalize_subtyp_ind (
+			     Symboltbl.make_name_of_lval lv, None))
       in
-     	(*enum_case is different due to potential redefiniton 
-	  of value with Enumeration clause use*)
 
       let basic_loop () = 
 	(*TODO For while loop a counter incremention is not enough *)
 	Sym.enter_context gtbl;
 	let ndp = 
-	  let t = 
-	    match sub_typ_ind with 
-		( [], None ) -> begin
-		  match lv_typopt with 
-		      Some synt_exp -> 
-			snd (normalize_exp (synt_exp))
-		    | _ -> Npkcontext.report_error 
-			"basic_loop" "unreachable case"
-		end 
-	      | _ -> merge_types (normalize_subtyp_ind sub_typ_ind)
-	  in
 	  let init = if is_rev then exp2 else exp1 in 
 	  let status = 
 	    match init with
@@ -1512,27 +1510,26 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 		    "Aggregate not handled"
 	      | _ ->
 		  try	
-		    let normexp = normalize_exp ~expected_type:t init in
+		    let normexp = normalize_exp ~expected_type:toto init in
 		    let value = Eval.eval_static normexp gtbl in
 		      Npkcontext.set_loc loc;
-		      Sym.add_variable gtbl iter loc t ~value;
-			Ast.StaticVal value
+		      Sym.add_variable gtbl iter loc toto ~value;
+		      Ast.StaticVal value
 		  with
 		      Eval.NonStaticExpression ->
 			Npkcontext.report_warning "NonStaticExpression"
 		     	  "Normalize: ObjectDecl Constant";
-			Sym.add_variable gtbl iter loc t;
+			Sym.add_variable gtbl iter loc toto;
 			Ast.Variable
 		    | _ -> Npkcontext.report_error "Exit"
 			"Normalize: ObjectDecl Constant"
 	  in	    
-	    [Ast.BasicDecl ( Ast.ObjectDecl( iter, t, status
-			    , build_init_stmt (iter, Some init, loc)
-					   ) 
-			    
-			  ) , loc
+	    [Ast.BasicDecl ( Ast.ObjectDecl ( iter, toto, status
+			     , build_init_stmt ( iter, Some init, loc)) 
+			   ) , loc
 	    ]
 	in	  
+	
 	let nblock = normalize_block ?return_type block in
 	let loop = [Ast.Loop ( Ast.While
 		( normalize_exp (
@@ -1549,9 +1546,9 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 			      )
 		       , loc
 		     ]
-	  in  
-	    Sym.exit_context gtbl;
-	    [Ast.Block (ndp, loop), loc]
+	in  
+	  Sym.exit_context gtbl;
+	  [Ast.Block (ndp, loop), loc]
       in
 	
 	match range with 
@@ -1592,12 +1589,15 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 			       ,  List.tl sub_enums
 			   end
 			 in
-			   
-			 let dp = [BasicDecl (ObjectDecl ( 
-				[iter], sub_typ_ind, Some init , Constant)), loc]
-			 in
-			   Sym.enter_context gtbl;
-			   let ndp = normalize_decl_part dp in
+			   Sym.enter_context gtbl; 
+			   Sym.add_variable gtbl iter loc toto;
+			   let ndp = [(Ast.BasicDecl 
+					 (Ast.ObjectDecl (iter, toto, Ast.Variable,
+					   build_init_stmt (iter, Some init, loc)) 
+					 ),  loc
+				      )
+				     ] 
+			   in 
 			   let nblock = normalize_block ?return_type block in
 			   let unrolled_loops = ref nblock in
 			     List.iter
@@ -1614,13 +1614,9 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 			     Sym.exit_context gtbl;
 			     [Ast.Block (ndp, !unrolled_loops), loc]
 				 
-		    | _ -> 
-			basic_loop ()
+		    | _ ->  basic_loop ()
 		end
 	    | _ -> 	basic_loop ()
-
-
-
     end
       
   | Exit -> [Ast.Exit, loc]

@@ -13,7 +13,7 @@ void t329(void) {
         (t329.adb:11#7)^guard((i_int32 > 10));
         (t329.adb:11#7)^goto lbl1;
       }
-      (t329.adb:11#7)^i =(int32) belongs[-2147483648,2147483647] (i_int32 + 1);
+      (t329.adb:11#7)^i =(int32) belongs[1,10] (i_int32 + 1);
     }
   } with lbl1:
 }

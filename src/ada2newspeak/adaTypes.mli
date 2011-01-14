@@ -123,6 +123,8 @@ val get_enum_litt_value : t -> data_t -> data_t
  *)
 val extract_array_types : t -> (t * t list)
 
+val extract_array_range : t -> t 
+
 (**
  * Return the base (first element) of an index type.
  * This allows a correct translation in firstpass :
