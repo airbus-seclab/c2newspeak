@@ -355,9 +355,24 @@ let rec normalize_exp ?expected_type exp =
 		    
 	      | _ -> Npkcontext.report_error "normalize_exp" "not a Lval"
 	end
-   (* | Lval (SName ( SName (  SName _ , _ ), _ )) -> 
-	Npkcontext.report_error "normalize_exp" "not a Lval"
-   *)
+	  
+    | Lval (SName  (SName ( SName ( x, fld ), fld2 ), fld3)) ->
+	begin 
+	  let n_exp = normalize_exp( Lval( SName ( SName ( x, fld ), fld2 ))) 
+	  in   
+	    match n_exp  with  
+		(Ast.Lval nlv, t) ->  
+		  let (off, tf) = T.record_field t fld3 in
+		    Ast.Lval(Ast.RecordAccess (nlv , off, tf)), tf
+	      
+	      | Ast.BlkExp ( [instr, loc], ( Ast.Lval lvalue, t)), _t ->
+		  let (off, tf) = T.record_field t fld3 in
+		  let expr = Ast.Lval (Ast.RecordAccess (lvalue, off, tf)) in
+		    Ast.BlkExp ( [instr, loc], (expr, tf)), tf
+	  
+	      | _ -> Npkcontext.report_error "normalize_exp" "unexpected call in case with fld3 "
+	end
+
 
     | Lval lv ->  
         begin
