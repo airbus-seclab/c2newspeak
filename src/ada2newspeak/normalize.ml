@@ -1621,14 +1621,17 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
       
   | Exit -> [Ast.Exit, loc]
   | Case (e, choices, default) ->
-            [Ast.Case (normalize_exp e,
-                  List.map (fun (e,block) ->
-                              normalize_exp e,
-                              normalize_block ?return_type block)
-                      choices,
-                  Ada_utils.may (fun x -> normalize_block ?return_type x)
-                                default
-                  ),loc]
+      let case_exp = normalize_exp e in
+      let (_, case_t) = case_exp in 
+        [Ast.Case (case_exp ,
+                   List.map (fun (e,block) ->
+                               normalize_exp e ~expected_type:case_t,
+                               normalize_block ?return_type block)
+                     choices,
+                   Ada_utils.may (fun x -> normalize_block ?return_type x)
+                     default
+                  ),loc
+	]
   | Block (dp,blk) -> 
       Sym.enter_context ~desc:"Declare block" gtbl;
       let ndp = normalize_decl_part dp in
