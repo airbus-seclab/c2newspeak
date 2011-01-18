@@ -932,6 +932,17 @@ let get_possible_common_type s lval1 lval2 =
 	    | Some tbl -> res:=List.append !res (find_symbols tbl name)
 	    | None     -> ()
       done;
+    (*  print_endline "____________";
+      List.iter ( fun x ->
+		    print_endline (
+		      match x with 
+			 (_, Variable (n,_,_,_,_) )-> (" _ " ^n)
+			| (_, Subprogram _ )-> "sub"
+			|_ -> "?"
+		    )
+		)
+	        ( List.append symb1 !res);
+    *)
       List.append symb1 !res
   in
     try
