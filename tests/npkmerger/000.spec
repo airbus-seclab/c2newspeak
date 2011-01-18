@@ -1,1 +1,1 @@
-Fatal error: Npkmerger.merge: to continue
+Fatal error: Npkmerger.post_check: implement function signature
