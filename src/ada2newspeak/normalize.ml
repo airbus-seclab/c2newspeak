@@ -262,7 +262,9 @@ let parse_specification name =
     then begin
       if ((Sys.file_exists body_name) && 
 	    (not ( List.mem body_name !body_tbl))) 
-      then body_tbl := body_name::!body_tbl;
+      then body_tbl := body_name::!body_tbl
+      ;
+
       let res = File_parse.parse spec_name in
 	if (!Npkcontext.verb_ast) then begin
           print_endline "Abstract Syntax Tree (extern)";
@@ -598,16 +600,16 @@ and normalize_binop bop e1 e2 xpec =
       | _ ->  
 	  let bop' = direct_op_trans bop in
 	  let n = Ada_utils.make_operator_name bop in	    
+
 	  let expected_type =
 	    match (e1, e2) with
-		    | Lval l1, Lval l2 -> 
+	      | Lval l1, Lval l2 -> 
 			Sym.get_possible_common_type gtbl l1 l2
 		    | _ , Qualified (lvn,_) -> 
 			let n = Symboltbl.make_name_of_lval lvn in
 			  Some (subtyp_to_adatyp n)
 		    | _ -> None
 	  in
-	    	 
 	  let (e1',t1) = normalize_exp ?expected_type e1 in
 	  let (e2',t2) = normalize_exp ?expected_type e2 in
 	    
@@ -847,10 +849,9 @@ and normalize_typ_decl ident typ_decl loc =
       let ids = fst (List.split symbs) in
       let t = T.new_enumerated ids in
       Sym.add_type gtbl ident loc t;
-      List.iter (fun (i,v) -> Sym.add_variable gtbl i loc t
-                                                 ~value:(T.IntVal v)
-                                                 ~no_storage:true
-      ) symbs;
+	List.iter (fun (i,v) -> Sym.add_variable gtbl i loc t
+                   ~value:(T.IntVal v) ~no_storage:true
+		) symbs;
       ()
   | DerivedType subtyp_ind ->
       let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
@@ -1148,7 +1149,6 @@ and normalize_basic_decl item loc =
 	match actuals with 
 	    (Some "source", Lval src)::(Some "target", Lval tgt)::[]
 	  | (None, Lval src)::(None, Lval tgt)::[] -> 
-
 	      begin
 		let src_t = Symboltbl.make_name_of_lval src in	  
 		let tgt_t = Symboltbl.make_name_of_lval tgt in
@@ -2081,7 +2081,7 @@ and normalize_context context =
   List.fold_left ( 
     fun ctx item -> 
       match item with
-	| With(nom, spec) ->  
+	| With(nom, spec) -> 
 	    (*if (not (Sym.is_with gtbl nom)) then*)
 	    if (not (Hashtbl.mem spec_tbl nom) && not (Sym.is_ada_pck nom )) then
 	      begin 
@@ -2120,6 +2120,7 @@ and normalize_context context =
  *)
     
 and normalization compil_unit = 
+ 
   let cu_name = compilation_unit_name compil_unit in
     Npkcontext.print_debug ("Semantic checking " ^ cu_name ^ "...");
     let (context, lib_item,loc) = compil_unit in
@@ -2127,5 +2128,5 @@ and normalization compil_unit =
     let norm_lib_item = normalize_lib_item lib_item loc in 
       Npkcontext.forget_loc ();
       Npkcontext.print_debug ("Done semantic checking " ^ cu_name);
-      (norm_context, norm_lib_item, loc)
+       (norm_context, norm_lib_item, loc)
 	

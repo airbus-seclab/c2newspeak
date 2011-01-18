@@ -310,9 +310,8 @@ let translate src_lang prog =
 	K.is_used = false;
       }
     in
-      Hashtbl.add glbdecls x declaration
+      Hashtbl.add glbdecls x declaration;
   in
-
 (* TODO: remove unused argument from cir *)
   let translate_fundef f declaration =
 (* TODO: remove normalize!! *)
@@ -329,9 +328,8 @@ let translate src_lang prog =
     in
       Hashtbl.add fundefs f fundec
   in
-
   let flag_glb x = 
-    try  
+    try
       let declaration = Hashtbl.find glbdecls x in
       let declaration = { declaration with K.is_used = true; } in
  	Hashtbl.replace glbdecls x declaration
@@ -346,7 +344,7 @@ let translate src_lang prog =
   let init = Cir.normalize prog.init in
   let init = translate_blk init in
     Hashtbl.iter translate_glbdecl prog.globals;
-    Hashtbl.iter translate_fundef prog.fundecs;
+    Hashtbl.iter translate_fundef  prog.fundecs;
     Set.iter flag_glb !used_glbs;
     { K.globals = glbdecls; K.init = init;
       K.fundecs = fundefs; K.src_lang = src_lang }

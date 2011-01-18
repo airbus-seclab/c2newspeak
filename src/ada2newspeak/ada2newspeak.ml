@@ -75,7 +75,9 @@ let compile (fname: string): Npkil.t =
       Sys.chdir dir_name
     end;
     let ast = parse base_name in
-      (*Find a cleaner way to Go into the spec in order to add with Clause*)
+    (* Find a cleaner way to Go into the spec in order 
+       to add 'with' clauses
+    *)
     let spec_name = (Filename.chop_suffix  base_name  
 		       Params.ada_suffix)^Params.ada_spec_suffix 
     in
@@ -93,23 +95,21 @@ let compile (fname: string): Npkil.t =
       let eq_clause cl y = 
 	match cl, y with 
 	    AdaSyntax.With(s1, _), AdaSyntax.With(s2, _) 
-	  | AdaSyntax.UseContext s1 , AdaSyntax.UseContext s2 -> compare s1 s2 = 0
+	  | AdaSyntax.UseContext s1 , AdaSyntax.UseContext s2 -> 
+	      compare s1 s2 = 0
 	  | _ -> false 
       in
 	List.for_all (fun x -> not (eq_clause x y)) cls
-    in
-         
+    in  
     let added_clauses = 
       List.fold_left (
 	fun x y -> if ( not_in_clauses clauses y) then  y::x else x
       ) [] spec_clauses  
     in 
-
-    let updated_clauses =   List.append clauses (List.rev added_clauses) in
-    let n_ast = ( updated_clauses, libs, locat) in
-
+    let updated_clauses =   
+      List.append clauses (List.rev added_clauses ) in
+    let n_ast = ( updated_clauses, libs, locat ) in
     let norm_tree = normalization fname n_ast in
-
     let prog = firstpass_translate fname norm_tree in
     let tr_prog = translate prog in
       if dir_name <> "." then begin
@@ -138,24 +138,38 @@ let extract_no fname =
     
 let execute () =
     (* TODO: this code should be factored with c2newspeak!!! into x2newspeak *)
-    match !Npkcontext.input_files with
-        file::[]
-          when !Npkcontext.compile_only && (!Npkcontext.output_file <> "") ->
-	    let prog = compile file in
-	      Npkil.write !Npkcontext.output_file prog
-		
+   (* match !Npkcontext.input_files with
+      file::[] when ( !Npkcontext.compile_only && 
+      (!Npkcontext.output_file <> "")) ->
+      
+      let prog = compile file in	   
+      Npkil.write !Npkcontext.output_file prog;
+      
       | files ->
-	  Normalize.init_bodies files;
-	  let nos  = List.map extract_no files in
-	  let bods = Normalize.bodies_to_add() in
-	  let bods_less_files = 
-	    List.filter (fun x -> not (List.mem x files)) bods 
-	  in
-	  let bodies_nos = List.map extract_no (List.rev bods_less_files) in 
-	    if not !Npkcontext.compile_only then begin
-	      Linker.link (List.append bodies_nos nos)
-	    end
-	      
+   *)
+  Normalize.init_bodies !Npkcontext.input_files;
+
+  let nos = List.map extract_no !Npkcontext.input_files in
+    
+    let bods = Normalize.bodies_to_add() in
+
+    let bods_less_files = List.filter (fun x -> not (
+	 List.mem x !Npkcontext.input_files)) bods 
+    in
+(*      print_endline "____      ____       _____          ______     ";
+	List.iter ( fun x -> print_endline x)  (List.rev bods_less_files) ;
+*)
+	let bodies_nos = List.map extract_no (
+	List.rev bods_less_files) 
+	in 
+(*	print_endline "____      ____       _____          ______      ";
+	puis en ecadrant print begin...print ... end dans normalization
+*)
+      if not !Npkcontext.compile_only then begin
+	Linker.link (List.append bodies_nos nos)
+      end
+	
+	
 let _ =
   X2newspeak.process Params.version_string Params.comment_string execute
     
