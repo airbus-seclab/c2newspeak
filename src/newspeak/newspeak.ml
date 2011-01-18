@@ -1545,3 +1545,5 @@ let char_typ =
   Int (char_signedness, Config.size_of_char)
 
 let is_generic_temp name = Temps.is_generic_temp name
+
+let get_config () = Config.get ()

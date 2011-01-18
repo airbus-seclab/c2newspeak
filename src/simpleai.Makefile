@@ -34,8 +34,8 @@ FILES=version utils/strSet \
       utils/standardApplication \
       newspeak/npkcontext newspeak/lowspeak newspeak/npk2lpk \
       simpleai/context simpleai/simple \
-      simpleai/filter simpleai/sigs simpleai/topState \
-      simpleai/unrelState simpleai/cst simpleai/range \
+      simpleai/filter simpleai/sigs \
+      simpleai/unrelState simpleai/cst \
       simpleai/solver simpleai/simpleai
 
 FILES.CMO=$(addsuffix .cmo,$(FILES))

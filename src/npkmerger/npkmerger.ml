@@ -28,11 +28,6 @@ let debug     = ref false
 let print     = ref false
 let input     = ref []
 let output    = ref "a.npk"
-let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file1.npk file2.npk ..."
-let speclist  = [
-  ("--debug", Arg.Set debug, "prints debug information");
-  ("--print", Arg.Set print, "prints output");
-  ("-o", Arg.Set_string output, "gives a name to the output (default is "^(!output)^")")]
 
 let check progs =
   if !debug then print_endline "Checking compatibility of programs...";
@@ -43,19 +38,42 @@ let check progs =
     p.N.src_lang = p'.N.src_lang && p.N.ptr_sz = p'.N.ptr_sz
   in
   if not (List.for_all same (List.tl progs)) then 
-    raise (Invalid_argument "different configurations (pointer size or source language)")
+    raise (Invalid_argument "different configurations (pointer size or source language)");
+    if true then raise (Invalid_argument "check function signature");
+    if true then raise (Invalid_argument "check that types have the same size");
+  if true then raise (Invalid_argument "check something about globals")
 
-let anon_fun (f: N.fid) = 
-  input := f::!input
- 
-let merge _progs = 
-if !debug then print_endline "Merging...";
- invalid_arg "Npkmerger.merge: to continue"
+let merge progs = 
+  if !debug then print_endline "Merging...";
+  let pi = List.hd progs in
+  let po = {
+    N.globals  = Hashtbl.copy pi.N.globals;
+    N.init     = pi.N.init;
+    N.fundecs  = Hashtbl.copy pi.N.fundecs;
+    N.ptr_sz   = pi.N.ptr_sz;
+    N.src_lang = pi.N.src_lang;
+  } 
+  in
+  let add init p =
+    Hashtbl.iter (fun s t -> Hashtbl.add po.N.globals s t) p.N.globals;
+    Hashtbl.iter (fun f fundec -> Hashtbl.add po.N.fundecs f fundec) p.N.fundecs; 
+    p.N.init @ init
+  in
+  let init = List.fold_left add po.N.init (List.tl progs) in
+    { po with N.init = List.rev init; }
 
 let process () = 
   let progs = List.map Newspeak.read !input in
     check progs;
     let p = merge progs in
-    if !print then Newspeak.dump p
+      if !print then Newspeak.dump p
 
-let _ = StandardApplication.launch speclist anon_fun usage_msg process
+let _ = 
+  let anon_fun (f: N.fid) = input := f::!input in
+  let usage_msg 	  = Sys.argv.(0)^" [options] [-help|--help] file1.npk file2.npk ..." in
+  let speclist  	  = [
+    ("--debug", Arg.Set debug, "prints debug information");
+    ("--print", Arg.Set print, "prints output");
+    ("-o"     , Arg.Set_string output, "gives a name to the output (default is "^(!output)^")")] 
+  in
+    StandardApplication.launch speclist anon_fun usage_msg process
