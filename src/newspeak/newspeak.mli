@@ -358,7 +358,7 @@ val write : string -> t -> unit
     @raise Invalid_argument if the input file is not a valid .npk file, or its
     newspeak version is not the same as this file's.
 *)
-val read : string -> t
+val read : string -> t 
 
 val size_of_scalar : size_t -> scalar_t -> size_t
 
@@ -393,3 +393,6 @@ val return_value: string
 (** returns true whenever the parameter is a name of variable
 introduced by Newspeak *)
 val is_generic_temp: string -> string option
+
+(** returns the configuration used to compile to newspeak *)
+val get_config: unit -> Config.t

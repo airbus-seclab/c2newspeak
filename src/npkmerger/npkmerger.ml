@@ -29,7 +29,7 @@ let print     = ref false
 let input     = ref []
 let output    = ref "a.npk"
 
-let pre_check progs =
+let check progs =
   if !debug then print_endline "Checking compatibility of programs...";
   if List.length progs < 2 then 
     raise (Invalid_argument "give at least two npk files to merge");
@@ -38,11 +38,10 @@ let pre_check progs =
     p.N.src_lang = p'.N.src_lang && p.N.ptr_sz = p'.N.ptr_sz
   in
   if not (List.for_all same (List.tl progs)) then 
-    raise (Invalid_argument "different configurations (pointer size or source language)")
-
-let post_check _progs = 
-  if !debug then print_endline "Checking compatibility of function signatures...";
-  if true then invalid_arg "Npkmerger.post_check: implement function signature"
+    raise (Invalid_argument "different configurations (pointer size or source language)");
+    if true then raise (Invalid_argument "check function signature");
+    if true then raise (Invalid_argument "check that types have the same size");
+  if true then raise (Invalid_argument "check something about globals")
 
 let merge progs = 
   if !debug then print_endline "Merging...";
@@ -65,9 +64,8 @@ let merge progs =
 
 let process () = 
   let progs = List.map Newspeak.read !input in
-    pre_check progs;
+    check progs;
     let p = merge progs in
-      post_check p;
       if !print then Newspeak.dump p
 
 let _ = 
