@@ -160,7 +160,7 @@ struct
       ^ "}")
 
   let add_variable tbl n =
-    adder (fun (t,v,ns,r) -> Variable (n,t,v,ns,r))
+   adder (fun (t,v,ns,r) -> Variable (n,t,v,ns,r))
           "variable" tbl n
 
   let add_type =
@@ -208,8 +208,17 @@ struct
     in
       match extract_unique ~filter fn' lst with
 	| None -> 
+	    begin
+(*
+  List.iter (fun x -> print_endline (match (snd x) with
+  Variable (n,_x, _v, _, _r) -> (">> "^n)
+  | _ -> "?"
+  )
+  ) lst;
+*)
 	    Npkcontext.report_error "Symboltbl.mkcast" 
 	      ("Ambiguous " ^ desc ^ " name") 
+	  end
 	| Some x -> x
 
   let cast_v ?filter = 
@@ -889,16 +898,30 @@ let rec make_name_of_lval lv =
 
 let get_possible_common_type s lval1 lval2 =
   let inter l1 l2 =
-    let sym_eq (_,x) (_,y) = match (x,y) with
+    
+    let sym_eq (_,x) (_,y) = 
+      let extract_typ symbol = 
+	match symbol with  
+	    Variable (_,t,_,_,_) -> Some t
+	  | Subprogram (_, _, t) -> t
+	  | _ -> Npkcontext.report_error "get_possible_common_type"
+	      "Unexpected case in get_possible_common_type"
+      in
+	match  extract_typ x,  extract_typ y with
+	    Some a, Some b -> a = b 
+	  | _ -> false
+    (*
+      match (x,y) with
       | Variable (_,t1,_,_,_), Variable (_,t2,_,_,_) -> t1 = t2
       | a, b -> a = b
+    *)
     in
       List.filter (fun x -> List.exists (fun y -> sym_eq x y) l1) l2
   in   
   let all_find_symbols stack name = 
     let symb1 = 
       Tree.fold (fun rf it ->
-		   List.append rf (find_symbols it name)) [] stack.s_stack 
+	List.append rf (find_symbols it name)) [] stack.s_stack 
     in
     let context = ref (s_get_use stack) in 
     let res = ref [] in
@@ -909,6 +932,17 @@ let get_possible_common_type s lval1 lval2 =
 	    | Some tbl -> res:=List.append !res (find_symbols tbl name)
 	    | None     -> ()
       done;
+    (*  print_endline "____________";
+      List.iter ( fun x ->
+		    print_endline (
+		      match x with 
+			 (_, Variable (n,_,_,_,_) )-> (" _ " ^n)
+			| (_, Subprogram _ )-> "sub"
+			|_ -> "?"
+		    )
+		)
+	        ( List.append symb1 !res);
+    *)
       List.append symb1 !res
   in
     try
