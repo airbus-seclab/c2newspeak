@@ -233,7 +233,7 @@ let to_string prog =
     res := !res^string_of_blk "  " body;
     res := !res^"}\n"
   in
-    List.iter string_of_global prog.globals;
+    List.iter string_of_global (List.rev prog.globals);
     res := !res^string_of_blk "" prog.init;
     Hashtbl.iter string_of_fundec prog.fundecs;
     !res
