@@ -27,16 +27,16 @@
 ifdef WITH_BISECT
 INSTRUMENT_CMA=$(shell ocamlc -where)/bisect/instrument.cmo
 LIBX+=-I +bisect -pp 'camlp4o -unsafe $(INSTRUMENT_CMA)'
-OCAMLOPTFLAGS=-w Ael -warn-error Ael -inline 100 -noassert
+OCAMLOPTFLAGS=-w Ael -inline 100 -noassert
 EXTRALINKFLAGS=-I +bisect bisect.cmxa
 else
-OCAMLOPTFLAGS=-w Ael -warn-error Ael -inline 100 -noassert -unsafe
+OCAMLOPTFLAGS=-w Ael -inline 100 -noassert -unsafe
 endif
 
 #utils
 CP=cp
 RM=rm -rf
-OCAMLC=ocamlc -w Ael -warn-error Ael
+OCAMLC=ocamlc -w Ael
 
 OCAMLOPTCOMP=$(shell if ocamlopt.opt -v >/dev/null 2>&1; \
 		 then echo ocamlopt.opt ; \
