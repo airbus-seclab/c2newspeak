@@ -194,7 +194,7 @@ let translate prog =
                 FunId fid -> 
                   let args_ids = 
                     try
-                      let { args = args } = Hashtbl.find prog.fundecs fid in
+                      let { args = args; _ } = Hashtbl.find prog.fundecs fid in
                         List.map fst args
                     with Not_found -> default_args_ids fid (List.length args)
                   in
