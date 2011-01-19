@@ -35,13 +35,22 @@ let check progs =
     raise (Invalid_argument "give at least two npk files to merge");
   let p = List.hd progs in
   let same p' =
-    p.N.src_lang = p'.N.src_lang && p.N.ptr_sz = p'.N.ptr_sz
+    p.N.src_lang = p'.N.src_lang
   in
   if not (List.for_all same (List.tl progs)) then 
     raise (Invalid_argument "different configurations (pointer size or source language)");
     if true then raise (Invalid_argument "check function signature");
-    if true then raise (Invalid_argument "check that types have the same size");
   if true then raise (Invalid_argument "check something about globals")
+
+(*let merge_globals t1 t2 =*)
+  (* check that common globals are of the same type and add new
+  globals of t2 into t1 *)
+  (* let check_and_add s gdecl = *)
+(*     try  *)
+(*       let gdecl' = Hashtbl.find s t1 in *)
+(*     with Not_found -> Hashtbl.add s gdecl t1 *)
+(*   in *)
+(*     Hashtbl.iter check_and_add t2 *)
 
 let merge progs = 
   if !debug then print_endline "Merging...";
@@ -55,8 +64,8 @@ let merge progs =
   } 
   in
   let add init p =
-    Hashtbl.iter (fun s t -> Hashtbl.add po.N.globals s t) p.N.globals;
-    Hashtbl.iter (fun f fundec -> Hashtbl.add po.N.fundecs f fundec) p.N.fundecs; 
+    (*merge_globals po.N.globals p.N.globals;
+    merge_funs po.N.globals p.N.fundecs; *)
     p.N.init @ init
   in
   let init = List.fold_left add po.N.init (List.tl progs) in

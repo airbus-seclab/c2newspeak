@@ -198,7 +198,7 @@ object (this)
     incr_counters counters current_counters;
     current_counters <- init_counters ()
 
-  method process_gdecl _ (t, _) =
+  method process_gdecl _ t =
     globals <- globals + 1;
     if !more_verb then 
       try 

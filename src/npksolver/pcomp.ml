@@ -38,10 +38,10 @@ let check_scalar_type loc = function
   | N.Int (N.Unsigned, _) -> fail loc "Unsigned value"
   | _ -> fail loc "Bad scalar"
 
-let rec check_type loc = function
-  | N.Scalar s -> check_scalar_type loc s
-  | N.Array (t, _sz) -> check_type loc t
-  | N.Region _ -> fail loc "Not a scalar"
+let rec check_type = function
+  | N.Scalar s -> check_scalar_type (N.unknown_loc) s
+  | N.Array (t, _sz) -> check_type t
+  | N.Region _ -> fail (N.unknown_loc) "Not a scalar"
 
 let pcomp_binop loc binop =
   match binop with
@@ -144,8 +144,8 @@ and pcomp_blk x = List.fold_right (fun s (stmts, anns) ->
 
 let compile npk =
   let globals =
-  Hashtbl.fold (fun s (ty, loc) l ->
-    check_type loc ty;
+  Hashtbl.fold (fun s ty l ->
+    check_type ty;
     (s, pcomp_type ty)::l
   ) npk.globals []
   in

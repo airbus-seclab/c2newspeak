@@ -1,7 +1,7 @@
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans
+  Copyright (C) 2007-2011  Charles Hymans, Sarah Zennou
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -21,6 +21,11 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
+
+  Sarah Zennou
+  EADS Innovation Works - SE/IS
+  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
+  email: sarah(dot)zennou(at)eads(dot)net
 *)
 
 module Nat =
@@ -100,9 +105,7 @@ and fundec = {
   position: location;         (** position of the start of the function *)
 }
 
-and globals = (string, gdecl) Hashtbl.t
-
-and gdecl = typ * location
+and globals = (string, typ) Hashtbl.t
 
 and src_lang = C | ADA
 
@@ -428,8 +431,7 @@ let string_of_funexp f =
 (* Actual dump *)
 let string_of_lbl l = "lbl"^(string_of_int l)
 
-(* TODO: print location too *)
-let dump_gdecl name (t, _) = print_endline (string_of_typ t^" "^name^";")
+let dump_gdecl name t = print_endline (string_of_typ t^" "^name^";")
 
 let string_of_token x =
   match x with
@@ -612,7 +614,7 @@ object
   val mutable curloc = unknown_loc
   method set_curloc loc = curloc <- loc
   method curloc = curloc
-  method process_global (_: string) (x: gdecl) = x
+  method process_global (_: string) (x: typ) = x
   method process_lval (x: lval) = x
   method process_exp (x: exp) = x
   method process_blk (x: blk) = x
@@ -1052,10 +1054,8 @@ let rec build builder prog =
     Hashtbl.iter build_fundec prog.fundecs;
     { prog with globals = globals'; fundecs = fundecs' }
 
-and build_gdecl builder (t, loc) =
-  builder#set_curloc loc;
-  let t = build_typ builder t in
-    (t, loc)
+and build_gdecl builder t =
+  build_typ builder t
 
 and build_fundec builder fd = 
   let (args_t, ret_t) = build_formal_ftyp builder (fd.args, fd.rets) in
@@ -1271,7 +1271,7 @@ object
   method set_loc loc = cur_loc <- loc
   method get_loc = cur_loc
 
-  method process_gdecl (_: string) (_: gdecl) = true
+  method process_gdecl (_: string) (_: typ) = true
   method process_fun (_: fid) (_: fundec) = true
   method process_fun_after () = ()
   method process_stmt (_: stmt) = true
@@ -1434,9 +1434,8 @@ let visit_fun visitor fid ft =
 
 let visit_init visitor (_, _, e) = visit_exp visitor e
 
-let visit_glb visitor id (t, loc) =
-  visitor#set_loc loc;
-  let continue = visitor#process_gdecl id (t, loc) in
+let visit_glb visitor id t =
+  let continue = visitor#process_gdecl id t in
     if continue then visit_typ visitor t
 
 let visit visitor prog =

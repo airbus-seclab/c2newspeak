@@ -1,7 +1,7 @@
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans
+  Copyright (C) 2007-2011  Charles Hymans, Sarah Zennou
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -21,6 +21,9 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
+
+  Sarah Zennou
+  email: sarah(dot)zennou(at)eads(dot)net
 *)
 
 (** Simple language.
@@ -30,16 +33,12 @@
 module type T =
 sig 
   type t = {
-    globals: globals;                     (** program variables *)
+    globals: vid list;                     (** program variables *)
     init: blk;                            (** initialization block of globals *)
     fundecs: (fid, fundec) Hashtbl.t;     (** table of all declared functions *)
     src_lang: Newspeak.src_lang;          (** source programming language *)
   }
-      
-  and globals = (vid, gdecl) Hashtbl.t    (** Table of global names to location *)
-      
-  and gdecl = Newspeak.location
-      
+     
   and fundec = blk
       
   and blk = stmt list

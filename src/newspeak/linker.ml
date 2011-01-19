@@ -1,7 +1,7 @@
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans, Olivier Levillain
+  Copyright (C) 2007-2011  Charles Hymans, Olivier Levillain, Sarah Zennou
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -24,6 +24,9 @@
 
   Olivier Levillain
   email: olivier.levillain@penjili.org
+
+  Sarah Zennou
+  email: sarah(dot)zennou(at)eads(dot)net
 *)
 
 open Npkil
@@ -52,8 +55,7 @@ let scalar_of_typ t =
 
 let get_glob_typ name =
   try
-    let (t, _) = Hashtbl.find globals name in
-      t
+    Hashtbl.find globals name
   with Not_found ->
     Npkcontext.report_error "Npklink.get_glob_typ" 
       ("type for global variable "^name^" not found")
@@ -97,7 +99,7 @@ and add_glb_cstr str =
       let char_typ = N.Int (N.Signed, Config.size_of_char) in
       let len = String.length str in	  
       let t = N.Array (N.Scalar char_typ, len + 1) in
-	Hashtbl.add globals name (t, loc);
+	Hashtbl.add globals name t;
 	(* TODO: think about it, this code is redundant with initialization in
 	   typedC2Cir *)
 	let offset = ref 0 in
@@ -170,11 +172,9 @@ and generate_addr_of lv sz =
   N.UnOp (N.Focus sz, N.AddrOf (generate_lv lv))
 	    
 let generate_global name declaration =
-  let loc = declaration.global_position in
-    Npkcontext.set_loc loc;
-    if declaration.is_used || (not !Npkcontext.remove_temp) then begin
+  if declaration.is_used || (not !Npkcontext.remove_temp) then begin
       let t = generate_typ declaration.global_type in
-	Hashtbl.add globals name (t, loc);
+	Hashtbl.add globals name t;
 	match declaration.storage with
             Extern -> 
               Npkcontext.report_accept_warning "Link.generate_global" 
@@ -345,11 +345,17 @@ let merge npkos =
 	merge_storages name prev_loc 
 	  previous_declaration.storage declaration.storage
       in
+      let loc = 
+	if storage = declaration.storage then
+	  declaration.global_position
+	else
+	  prev_loc
+      in
       let used = declaration.is_used || previous_declaration.is_used in
       let declaration = 
 	{
 	  global_type = t;
-	  global_position = prev_loc;
+	  global_position = loc;
 	  storage = storage;
 	  is_used = used;
 	}

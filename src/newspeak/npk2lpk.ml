@@ -253,9 +253,9 @@ let translate prog =
     Hashtbl.add fundecs f (ft, body)
   in
 
-  let translate_global x (t, loc) = Hashtbl.add globals x (t, loc) in
-    
-  let init = translate_blk prog.init in
+  let translate_global x t = 
+    Hashtbl.add globals x t in
+    let init = translate_blk prog.init in
     Hashtbl.iter translate_fundec prog.fundecs;
     Hashtbl.iter translate_global prog.globals;
 

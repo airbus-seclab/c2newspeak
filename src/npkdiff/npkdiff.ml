@@ -44,8 +44,6 @@ let usage_msg = Sys.argv.(0)^" [options] [-help|--help] file1.npk file2.npk"
 let speclist = 
   [ ]
 
-let filter_global (k, (t, _)) = (k, t)
-
 let hashtbl_to_list tbl =
   let res = ref [] in
   let add_binding k d = res := (k, d)::!res in
@@ -84,10 +82,8 @@ let process () =
   let prog1 = Newspeak.read !input1 in
   let prog2 = Newspeak.read !input2 in
   let glbs1 = hashtbl_to_list prog1.globals in
-  let glbs1 = List.map filter_global glbs1 in
   let glbs1 = List.sort compare_key glbs1 in
   let glbs2 = hashtbl_to_list prog2.globals in
-  let glbs2 = List.map filter_global glbs2 in
   let glbs2 = List.sort compare_key glbs2 in
   let fundecs1 = hashtbl_to_list prog1.fundecs in
   let fundecs1 = List.map remove_location fundecs1 in

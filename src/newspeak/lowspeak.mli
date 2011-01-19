@@ -34,8 +34,6 @@ type t = {
   src_lang: Newspeak.src_lang;
 }
 
-and gdecl = Newspeak.typ * Newspeak.location
-
 and fundec = Newspeak.ftyp * blk
 
 and assertion = spec_token list
@@ -92,7 +90,7 @@ val dump_fundec : string -> fundec -> unit
 (* Visitor *)
 class visitor:
 object
-  method process_gdecl: string -> gdecl -> bool
+  method process_gdecl: string -> Newspeak.typ -> bool
   method process_fun: Newspeak.fid -> fundec -> bool
   method process_fun_after: unit -> unit
   method process_stmt: stmt -> bool
@@ -121,7 +119,7 @@ val visit_assertion: visitor -> assertion -> unit
 val visit_exp: visitor -> exp -> unit
 val visit_blk: visitor -> blk -> unit
 val visit_fun: visitor -> Newspeak.fid -> fundec -> unit
-val visit_glb: visitor -> string -> gdecl -> unit
+val visit_glb: visitor -> string -> Newspeak.typ -> unit
 val visit: visitor -> t -> unit
 
 val collect_fid_addrof: t -> Newspeak.fid list
@@ -151,7 +149,7 @@ object
 (* TODO: should have the same name as in the visitor!!! *)
   method set_curloc: Newspeak.location -> unit
   method curloc: Newspeak.location
-  method process_global: string -> gdecl -> gdecl
+  method process_global: string -> Newspeak.typ -> Newspeak.typ
   method process_lval: lval -> lval
   method process_exp: exp -> exp
   method process_blk: blk -> blk

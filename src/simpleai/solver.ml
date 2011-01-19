@@ -1,7 +1,7 @@
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans
+  Copyright (C) 2007-2011  Charles Hymans, Sarah Zennou
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -21,18 +21,18 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
+
+  Sarah Zennou
+  email: sarah(dot)zennou(at)eads(dot)net
 *)
 
-(* This is the code that should be implemented by students *)
 open Simple
 
 module State = UnrelState.Make(Cst)
 
-let add_globals tbl s =
-  let res = ref s in
-  let add_global x _ = res := State.add_var x !res in
-    Hashtbl.iter add_global tbl;
-    !res
+let add_globals globals s =
+  List.fold_left (fun s' x -> State.add_var x s') s globals
+  
 
 let fixpoint f s =
   let rec fixpoint s1 =
