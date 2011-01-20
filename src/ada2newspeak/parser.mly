@@ -312,14 +312,15 @@ basic_declaration :
 | decl                                     { SpecDecl(fst $1), snd $1 }
 | representation_clause SEMICOLON          { RepresentClause(fst (fst $1),
                                              snd (fst $1)), snd $1 }
-| subprogram_spec RENAMES name SEMICOLON   { let nm = fst $3 in
-                                             match (fst $1) with
-                                             | Subprogram (n, ag, _) ->
-                                                 RenamingDecl(n,Some ag,nm),$2
-                                           }
+| subprogram_spec RENAMES name SEMICOLON   { 
+                                      let nm = fst $3 in
+                                        match (fst $1) with
+                                          | Subprogram (n, ag, rt) ->
+                                            RenamingDecl(n,Some ag, rt, nm),$2
+  }
 | ident_list COLON subtyp_indication
   RENAMES name SEMICOLON                   { match $1 with
-                                             | [x] -> RenamingDecl(x, None, fst $5),$2
+                                             | [x] -> RenamingDecl(x, None, None, fst $5),$2
                                              | _ -> Npkcontext.report_error
                                                  "Parser" ("Only one identifier"
                                                  ^" is allowed before "

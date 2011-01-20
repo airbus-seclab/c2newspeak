@@ -217,9 +217,10 @@ and basic_declaration =
   | SubtypDecl           of string
                           * subtyp_indication
   | RepresentClause      of string * representation_clause
-  | RenamingDecl         of string (* new name *)
+  | RenamingDecl         of string                 (* new name *)
                           * ( param list ) option 
-                          * name   (* old name *)
+                          *  subtyp option         (*return type*)
+                          * name                   (* old name *)
   | GenericInstanciation of string
                           * name
                           * argument list

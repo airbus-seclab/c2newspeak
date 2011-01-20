@@ -92,7 +92,7 @@ val get_possible_common_type:
 
 (** Find data.  *)
 
-exception Parameterless_function of scope * AdaTypes.t
+exception Parameterless_function of scope * string * AdaTypes.t
 exception Variable_no_storage    of AdaTypes.t * AdaTypes.data_t
 
 val find_variable :    t
@@ -122,6 +122,8 @@ val find_subprogram : t
                     ->  AdaTypes.t option
                     -> ( string option * string -> scope * AdaTypes.t)
     -> scope * (string * AdaSyntax.param list * AdaTypes.t option)
+
+val is_already_defined : t  -> string -> bool
 
 val is_operator_overloaded : t -> string -> bool
 
@@ -174,6 +176,6 @@ val s_get_use         : t -> string list
 
 val add_renaming_decl : 
   t -> string option * string -> (AdaSyntax.param list) option 
-  -> string option * string -> unit
+    -> string option * string -> unit
 
 val make_name_of_lval: AdaSyntax.lval -> string list

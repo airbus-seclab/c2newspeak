@@ -1,6 +1,6 @@
 (*
-  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language
-  well-suited for static analysis.
+  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal 
+  language  well-suited for static analysis.
   Copyright (C) 2007  Charles Hymans, Olivier Levillain
 
   This library is free software; you can redistribute it and/or
@@ -35,6 +35,8 @@ module Sym = Symboltbl
 
 let (%+) = Nat.add
 let (%-) = Nat.sub
+
+let set_package = ref None
 
 let gtbl = Sym.create ()
 
@@ -139,18 +141,28 @@ type selected =
 
 
 let rec resolve_selected ?expected_type n =
-  
- let resolve_variable pkg id =
+  let resolve_variable pkg id =
     begin
       try
 	let (sc,(act_id, t, ro)) = 
-	  Sym.find_variable_with_error_report ?expected_type gtbl (pkg,id) 
+	 Sym.find_variable_with_error_report ?expected_type gtbl (pkg,id) 
 	in
 	  SelectedVar(sc,act_id,t,ro)
       with
-      | Sym.Parameterless_function (sc,rt) -> SelectedFCall( sc , id , rt)
+      | Sym.Parameterless_function (sc, n, rt) -> 
+	  (* Il se peut cependant qu'il y ait renaming cf t470*)
+	    let scp = match sc with Sym.In_package p -> Some p | _ -> None in
+	    let nsc = scp, n in
+
+	  let (sc_ren,(act_n, _,_)) = 
+	    Sym.find_subprogram 
+	      ~silent:true gtbl (add_p nsc)  [] (Some rt)
+	      (*expected_type*)
+	      (fun x -> Symboltbl.find_type gtbl x) 
+	  in
+	    SelectedFCall( sc_ren , act_n , rt)
+	    
       | Sym.Variable_no_storage (t,v) -> SelectedConst (t, v)
-      	
     end
   in
    match n with
@@ -163,7 +175,6 @@ let rec resolve_selected ?expected_type n =
      	 with Not_found -> resolve_variable (Some pfx) fld
        end
      | Var id ->  resolve_variable None id
-	 
      | SName (SName (Var _, _) as pf, z) -> begin
 	 match (resolve_selected pf) with
            | SelectedFCall _ 
@@ -598,31 +609,32 @@ and normalize_binop bop e1 e2 xpec =
 		
       (* Otherwise : direct translation *)		
       | _ ->  
+	
 	  let bop' = direct_op_trans bop in
-	  let n = Ada_utils.make_operator_name bop in	    
-
+	  let n = Ada_utils.make_operator_name bop in
 	  let expected_type =
 	    match (e1, e2) with
 	      | Lval l1, Lval l2 -> 
-			Sym.get_possible_common_type gtbl l1 l2
-		    | _ , Qualified (lvn,_) -> 
-			let n = Symboltbl.make_name_of_lval lvn in
-			  Some (subtyp_to_adatyp n)
-		    | _ -> None
+		  Sym.get_possible_common_type gtbl l1 l2
+	      | _ , Qualified (lvn,_) -> 
+		  let n = Symboltbl.make_name_of_lval lvn in
+		    Some (subtyp_to_adatyp n)
+	      | _ -> None
 	  in
 	  let (e1',t1) = normalize_exp ?expected_type e1 in
 	  let (e2',t2) = normalize_exp ?expected_type e2 in
-	    
-	    if ( Sym.is_operator_overloaded gtbl n) then 
+	    if ( Sym.is_operator_overloaded gtbl n) then
 	      begin 
-		(*No Expected type : might raise error in typecheck*)
+		(* No Expected type : might raise error in typecheck *)
 		let norm_args = [(None, (e1',t1));(None, (e2',t2))] in 
 		let norm_typs = [(None, t1);(None, t2)] in
-		let n = Ada_utils.make_operator_name bop in
 		  try
+		    let packg = match (Sym.current gtbl) with 
+			Some p -> Some p
+		      | None -> !set_package
+		    in
 		    let (sc,( act_name, spec, top)) =
-		      Sym.find_subprogram ~silent:true gtbl 
-			(Sym.current gtbl, n) norm_typs xpec
+		      Sym.find_subprogram ~silent:true gtbl (packg, n) norm_typs xpec
 	      		(fun x -> Symboltbl.find_type gtbl x)
 	      	    in 
 
@@ -635,18 +647,17 @@ and normalize_binop bop e1 e2 xpec =
 	      	    in
 		    let effective_args = make_arg_list norm_args spec 
 		    in
-		      Ast.FunctionCall (sc, act_name, effective_args, t), t
+		      Ast.FunctionCall(sc, act_name, effective_args, t), t
 			
 		  with Not_found ->
 		  (*Overloaded but no renaming matches expected spec*)
 		    let tc = TC.type_of_binop bop' t1 t2  in
 		    Ast.Binary (bop', (e1',t1), (e2',t2)), tc
 	      end
-
-	    else
+	    else  begin
 	      let tc = TC.type_of_binop bop' t1 t2  in
 		Ast.Binary (bop', (e1',t1), (e2',t2)), tc
-	    
+	    end
 		      
 and make_abs (exp,t) =
   let x = (exp,t) in
@@ -680,26 +691,26 @@ and normalize_uop uop exp =
      | Not    -> Ast.Not(ne,t), TC.type_of_not t
 
 and normalize_fcall (n, params) expectedtype =
-
   (* Maybe this indexed expression is an array-value *)
   let n = Symboltbl.make_name_of_lval n in
   let n = mangle_sname n in
     try
       let norm_args = List.map normalize_arg params in
       let norm_typs = List.map (fun (s,(_,t)) -> (s,t)) norm_args in
-    
-	let (sc,(act_name,spec,top)) = 
+	
+      let (sc,(act_name,spec,top)) = 
 	Sym.find_subprogram 
 	  ~silent:true gtbl (add_p n) norm_typs 
 	  expectedtype (fun x -> Symboltbl.find_type gtbl x) 
 	in
-      let t = match top with
+      let t = match top with 
 	| None -> Npkcontext.report_error "normalize_fcall"
             "Expected function, got procedure"
 	| Some top -> top
       in
 		    
       let effective_args = make_arg_list norm_args spec in
+	
 	Ast.FunctionCall(sc, act_name, effective_args, t),t
 
     with Not_found ->
@@ -775,7 +786,7 @@ and normalize_fcall (n, params) expectedtype =
 		 
       	  with _ ->  
 	    (*See t437: "=" undefined operator case*)
-	    if ( (compare  (make_operator_name Eq)  (snd n) = 0) &&
+	    if ( (compare (make_operator_name Eq)  (snd n) = 0) &&
 		 (compare (List.length params)  2 = 0 )
 	       ) then
 	      begin 
@@ -1126,11 +1137,23 @@ and normalize_basic_decl item loc =
       let norm_subtyp_ind = normalize_subtyp_ind subtyp_ind in
       Sym.add_type gtbl ident loc (merge_types norm_subtyp_ind);
       []
-  | RenamingDecl (n, arguments, o) ->
+  | RenamingDecl (n, arguments, ret_tp, o) ->
       let updt_arguments = Ada_utils.may 
 	(List.map normalize_params_cur) arguments in
+      let r_t = Ada_utils.may subtyp_to_adatyp ret_tp in
       let (pk, o') = mangle_sname o in
-      let old = add_p (pk, o')  in	
+      let old = add_p (pk, o')  in
+	(*only dedicated to find_symbols in Symbols*)
+      let program_args = match updt_arguments with
+	  None -> []  
+	| Some args -> args 
+      in
+
+	(* Necessary for possible_type in symbol: only though to avoid 
+	   Ambiguous raised for binop (is_overloaded)*)
+	if not ( Sym.is_already_defined gtbl n ) then 
+	  Sym.add_subprogram gtbl n program_args r_t
+	;	
 	Sym.add_renaming_decl gtbl
 	  (Sym.current gtbl, n) updt_arguments old;
         []
@@ -1925,14 +1948,8 @@ and normalize_assign_agr nlv t_lv bare_assoc_list loc =
 		FieldSet.elements (FieldSet.diff all_fields defined) in
 		List.map (fun f -> (f, other_exp)) missing_others
             end
-    in
-      
+    in      
     let other_list =  getfields_other t_lv  (List.map fst assoc_list) other in
-
-
-
-
-
 
     let rec  handle_record lv tlv  aggrs = 
       List.flatten 
@@ -2019,24 +2036,27 @@ and normalize_decl_part decl_part =
 
 and normalize_body body  = match body with
   | SubprogramBody(subprog_decl,decl_part,block) ->
-      let norm_subprog_decl =
-        normalize_sub_program_spec subprog_decl ~addparam:true in
-	Sym.enter_context ~desc:"SP body (locals)" gtbl;
-	let return_type = norm_subprog_decl.Ast.return_type in
-	let norm_decl_part = normalize_decl_part decl_part in
-	let norm_block = normalize_block ?return_type block in
-	  Sym.exit_context gtbl;
-	  Sym.exit_context gtbl; (* params *)
-	  let current_loc = Npkcontext.get_loc () in
-	  let block = [(Ast.Block (norm_decl_part, norm_block), current_loc)] in
-	  Ast.SubProgramBody (norm_subprog_decl, block)
+	let norm_subprog_decl =
+          normalize_sub_program_spec subprog_decl ~addparam:true in
+	  Sym.enter_context ~desc:"SP body (locals)" gtbl;
+	  let return_type = norm_subprog_decl.Ast.return_type in
+	  let norm_decl_part = normalize_decl_part decl_part in
+	  let norm_block = normalize_block ?return_type block in
+	    Sym.exit_context gtbl;
+	    Sym.exit_context gtbl; (* params *)
+	    let current_loc = Npkcontext.get_loc () in
+	    let block =
+	      [(Ast.Block (norm_decl_part, norm_block), current_loc)] 
+	    in
+	      Ast.SubProgramBody (norm_subprog_decl, block)
+
   | PackageBody(name, package_spec, decl_part) ->
       let (nname,nspec) = normalize_package_spec
         (with_default package_spec
            (parse_package_specification name)
         )
       in
-        Sym.set_current gtbl name;
+	Sym.set_current gtbl name;
         Sym.enter_context ~name ~desc:"Package body" gtbl;
         let ndp = normalize_decl_part decl_part in
         let norm_spec = (nname,nspec) in
@@ -2049,7 +2069,20 @@ and normalize_lib_item lib_item loc =
   Npkcontext.set_loc loc;
   match lib_item with
     | Spec spec -> Ast.Spec (normalize_spec spec)
-    | Body body -> Ast.Body (normalize_body body)
+    | Body body ->
+	let previous_val = !set_package in 
+	begin
+	  match body with
+	      (SubprogramBody ( Subprogram(n,_,_), _, _)) -> 
+		set_package:=Some n;
+	    | _ -> ()
+		
+	end;
+	let tmp = Ast.Body (normalize_body body) in
+	  set_package:=previous_val
+	  ;  
+	  tmp
+	  
 
 and add_extern_spec spec =
   let add_extern_basic_decl (basic_decl, loc) =

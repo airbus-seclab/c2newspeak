@@ -27,7 +27,7 @@ module T = AdaTypes
 
 type scope = Lexical | In_package of string
 
-exception Parameterless_function of scope * T.t
+exception Parameterless_function of scope * string * T.t
 exception Variable_no_storage    of T.t * T.data_t
 
 module Table = 
@@ -167,7 +167,6 @@ struct
     adder (fun t -> Type t)
           "type"
 
-	    
   let add_subprogram tbl n params ret =
     adder (fun (params,ret) -> Subprogram (n,params,ret))
           "subprogram"
@@ -181,6 +180,7 @@ struct
  *                              cast_xxx functions                            *
  *                                                                            *
  ******************************************************************************)
+
 
   (* ('a -> 'b option) -> ?filter:('b->bool) -> 'a list -> 'b option *)
   let rec extract_unique p ?(filter:'b -> bool = fun _ -> true) l =
@@ -204,33 +204,36 @@ struct
     let fn' (wh,x) =
       match fn x with
 	| None -> None
-	| Some y -> Some (wh,y)
+	| Some y -> 
+	    Some (wh,y)
     in
       match extract_unique ~filter fn' lst with
-	| None -> 
-	    begin
-(*
-  List.iter (fun x -> print_endline (match (snd x) with
-  Variable (n,_x, _v, _, _r) -> (">> "^n)
-  | _ -> "?"
-  )
-  ) lst;
-*)
+	| None ->     
 	    Npkcontext.report_error "Symboltbl.mkcast" 
 	      ("Ambiguous " ^ desc ^ " name") 
-	  end
 	| Some x -> x
 
-  let cast_v ?filter = 
-    mkcast "variable"
-      (fun s -> match s with
-         | Variable (_,_,_     ,false,_) -> Some s
-         | Variable (_,_,Some _,true ,_) -> Some s
-         | Subprogram (_,[],Some  _)     -> Some s
-         |_ -> None
-      )
-      ?filter
 
+  let mkcast_no_error fn lst  =
+    let subps = List.filter ( fun (_,x) -> 
+	match fn x with None -> false | _-> true 
+			    ) lst
+    in
+      match subps with
+	  [] -> false
+	| _ -> true
+     
+
+  let cast_v ?filter = 
+   mkcast "variable"
+     (fun s -> match s with
+        | Variable (_,_,_     ,false,_) -> Some s
+        | Variable (_,_,Some _,true ,_) -> Some s
+        | Subprogram (_,[],Some  _)     -> Some s
+        |_ -> None
+     )
+     ?filter
+     
   let cast_t ?filter = mkcast "type"
                        (function Type x -> Some x
                                | _      -> None)
@@ -240,28 +243,35 @@ struct
                        (function Subprogram x -> Some x
                                | _            -> None)
                        ?filter
+		       
+  let cast_s_no_error  = 
+    mkcast_no_error (function Subprogram x -> Some x | _ -> None) 
+   
+
+
 
 (******************************************************************************
  *                                                                            *
  *                              find_xxx functions                            *
  *                                                                            *
  ******************************************************************************)
-
-  let rec find_symbols t id =
-    List.map (fun (wh,_,_,x) -> wh,x) (
-      Symset.elements
-        (Symset.filter (fun (_,m,_,_) -> m = id)
-           t.t_tbl)
-    )
-      
-  let tbl_find_type tbl n =
-    cast_t (find_symbols tbl n)
-
-
+		   
+ let rec find_symbols t id =
+   List.map (fun (wh,_,_,x) -> wh,x) (
+     Symset.elements
+       (Symset.filter (fun (_,m,_,_) -> m = id)
+          t.t_tbl)
+   )
+     
+ let tbl_find_type tbl n =
+   cast_t (find_symbols tbl n)
+     
+     
  let tbl_find_subprogram_simple tbl n = 
    (fun (wh,(x,y,z)) -> wh,(x,y,z))
      (cast_s (find_symbols tbl n))
 
+     
  let tbl_find_subprogram n_args xpect my_find tbl n =
     let match_ret_typ xpect z =
       match (xpect, z) with
@@ -339,30 +349,32 @@ struct
   let tbl_find_variable tbl ?expected_type n =
     let ovl_predicate = 
       match expected_type with
-	| Some t when not (T.is_unknown t) -> (fun x -> T.is_compatible x t)
+	| Some t when not (T.is_unknown t) ->
+	             (fun x -> T.is_compatible x t)
 	| _ -> (fun _ -> true)
     in
       try
 	let (s,sym) =
-          cast_v ~filter:(function
-                            | (_,(Variable (_,x,_,_,_)))      -> ovl_predicate x
-                            | (_,(Subprogram(_, [], Some x))) -> ovl_predicate x
-                            | _ -> true
-                         ) (find_symbols tbl n)
+          cast_v  ~filter:(
+	     function
+               | (_,(Variable (_,x,_,_,_)))      -> ovl_predicate x
+               | (_,(Subprogram(_, [], Some x))) -> ovl_predicate x               
+	       | _ -> true
+                           ) (find_symbols tbl n)
 	in
 	let (n,t,v,r) = 
 	  match sym with
             | Variable (n,x,      v, false, r) -> (n, x, v, r)
             | Variable (_,x, Some v, true , _) ->
 		raise (Variable_no_storage (x, T.get_enum_litt_value x v))
-            | Subprogram (_,[], Some rt)     ->
-		raise (Parameterless_function (s, rt))
+            | Subprogram (n,[], Some rt)     ->
+		raise (Parameterless_function (s, n, rt))
             | _ -> Npkcontext.report_error "find_variable" "unreachable"
 	in
 	  s, (n, t, v, (match v with Some _ -> true | None -> r))
       with
-	| Parameterless_function (Lexical, rt) ->
-            raise (Parameterless_function (tbl.t_scope, rt))
+	| Parameterless_function (Lexical, n, rt) ->
+            raise (Parameterless_function (tbl.t_scope, n, rt))
 	  
   let tbl_find_unit t id =
     match (find_symbols t id) with
@@ -413,10 +425,11 @@ type t = {         s_stack    : table Tree.t
          ; mutable s_cpkg     : string option
 	   (*; mutable s_with     : string list*)
          ; mutable s_renaming : ( (string option * string) *
-				   ((string option * string) * 
-				    (AdaSyntax.param list) option
-				   ) list
-				 ) list
+		((string option * string) * 
+		   (*arguments and  for subprogram*)
+		   (AdaSyntax.param list)option
+		) list
+				) list
          }
 
 let top s = Tree.top s.s_stack
@@ -516,7 +529,6 @@ let eq_renaming  (p1, n1) (p2, n2) =
 	  | _ -> false
      ) 
     
-
 let add_renaming_decl s (current, new_name) new_args old_name  =
   (*Making sure old name can later be found *)
   let is_None x = match x with None -> true | _ -> false 
@@ -525,12 +537,12 @@ let add_renaming_decl s (current, new_name) new_args old_name  =
       Npkcontext.report_error "add_renaming_decl"
 	( "None package is specified" ^ new_name ^ "'.")
     ;
-    
     if ((None,new_name) = old_name) then
       Npkcontext.report_error "add_renaming_decl"
 	( "Circular declaration detected for '" ^ new_name ^ "'.")
     else
-      (*Multiple renaming is possible*)    
+     
+      (*Multiple renaming is possible*)     
       if (List.exists (fun (key, _) -> 
 	eq_renaming key (current, new_name)) s.s_renaming)
       then
@@ -546,10 +558,9 @@ let add_renaming_decl s (current, new_name) new_args old_name  =
 	      Npkcontext.report_error "Symbtbl.add_renaming_decl" 
 		("Too many bining s for "^ new_name )
 	in
-	  s.s_renaming <- ((current, new_name) ,
-			   ((old_name, new_args)::
-			      bindings))::
-	    removeds
+	  s.s_renaming <- (  (current, new_name) 
+			   , ((old_name, new_args)::bindings)
+			  )::removeds
 			  
       end
     else
@@ -624,7 +635,10 @@ let push_saved_context s ctx =
 let library s =
   Tree.nth s 1
 
-
+(*Only used for renaming (for is_overloaded function)*)
+let is_already_defined tbl n = 
+   cast_s_no_error (find_symbols (top tbl) n)
+     
 let s_find_abs _desc f s p n =
   match tbl_find_unit (library s.s_stack) p with
     | Some tbl -> f tbl n
@@ -634,15 +648,16 @@ let s_find_abs _desc f s p n =
 let s_find desc finder s ?package n =
   match package with
     | Some p -> s_find_abs desc finder s p n
-    | None  ->
+    | None  -> 
         begin
          try
            find_rec s.s_stack (fun t ->
              try Some (finder t n)
-             with Not_found -> None
+             with Not_found ->
+	       None
            )
-         with Not_found ->
-           begin
+         with Not_found ->  
+	   begin
              let context = ref (s_get_use s) in
              let res = ref None in
              while (!context <> [] && !res = None) do
@@ -711,7 +726,7 @@ let rec find_type s (package, n) =
     s_find "type" tbl_find_type s ?package n
 
 
-let rec find_subprogram_aux  s ?(silent=false) (pack,n) n_args xpect t_find use  =
+let rec find_subprogram_aux s ?(silent=false) (pack,n) n_args xpect t_find use  =
   let find_one_renaming  ((p_opt, n_a), params_opt) = 
     if (eq_renaming  (p_opt, n_a) (pack,n)) then 
       Npkcontext.report_error "Symboltbl.find_subprogram" 
@@ -727,22 +742,22 @@ let rec find_subprogram_aux  s ?(silent=false) (pack,n) n_args xpect t_find use 
 		 "'" ^"can not find previous formal parameters")
   in
   let res = ref[] in 
-  
   let multiple_renaming x = 
     try
       let new_spec = find_one_renaming x  in
 	res:=new_spec::(!res)
     with _ -> ()
   in
+    
 
-    (*Looking in use is used in order to look for function in use clause;
+  (*Looking in use is used in order to look for function in use clause;
     it is only one level deep *)
   let looking_in_use pack use_enabled  tbl_find s find_auxiliary =  
     let find_pck n  = 
       match pack with 
-	  Some p ->  s_find "subprogram" tbl_find s ~package:(p) n
-	| _ ->       s_find "subprogram" tbl_find  s n
-     in
+	  Some p ->  s_find "subprogram" tbl_find s ~package:(p) n 
+	| _ ->       s_find "subprogram" tbl_find s n
+    in
      let context_orig = ref (s_get_use s) in
      let context = match pack with 
 	 Some p -> ref (List.find_all ( fun x -> 
@@ -750,37 +765,39 @@ let rec find_subprogram_aux  s ?(silent=false) (pack,n) n_args xpect t_find use 
 				      ) !context_orig 
 		       ) 
        | _ -> context_orig
-     in 
+     in        
        try (find_pck n)
-       with 
-	   Not_found ->
-	     try
-               if use_enabled then
-		 let res = ref None in
-		   while (!context <> [] && !res = None) do	  
-		     try
-		       let p = (List.hd !context) in
-			 res := Some (find_auxiliary (Some p, n));
-		     with Not_found -> 
-		       context := List.tl !context;
-		   done;
-		   match !res with
-		       Some prog ->  prog
-		     | _ ->  
-			 if silent then raise Not_found
-			 else 
-			   Npkcontext.report_error 
-			     "Symboltbl" 
-			     ("Cannot find subprogram '" ^ n ^ "'")
-			     
-	       else raise Not_found
-	     with Not_found ->
-	       if silent then
-		 raise Not_found
-	       else 
-		 Npkcontext.report_error  "Symboltbl.multiple_renaming" 
-		   ("Cannot find subprogram '" ^ n ^ "'")   
+       with Not_found ->
+	 try
+           if use_enabled then
+	     let res = ref None in
+	       while (!context <> [] && !res = None) do	  
+		 try
+		   let p = (List.hd !context) in
+		     let sub = find_auxiliary (Some p, n) in
+		       res := Some (sub);
+		 with Not_found -> 
+		   context := List.tl !context;
+	       done;
+	       match !res with
+		   Some prog ->  prog
+		 | _ ->  
+		     if silent then raise Not_found
+		     else 
+		       Npkcontext.report_error 
+			 "Symboltbl" 
+			 ("Cannot find subprogram '" ^ n ^ "'")
+			 
+	   else 
+	     raise Not_found	     
+	 with Not_found ->
+	   if silent then
+	     raise Not_found
+	   else 
+	     Npkcontext.report_error  "Symboltbl.multiple_renaming" 
+	       ("Cannot find subprogram '" ^ n ^ "'")   
   in
+    
     (*Beginning of the function *)
     try 
       let names = snd (
@@ -799,25 +816,24 @@ let rec find_subprogram_aux  s ?(silent=false) (pack,n) n_args xpect t_find use 
 	      
     with Not_found -> 
       let tbl_find = 	(tbl_find_subprogram n_args xpect t_find) in
+      (*silent = true pour forcer la recursion dans les use*)
       let recursive_call = (fun x -> 
-		find_subprogram_aux s ~silent x n_args  xpect t_find false)
+	find_subprogram_aux s ~silent:true x n_args  xpect t_find false)
       in
-	looking_in_use pack  use tbl_find s recursive_call
+	looking_in_use pack use tbl_find s recursive_call
 	
-	    
 let find_subprogram s ?(silent=false) (pack,n) norm_args xpect t_find =
   find_subprogram_aux s ~silent:(silent) (pack,n) norm_args xpect t_find true
 
-
 let is_operator_overloaded s n =
   try 
-    begin
+    begin  
       ignore (s_find "overloaded operator" tbl_find_subprogram_simple s n);
       true
     end
   with Not_found -> 
     List.exists (fun ((_, key), _) -> compare  key n = 0) s.s_renaming
-
+      
 let scope t = t.t_scope
 
 let add_variable s n loc ?value ?(no_storage = false) ?(ro = false) t =
@@ -884,9 +900,7 @@ let replace_typ_enum s (name,data) oldt newt  =
 	| _ -> 
 	    Npkcontext.report_error "Symboltbl" 
 	      ("Replacing enumeration Value  failed")
-	  
-
-  
+	 
 let add_subprogram s n v rt =
   add_subprogram (top s) n v rt (scope (top s))
 
@@ -896,9 +910,9 @@ let rec make_name_of_lval lv =
     | SName (pf, tl) -> make_name_of_lval pf @ [tl]
     | _ -> invalid_arg "make_name_of_lval"
 
+
 let get_possible_common_type s lval1 lval2 =
   let inter l1 l2 =
-    
     let sym_eq (_,x) (_,y) = 
       let extract_typ symbol = 
 	match symbol with  
@@ -910,47 +924,47 @@ let get_possible_common_type s lval1 lval2 =
 	match  extract_typ x,  extract_typ y with
 	    Some a, Some b -> a = b 
 	  | _ -> false
-    (*
-      match (x,y) with
-      | Variable (_,t1,_,_,_), Variable (_,t2,_,_,_) -> t1 = t2
-      | a, b -> a = b
-    *)
     in
-      List.filter (fun x -> List.exists (fun y -> sym_eq x y) l1) l2
+      List.filter (fun x-> List.exists (fun y-> sym_eq x y) l1) l2
   in   
-  let all_find_symbols stack name = 
+  let all_find_symbols stack pk_opt name = 
     let symb1 = 
       Tree.fold (fun rf it ->
 	List.append rf (find_symbols it name)) [] stack.s_stack 
     in
-    let context = ref (s_get_use stack) in 
+    let uses = s_get_use stack in
+    let context =
+      match  pk_opt with 
+	  None ->  ref (uses) 
+	| Some pck -> 
+	    if  (List.mem pck uses) then 
+	      ref (uses) 
+	    else
+	      ref (pck::uses) 
+    in 
     let res = ref [] in
       while (!context <> []) do
-	let p = (List.hd !context) in 
+	let p = (List.hd !context) in
 	  context := List.tl !context;
 	  match (tbl_find_unit (library stack.s_stack) p) with
-	    | Some tbl -> res:=List.append !res (find_symbols tbl name)
+	    | Some tbl ->
+		res:= List.append !res (find_symbols tbl name)
 	    | None     -> ()
       done;
-    (*  print_endline "____________";
-      List.iter ( fun x ->
-		    print_endline (
-		      match x with 
-			 (_, Variable (n,_,_,_,_) )-> (" _ " ^n)
-			| (_, Subprogram _ )-> "sub"
-			|_ -> "?"
-		    )
-		)
-	        ( List.append symb1 !res);
-    *)
       List.append symb1 !res
   in
     try
-      let n1 = ListUtils.last (make_name_of_lval lval1) in
-      let n2 = ListUtils.last (make_name_of_lval lval2) in
-      let s1 = all_find_symbols s n1 in
-      let s2 = all_find_symbols s n2 in
-	
+      (* Hack: try to add a package name for find_all*)
+      let try_add_pck strl =
+	match strl with 
+	    x::[]    -> None   , x
+	  | y::x::[] -> Some(y), x
+	  | _        -> None   , ListUtils.last strl
+      in
+      let p1, n1 = try_add_pck (make_name_of_lval lval1) in
+      let p2, n2 = try_add_pck (make_name_of_lval lval2) in
+      let s1 = all_find_symbols s p1 n1 in
+      let s2 = all_find_symbols s p2 n2 in
       let inte = inter s1 s2 in
       let print_set set = "{"
 	^ String.concat ", " (List.map (fun (_,x) ->
