@@ -60,10 +60,12 @@ let merge_funs t1 t2 =
     try
       let args_t', rets_t' = Hashtbl.find sig_tbl fid in
 	if not (List.for_all2 (=) args_t args_t') 
-	  && not (List.for_all2 (=) rets_t rets_t') then
+	  || not (List.for_all2 (=) rets_t rets_t') then
 	    raise (Invalid_argument ("incompatible signatures for function "^fid))
     with Not_found ->     
       Hashtbl.add sig_tbl fid (args_t, rets_t) 
+      | Invalid_argument _ -> 
+	  raise (Invalid_argument ("incompatible signatures for function "^fid))
   in
   let rec explore_blk blk =
     match blk with
@@ -74,15 +76,15 @@ let merge_funs t1 t2 =
 
   and explore_stmt skind =
     match skind with
-      | N.Decl (_, _, blk) | N.InfLoop blk | N.DoWith (blk, _) -> explore_blk blk
-      | N.Select (blk1, blk2) 				 -> 
+      | N.Decl (_, _, blk) | N.InfLoop blk | N.DoWith (blk, _) 	 -> explore_blk blk
+      | N.Select (blk1, blk2) 				 	 -> 
 	  explore_blk blk1;
 	  explore_blk blk2
       | N.Call (args, N.FunId fid, rets) 			 -> 
 	  let args_t = List.map snd args in
 	  let rets_t = List.map snd rets in
 	    add_sig fid args_t rets_t 
-      | _ 						 -> ()
+      | _ 						 	 -> ()
   in
   let check fid fundec =
     let args_t = List.map snd fundec.N.args in 
@@ -99,6 +101,7 @@ let merge_funs t1 t2 =
     else
       Hashtbl.add t1 fid fundec
   in
+    Hashtbl.iter check t1;
     Hashtbl.iter check_and_add t2
 
 let merge progs = 
