@@ -52,6 +52,7 @@ type t = {
 }
 
 and fundec = {
+  position: Newspeak.location;
   ftyp: N.ftyp;
   body: blk;
 }
@@ -1019,7 +1020,7 @@ and build_gdecl builder t =
 and build_fundec builder declaration = 
   let ftyp = build_ftyp builder declaration.ftyp in
   let body = build_blk builder declaration.body in
-    { ftyp = ftyp; body = body }
+    { declaration with ftyp = ftyp; body = body }
 
 and build_typ builder t =
   match t with

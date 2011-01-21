@@ -35,6 +35,7 @@ type t = {
 }
 
 and fundec = {
+  position: Newspeak.location;
   ftyp: Newspeak.ftyp;
   body: blk;
 }

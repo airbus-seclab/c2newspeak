@@ -250,7 +250,9 @@ let translate prog =
     let body = translate_blk fd.body in
     List.iter pop arg_ids;
     List.iter pop ret_ids;
-    let declaration = { L.ftyp = ft; L.body = body } in
+    let declaration = 
+      { L.position = fd.position; L.ftyp = ft; L.body = body } 
+    in
       Hashtbl.add fundecs f declaration
   in
 
