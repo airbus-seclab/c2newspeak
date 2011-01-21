@@ -63,7 +63,7 @@ let add x y =
   match (x, y) with
       (Val x, Val y) -> 
 	let z = Int32.add x y in
-	  if (Int32.compare z y < 0) || (Int32.compare z x < 0) then Top
+         if (Int64.compare (Int64.add (Int64.of_int32 x) (Int64.of_int32 y)) (Int64.of_int32 z) != 0) then Top
 	  else Val z
     | _ -> Top
 
@@ -71,7 +71,7 @@ let is_safe_add x y =
   match (x, y) with
       (Val x, Val y) ->
 	let z = Int32.add x y in
-	  (Int32.compare z y >= 0) && (Int32.compare z x >= 0)
+         (Int64.compare (Int64.add (Int64.of_int32 x) (Int64.of_int32 y)) (Int64.of_int32 z) == 0) 
     | _ -> false
 
 let is_safe_mul _ _ = false
