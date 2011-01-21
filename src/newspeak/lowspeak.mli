@@ -34,7 +34,10 @@ type t = {
   src_lang: Newspeak.src_lang;
 }
 
-and fundec = Newspeak.ftyp * blk
+and fundec = {
+  ftyp: Newspeak.ftyp;
+  body: blk;
+}
 
 and assertion = spec_token list
 

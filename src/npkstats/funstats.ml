@@ -217,7 +217,8 @@ let collect prog =
     try Hashtbl.find funtbl f 
     with Not_found -> 
       try
-        let (_, blk) = Hashtbl.find prog.fundecs f in
+        let declaration = Hashtbl.find prog.fundecs f in
+	let blk = declaration.body in
         let env = init_env () in
         let kind =
           match blk with

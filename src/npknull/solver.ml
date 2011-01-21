@@ -267,8 +267,8 @@ let process glb_tbl prog =
    the current state?? *)
       let rel_list = Hashtbl.find fun_tbl f in
 
-      let (ft, _) = Hashtbl.find prog.fundecs f in
-      let locals_nb = height_of_ftyp ft in
+      let declaration = Hashtbl.find prog.fundecs f in
+      let locals_nb = height_of_ftyp declaration.ftyp in
       let locals = create_locals env.height locals_nb in
       let globals = Hashtbl.find glb_tbl f in
       let globals = List.map Memloc.of_global globals in
@@ -326,9 +326,11 @@ let process glb_tbl prog =
       Context.print_verbose ("Analyzing: "^f^" ("^sz^")");
       Context.print_graph ("node: "^f);
       live_funs := StrSet.add f !live_funs;
-      let (ft, body) = Hashtbl.find prog.fundecs f in
-      let env = { cur_fun = f; height = height_of_ftyp ft; lbl_tbl = [] } in
-	process_blk env body pre
+      let declaration = Hashtbl.find prog.fundecs f in
+      let env = 
+	{ cur_fun = f; height = height_of_ftyp declaration.ftyp; lbl_tbl = [] }
+      in
+	process_blk env declaration.body pre
 	  
   and get_post f memlocs reach rel_list =
     let rec apply rel_list =
@@ -370,11 +372,11 @@ let process glb_tbl prog =
     let s = State.universe in
     let env = { cur_fun = ""; height = 0; lbl_tbl = [] } in
     let s = process_blk env prog.init s in
-    let (ft, _) = 
+    let declaration = 
       try Hashtbl.find prog.fundecs "main"
       with Not_found -> invalid_arg "Solver.process: missing main function"
     in
-    let pre = build_main_info ft s in
+    let pre = build_main_info declaration.ftyp s in
     let post = process_fun "main" pre in
       Hashtbl.replace fun_tbl "main" [(pre, post)];
 

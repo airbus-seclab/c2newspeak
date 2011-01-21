@@ -153,8 +153,8 @@ let compile npk =
   let (blk_init, ann_init) = pcomp_blk npk.init in
   let (func, anns) =
     Hashtbl.fold
-      (fun fname (_,b) (map, anns) ->
-         let (blk, anns') = pcomp_blk b in
+      (fun fname declaration (map, anns) ->
+         let (blk, anns') = pcomp_blk declaration.body in
          let block =
            if fname = "main" then blk_init@blk
            else blk

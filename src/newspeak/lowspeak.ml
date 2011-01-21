@@ -51,7 +51,10 @@ type t = {
   src_lang: N.src_lang;
 }
 
-and fundec = N.ftyp * blk
+and fundec = {
+  ftyp: N.ftyp;
+  body: blk;
+}
 
 and assertion = spec_token list
 
@@ -396,11 +399,12 @@ let string_of_blk offset x =
     dump_blk x;
     Buffer.contents buf
   
-let dump_fundec name ((args_t, ret_t), body) =
+let dump_fundec name declaration =
+  let (args_t, ret_t) = declaration.ftyp in
   let args_t = string_of_args_t args_t in
   let ret_t = string_of_ret_t ret_t in
     print_endline (ret_t^" "^name^"("^args_t^") {");
-    print_string (string_of_blk 2 body);
+    print_string (string_of_blk 2 declaration.body);
     print_endline "}";
     print_newline ()
 
@@ -583,11 +587,11 @@ and visit_token builder x =
         visit_typ builder t
     | _ -> ()
 
-let visit_fun visitor fid (t, body) =
-  let continue = visitor#process_fun fid (t, body) in
+let visit_fun visitor fid declaration =
+  let continue = visitor#process_fun fid declaration in
   if continue then begin
-    visit_ftyp visitor t;
-    visit_blk visitor body;
+    visit_ftyp visitor declaration.ftyp;
+    visit_blk visitor declaration.body;
     visitor#process_fun_after ()
   end
 
@@ -961,9 +965,10 @@ let simplify opt_checks prog =
   let fundecs = Hashtbl.create 100 in
   let globals = Hashtbl.create 100 in
   let simplify_global x info = Hashtbl.add globals x info in
-  let simplify_fundec f (ft, body) =
-    let body = simplify_blk opt_checks body in
-      Hashtbl.add fundecs f (ft, body)
+  let simplify_fundec f declaration =
+    let body = simplify_blk opt_checks declaration.body in
+    let declaration = { declaration with body = body } in
+      Hashtbl.add fundecs f declaration
   in
   let init = simplify_blk opt_checks prog.init in
     Hashtbl.iter simplify_global prog.globals;
@@ -1011,10 +1016,10 @@ let rec build builder prog =
 and build_gdecl builder t =
   build_typ builder t
 
-and build_fundec builder (ft, body) = 
-  let ft = build_ftyp builder ft in
-  let body = build_blk builder body in
-    (ft, body)
+and build_fundec builder declaration = 
+  let ftyp = build_ftyp builder declaration.ftyp in
+  let body = build_blk builder declaration.body in
+    { ftyp = ftyp; body = body }
 
 and build_typ builder t =
   match t with

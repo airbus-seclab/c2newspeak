@@ -130,14 +130,15 @@ let build prog =
       | UserSpec x -> (translate_assertion x, loc)::[]
   in
 
-  let translate_fundec f (_, body) =
-    let body = translate_blk [] body in
+  let translate_fundec f declaration =
+    let body = translate_blk [] declaration.body in
       Hashtbl.add fundecs f body
   in
 
   let build_entry () =
     let loc = Newspeak.unknown_loc in
-    let ((args, ret), _) = Hashtbl.find prog.fundecs "main" in
+    let declaration = Hashtbl.find prog.fundecs "main" in
+    let (args, ret) = declaration.ftyp in
     let call = ref ((F.Call (F.Global "main"), Newspeak.unknown_loc)::[]) in
     let rec append_args args =
       match args with

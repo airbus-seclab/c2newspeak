@@ -23,6 +23,8 @@
   email: sarah(dot)zennou(at)eads(dot)net
 *)
 
+open Lowspeak
+
 module L = Lowspeak
 module S = Set.Make(String)
 
@@ -73,8 +75,8 @@ let collect prog cout =
     match blk with
 	[] -> ()
       | (stmt, _)::blk' -> process_stmt stmt; process_blk blk'
-  and process_fun _ (_, blk) =
-    process_blk blk
-  in
+
+  and process_fun _ declaration = process_blk declaration.body in
+
     Hashtbl.iter process_fun prog.L.fundecs;
     print !libfuns cout;

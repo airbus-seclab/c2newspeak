@@ -95,7 +95,8 @@ let translate npk =
   let translate_fn fn =
     match fn with
 	FunId fid -> 
-	  let (ftyp, _) = Hashtbl.find npk.fundecs fid in
+	  let declaration = Hashtbl.find npk.fundecs fid in
+	  let ftyp = declaration.ftyp in
 	    (S.Var fid, ftyp)
       | FunDeref (e, ftyp) -> (translate_exp e, ftyp)
   in
@@ -131,17 +132,17 @@ let translate npk =
 
   let translate_global x _ = Hashtbl.add vars x x in
 
-  let translate_fundec fid (ftyp, body) =
+  let translate_fundec fid declaration =
     current_fun := fid;
     vcnt := 0;
-    let formals = translate_ftyp ftyp in
+    let formals = translate_ftyp declaration.ftyp in
     let push_local _ = 
       let x = ("formal"^(string_of_int !vcnt)) in
 	push_local x
     in
       List.iter push_local formals;
       Hashtbl.add funs fid !stack;
-      translate_blk body;
+      translate_blk declaration.body;
       List.iter (fun _ -> pop_local ()) formals
   in
 

@@ -188,7 +188,7 @@ object (this)
   method process_fun f fdec =
     Hashtbl.add funstats f current_counters;
     if !more_verb then 
-      match (fst fdec) with
+      match fdec.ftyp with
           ([], []) -> void_fun <- void_fun + 1
         | _, _ -> ()
     else ();
