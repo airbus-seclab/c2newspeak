@@ -138,15 +138,6 @@ let extract_no fname =
     
 let execute () =
     (* TODO: this code should be factored with c2newspeak!!! into x2newspeak *)
-   (* match !Npkcontext.input_files with
-      file::[] when ( !Npkcontext.compile_only && 
-      (!Npkcontext.output_file <> "")) ->
-      
-      let prog = compile file in	   
-      Npkil.write !Npkcontext.output_file prog;
-      
-      | files ->
-   *)
   Normalize.init_bodies !Npkcontext.input_files;
 
   let nos = List.map extract_no !Npkcontext.input_files in
@@ -156,15 +147,9 @@ let execute () =
     let bods_less_files = List.filter (fun x -> not (
 	 List.mem x !Npkcontext.input_files)) bods 
     in
-(*      print_endline "____      ____       _____          ______     ";
-	List.iter ( fun x -> print_endline x)  (List.rev bods_less_files) ;
-*)
 	let bodies_nos = List.map extract_no (
 	List.rev bods_less_files) 
 	in 
-(*	print_endline "____      ____       _____          ______      ";
-	puis en ecadrant print begin...print ... end dans normalization
-*)
       if not !Npkcontext.compile_only then begin
 	Linker.link (List.append bodies_nos nos)
       end
