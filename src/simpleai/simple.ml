@@ -1,7 +1,7 @@
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans
+  Copyright (C) 2007-2011  Charles Hymans, Sarah Zennou
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -21,21 +21,21 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
+
+  Sarah Zennou
+  email: sarah(dot)zennou(at)eads(dot)net
 *)
+
 
 module type T =
 sig 
   type t = {
-    globals: globals;                     (** program variables *)
+    globals: vid list;                     (** program variables *)
     init: blk;                            (** initialization block of globals *)
     fundecs: (fid, fundec) Hashtbl.t;     (** table of all declared functions *)
     src_lang: Newspeak.src_lang;          (** source programming language *)
   }
-      
-  and globals = (vid, gdecl) Hashtbl.t    (** Table of global names to location *)
-      
-  and gdecl = Newspeak.location
-      
+     
   and fundec = blk
       
   and blk = stmt list
@@ -106,18 +106,13 @@ sig
   val string_of_blk: blk -> string
 
 end
-
-
+ 
 type t = {
-  globals: globals;
+  globals: vid list;
   init: blk;
   fundecs: (fid, fundec) Hashtbl.t;
   src_lang: Newspeak.src_lang;
 }
-    
-and globals = (vid, gdecl) Hashtbl.t
-    
-and gdecl = Newspeak.location
     
 and fundec = blk
     
@@ -232,13 +227,13 @@ and string_of_blk margin x =
 	
 let to_string prog =
   let res = ref "" in
-  let string_of_global x _ = res := !res^"int "^x^";\n" in
+  let string_of_global x = res := !res^"int "^x^";\n" in
   let string_of_fundec f body = 
     res := !res^"void "^f^"() {\n";
     res := !res^string_of_blk "  " body;
     res := !res^"}\n"
   in
-    Hashtbl.iter string_of_global prog.globals;
+    List.iter string_of_global (List.rev prog.globals);
     res := !res^string_of_blk "" prog.init;
     Hashtbl.iter string_of_fundec prog.fundecs;
     !res

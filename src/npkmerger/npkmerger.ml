@@ -27,7 +27,7 @@ module N      = Newspeak
 let debug     = ref false
 let print     = ref false
 let input     = ref []
-let output    = ref "a.npk"
+let output    = ref "merge.npk"
 
 let check progs =
   if !debug then print_endline "Checking compatibility of programs...";
@@ -35,13 +35,74 @@ let check progs =
     raise (Invalid_argument "give at least two npk files to merge");
   let p = List.hd progs in
   let same p' =
-    p.N.src_lang = p'.N.src_lang && p.N.ptr_sz = p'.N.ptr_sz
+    p.N.src_lang = p'.N.src_lang
   in
   if not (List.for_all same (List.tl progs)) then 
-    raise (Invalid_argument "different configurations (pointer size or source language)");
-    if true then raise (Invalid_argument "check function signature");
-    if true then raise (Invalid_argument "check that types have the same size");
-  if true then raise (Invalid_argument "check something about globals")
+    raise (Invalid_argument "different source language")
+
+let merge_globals t1 t2 =
+  (* check that common globals are of the same type and add new
+     globals of t2 into t1 *)
+  let check_and_add s gdecl =
+    try
+      let gdecl' = Hashtbl.find t1 s in
+	if gdecl = gdecl' then () 
+	else raise (Invalid_argument ("variable "^s^" with different types"))
+    with Not_found -> Hashtbl.add t1 s gdecl
+  in
+    Hashtbl.iter check_and_add t2
+
+let merge_funs t1 t2 =
+  (* check that signatures are compatible and add functions of t2 into
+     t1 *)
+  let sig_tbl = Hashtbl.create 100 in
+  let add_sig fid args_t rets_t =
+    try
+      let args_t', rets_t' = Hashtbl.find sig_tbl fid in
+	if not (List.for_all2 (=) args_t args_t') 
+	  || not (List.for_all2 (=) rets_t rets_t') then
+	    raise (Invalid_argument ("incompatible signatures for function "^fid))
+    with Not_found ->     
+      Hashtbl.add sig_tbl fid (args_t, rets_t) 
+      | Invalid_argument _ -> 
+	  raise (Invalid_argument ("incompatible signatures for function "^fid))
+  in
+  let rec explore_blk blk =
+    match blk with
+	[] 		 -> ()
+      | (skind, _)::blk' -> 
+	  explore_stmt skind;
+	  explore_blk blk'
+
+  and explore_stmt skind =
+    match skind with
+      | N.Decl (_, _, blk) | N.InfLoop blk | N.DoWith (blk, _) 	 -> explore_blk blk
+      | N.Select (blk1, blk2) 				 	 -> 
+	  explore_blk blk1;
+	  explore_blk blk2
+      | N.Call (args, N.FunId fid, rets) 			 -> 
+	  let args_t = List.map snd args in
+	  let rets_t = List.map snd rets in
+	    add_sig fid args_t rets_t 
+      | _ 						 	 -> ()
+  in
+  let check fid fundec =
+    let args_t = List.map snd fundec.N.args in 
+    let rets_t = List.map snd fundec.N.rets in 
+      add_sig fid args_t rets_t;
+      explore_blk fundec.N.body
+  in
+  let check_and_add fid fundec =
+    (* check *)
+    check fid fundec;
+    (* add *)
+    if Hashtbl.mem t1 fid then 
+      raise (Invalid_argument ("function "^fid^" defined twice"))
+    else
+      Hashtbl.add t1 fid fundec
+  in
+    Hashtbl.iter check t1;
+    Hashtbl.iter check_and_add t2
 
 let merge progs = 
   if !debug then print_endline "Merging...";
@@ -55,8 +116,8 @@ let merge progs =
   } 
   in
   let add init p =
-    Hashtbl.iter (fun s t -> Hashtbl.add po.N.globals s t) p.N.globals;
-    Hashtbl.iter (fun f fundec -> Hashtbl.add po.N.fundecs f fundec) p.N.fundecs; 
+    merge_globals po.N.globals p.N.globals;
+    merge_funs po.N.fundecs p.N.fundecs;
     p.N.init @ init
   in
   let init = List.fold_left add po.N.init (List.tl progs) in

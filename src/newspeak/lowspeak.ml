@@ -1,7 +1,7 @@
 (*
   C2Newspea: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007-2010  Charles Hymans, Olivier Levillain, Sarah Zennou, 
+  Copyright (C) 2007-2011  Charles Hymans, Olivier Levillain, Sarah Zennou, 
   Etienne Millon
   
   This library is free software; you can redistribute it and/or
@@ -51,9 +51,11 @@ type t = {
   src_lang: N.src_lang;
 }
 
-and gdecl = N.typ * N.location
-
-and fundec = N.ftyp * blk
+and fundec = {
+  position: Newspeak.location;
+  ftyp: N.ftyp;
+  body: blk;
+}
 
 and assertion = spec_token list
 
@@ -300,8 +302,8 @@ let string_of_funexp f =
 (* Actual dump *)
 let string_of_lbl l = "lbl"^(string_of_int l)
 
-(* TODO: print location too *)
-let dump_gdecl name (t, _) = print_endline (string_of_typ t^" "^name^";")
+
+let dump_gdecl name t = print_endline (string_of_typ t^" "^name^";")
 
 let string_of_token x =
   match x with
@@ -398,11 +400,12 @@ let string_of_blk offset x =
     dump_blk x;
     Buffer.contents buf
   
-let dump_fundec name ((args_t, ret_t), body) =
+let dump_fundec name declaration =
+  let (args_t, ret_t) = declaration.ftyp in
   let args_t = string_of_args_t args_t in
   let ret_t = string_of_ret_t ret_t in
     print_endline (ret_t^" "^name^"("^args_t^") {");
-    print_string (string_of_blk 2 body);
+    print_string (string_of_blk 2 declaration.body);
     print_endline "}";
     print_newline ()
 
@@ -438,7 +441,7 @@ object
   method set_loc loc = cur_loc <- loc
   method get_loc = cur_loc
 
-  method process_gdecl (_: string) (_: gdecl) = true
+  method process_gdecl (_: string) (_: N.typ) = true
   method process_fun (_: N.fid) (_: fundec) = true
   method process_fun_after () = ()
   method process_stmt (_: stmt) = true
@@ -585,19 +588,18 @@ and visit_token builder x =
         visit_typ builder t
     | _ -> ()
 
-let visit_fun visitor fid (t, body) =
-  let continue = visitor#process_fun fid (t, body) in
+let visit_fun visitor fid declaration =
+  let continue = visitor#process_fun fid declaration in
   if continue then begin
-    visit_ftyp visitor t;
-    visit_blk visitor body;
+    visit_ftyp visitor declaration.ftyp;
+    visit_blk visitor declaration.body;
     visitor#process_fun_after ()
   end
 
 let visit_init visitor (_, _, e) = visit_exp visitor e
 
-let visit_glb visitor id (t, loc) =
-  visitor#set_loc loc;
-  let continue = visitor#process_gdecl id (t, loc) in
+let visit_glb visitor id t =
+  let continue = visitor#process_gdecl id t in
     if continue then visit_typ visitor t
 
 let visit visitor prog =
@@ -643,7 +645,7 @@ object
   val mutable curloc = N.unknown_loc
   method set_curloc loc = curloc <- loc
   method curloc = curloc
-  method process_global (_: string) (x: gdecl) = x
+  method process_global (_: string) (x: N.typ) = x
   method process_lval (x: lval) = x
   method process_exp (x: exp) = x
   method process_blk (x: blk) = x
@@ -964,9 +966,10 @@ let simplify opt_checks prog =
   let fundecs = Hashtbl.create 100 in
   let globals = Hashtbl.create 100 in
   let simplify_global x info = Hashtbl.add globals x info in
-  let simplify_fundec f (ft, body) =
-    let body = simplify_blk opt_checks body in
-      Hashtbl.add fundecs f (ft, body)
+  let simplify_fundec f declaration =
+    let body = simplify_blk opt_checks declaration.body in
+    let declaration = { declaration with body = body } in
+      Hashtbl.add fundecs f declaration
   in
   let init = simplify_blk opt_checks prog.init in
     Hashtbl.iter simplify_global prog.globals;
@@ -1011,15 +1014,13 @@ let rec build builder prog =
     Hashtbl.iter build_fundec prog.fundecs;
     { prog with globals = globals'; fundecs = fundecs' }
 
-and build_gdecl builder (t, loc) =
-  builder#set_curloc loc;
-  let t = build_typ builder t in
-    (t, loc)
+and build_gdecl builder t =
+  build_typ builder t
 
-and build_fundec builder (ft, body) = 
-  let ft = build_ftyp builder ft in
-  let body = build_blk builder body in
-    (ft, body)
+and build_fundec builder declaration = 
+  let ftyp = build_ftyp builder declaration.ftyp in
+  let body = build_blk builder declaration.body in
+    { declaration with ftyp = ftyp; body = body }
 
 and build_typ builder t =
   match t with

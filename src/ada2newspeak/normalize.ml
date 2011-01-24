@@ -1804,8 +1804,7 @@ and normalize_assign_agr nlv t_lv bare_assoc_list loc =
 				    Some i -> normalize_exp i 
 				  | _ -> Npkcontext.report_error 
 				      "normalize_assign_agr"
-					"Other case only handled when 
-                                           only used with others"
+					"Other case only handled when only used with others"
 			      in
 			      let rec depiler_type tc = 
 				if T.is_array tc then

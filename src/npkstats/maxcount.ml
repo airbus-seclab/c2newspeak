@@ -85,8 +85,8 @@ let count debug prog =
       if debug then print_endline ("counting stack height of "^f);
       let height = 
         try 
-          let (_, body) = Hashtbl.find prog.fundecs f in
-            process_blk body init_stats
+          let declaration = Hashtbl.find prog.fundecs f in
+            process_blk declaration.body init_stats
         with Not_found -> 
           if not (List.mem f !unknown_funs) then begin
             unknown_funs := f::!unknown_funs;

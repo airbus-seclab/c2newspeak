@@ -188,7 +188,7 @@ object (this)
   method process_fun f fdec =
     Hashtbl.add funstats f current_counters;
     if !more_verb then 
-      match (fst fdec) with
+      match fdec.ftyp with
           ([], []) -> void_fun <- void_fun + 1
         | _, _ -> ()
     else ();
@@ -198,7 +198,7 @@ object (this)
     incr_counters counters current_counters;
     current_counters <- init_counters ()
 
-  method process_gdecl _ (t, _) =
+  method process_gdecl _ t =
     globals <- globals + 1;
     if !more_verb then 
       try 

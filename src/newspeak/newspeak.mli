@@ -1,7 +1,7 @@
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans
+  Copyright (C) 2007-2011  Charles Hymans, Sarah Zennou
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -22,6 +22,10 @@
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
 
+  Sarah Zennou
+  EADS Innovation Works - SE/IS
+  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
+  email: sarah(dot)zennou(at)eads(dot)net
 *)
 
 (** Newspeak is a language designed for the purpose of static analysis. 
@@ -106,9 +110,7 @@ and fundec = {
   position: location;         (** position of the start of the function *)
 }
 
-and globals = (string, gdecl) Hashtbl.t
-
-and gdecl = typ * location
+and globals = (string, typ) Hashtbl.t
 
 and src_lang = C | ADA
 
@@ -298,7 +300,7 @@ val string_of_assertion: assertion -> string
 (* Visitor *)
 class visitor:
 object
-  method process_gdecl: string -> gdecl -> bool
+  method process_gdecl: string -> typ -> bool
   method process_fun: fid -> fundec -> bool
   method process_fun_after: unit -> unit
   method process_stmt: stmt -> bool
@@ -327,14 +329,14 @@ val visit_assertion: visitor -> assertion -> unit
 val visit_exp: visitor -> exp -> unit
 val visit_blk: visitor -> blk -> unit
 val visit_fun: visitor -> fid -> fundec -> unit
-val visit_glb: visitor -> string -> gdecl -> unit
+val visit_glb: visitor -> string -> typ -> unit
 val visit: visitor -> t -> unit
 
 class builder:
 object
   method set_curloc: location -> unit
   method curloc: location
-  method process_global: string -> gdecl -> gdecl
+  method process_global: string -> typ -> typ
   method process_lval: lval -> lval
   method process_exp: exp -> exp
   method process_blk: blk -> blk
@@ -346,7 +348,7 @@ end
 
 val build : builder -> t -> t
 
-val build_gdecl: builder -> gdecl -> gdecl
+val build_gdecl: builder -> typ -> typ
 
 (* [write name (files, prog, ptr_sz) ] write the program prog, with
     the list of its file names and the size of pointers to file name. *)

@@ -160,8 +160,8 @@ let process silent prog =
 	let f = Queue.take todo in
 	  current_fun := f;
 (*	  print_verbose ("Analyzing: "^f); *)
-	  let (_, body) = Hashtbl.find prog.fundecs f in
-	  let used = process_blk body in
+	  let declaration = Hashtbl.find prog.fundecs f in
+	  let used = process_blk declaration.body in
 	    update_fun f used
       done;
     with Queue.Empty -> ()

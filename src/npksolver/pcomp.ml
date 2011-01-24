@@ -38,10 +38,10 @@ let check_scalar_type loc = function
   | N.Int (N.Unsigned, _) -> fail loc "Unsigned value"
   | _ -> fail loc "Bad scalar"
 
-let rec check_type loc = function
-  | N.Scalar s -> check_scalar_type loc s
-  | N.Array (t, _sz) -> check_type loc t
-  | N.Region _ -> fail loc "Not a scalar"
+let rec check_type = function
+  | N.Scalar s -> check_scalar_type (N.unknown_loc) s
+  | N.Array (t, _sz) -> check_type t
+  | N.Region _ -> fail (N.unknown_loc) "Not a scalar"
 
 let pcomp_binop loc binop =
   match binop with
@@ -144,8 +144,8 @@ and pcomp_blk x = List.fold_right (fun s (stmts, anns) ->
 
 let compile npk =
   let globals =
-  Hashtbl.fold (fun s (ty, loc) l ->
-    check_type loc ty;
+  Hashtbl.fold (fun s ty l ->
+    check_type ty;
     (s, pcomp_type ty)::l
   ) npk.globals []
   in
@@ -153,8 +153,8 @@ let compile npk =
   let (blk_init, ann_init) = pcomp_blk npk.init in
   let (func, anns) =
     Hashtbl.fold
-      (fun fname (_,b) (map, anns) ->
-         let (blk, anns') = pcomp_blk b in
+      (fun fname declaration (map, anns) ->
+         let (blk, anns') = pcomp_blk declaration.body in
          let block =
            if fname = "main" then blk_init@blk
            else blk

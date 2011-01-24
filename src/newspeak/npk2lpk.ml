@@ -194,8 +194,8 @@ let translate prog =
                 FunId fid -> 
                   let args_ids = 
                     try
-                      let { args = args } = Hashtbl.find prog.fundecs fid in
-                        List.map fst args
+                      let fundec = Hashtbl.find prog.fundecs fid in
+                        List.map fst fundec.args
                     with Not_found -> default_args_ids fid (List.length args)
                   in
                     (fid, args_ids)
@@ -250,12 +250,15 @@ let translate prog =
     let body = translate_blk fd.body in
     List.iter pop arg_ids;
     List.iter pop ret_ids;
-    Hashtbl.add fundecs f (ft, body)
+    let declaration = 
+      { L.position = fd.position; L.ftyp = ft; L.body = body } 
+    in
+      Hashtbl.add fundecs f declaration
   in
 
-  let translate_global x (t, loc) = Hashtbl.add globals x (t, loc) in
-    
-  let init = translate_blk prog.init in
+  let translate_global x t = 
+    Hashtbl.add globals x t in
+    let init = translate_blk prog.init in
     Hashtbl.iter translate_fundec prog.fundecs;
     Hashtbl.iter translate_global prog.globals;
 

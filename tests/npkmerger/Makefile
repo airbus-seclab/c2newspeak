@@ -25,5 +25,5 @@ COMMAND=$(C2NEWSPEAK) `[ -e $*.in0 ] && cat $*.in0` $*-a.c -o $*-a.npk > /dev/nu
 	$(C2NEWSPEAK) `[ -e $*.in0 ] && cat $*.in0` $*-b.c -o $*-b.npk > /dev/null 2>&1; \
         $(NPKMERGER) --print -o $*.npk `[ -e $*.in ] && cat $*.in` $*-a.npk $*-b.npk 
 PREREQ=%-a.c %-b.c
-TESTS=000
+TESTS=000 001
 include ../common.Makefile
