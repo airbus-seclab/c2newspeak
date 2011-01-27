@@ -1,7 +1,7 @@
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans
+  Copyright (C) 2007, 2010, 2011  Charles Hymans, Etienne Millon, Sarah Zennou
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -21,6 +21,12 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
+
+  Etienne Millon
+  etienne.millon@eads.net
+
+  Sarah Zennou
+  sarah(dot)zennou(at)eads(dot)net
 *)
 
 open Newspeak
@@ -47,6 +53,47 @@ let default_args_ids fid n =
     else (fid^".arg"^(string_of_int i))::(create_args (i+1))
   in
     create_args 1
+
+class normalize_ptr_shift =
+object
+  inherit L.builder
+  method process_exp e =
+    let rec process_exp e = 
+      match e with
+	| L.UnOp (IntToPtr i, L.UnOp ((Coerce r), L.BinOp (PlusI, e1, e2))) -> begin
+	    match e1, e2 with
+		L.UnOp ((PtrToInt (Signed, _)), L.Lval (lv, Ptr)), L.Const (CInt c) ->
+		      let ptr_sz = Config.size_of_ptr in
+		      let d = domain_of_typ (Signed, ptr_sz) in
+			if contains d r then 
+			  let e1 = L.Lval (lv, Ptr) in
+			  let c = Nat.mul c "8" in
+			  let e2 = L.Const (CInt c) in
+			    L.BinOp (PlusPI, e1, e2)
+			else e 
+	      | L.Const (CInt _), L.UnOp ((PtrToInt (Signed, _)), L.Lval (_, Ptr)) ->
+		  let e = L.UnOp (IntToPtr i, L.UnOp ((Coerce r), L.BinOp (PlusI, e2, e1))) in
+		    process_exp e
+	      | L.UnOp ((PtrToInt (Signed, _)), L.Lval (lv, Ptr)), L.Lval (_, (Int _)) ->
+		      let ptr_sz = Config.size_of_ptr in
+		      let d = domain_of_typ (Signed, ptr_sz) in
+			if contains d r then 
+			  let e1 = L.Lval (lv, Ptr) in
+			    L.BinOp (PlusPI, e1, e2)
+			else e 
+	      |  L.Lval (_, (Int _)), L.UnOp ((PtrToInt (Signed, _)), L.Lval (_, Ptr)) ->
+		   let e = L.UnOp (IntToPtr i, L.UnOp ((Coerce r), L.BinOp (PlusI, e2, e1))) in
+		    process_exp e
+	      | _ -> e
+	  end	  
+	| _ -> e
+    in
+      process_exp e
+end
+
+let normalize_ptr_shift prog =
+  let builder = new normalize_ptr_shift in
+    L.build builder prog
 
 let translate prog = 
   let fundecs = Hashtbl.create 100 in
@@ -262,11 +309,12 @@ let translate prog =
     Hashtbl.iter translate_fundec prog.fundecs;
     Hashtbl.iter translate_global prog.globals;
 
-    { 
+    let p = { 
       L.globals = globals;
       L.init = init;
       L.fundecs = fundecs;
       L.ptr_sz = prog.ptr_sz;
       L.src_lang = prog.src_lang;
     }
+    in normalize_ptr_shift p
 
