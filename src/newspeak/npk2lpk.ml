@@ -63,7 +63,7 @@ object
 	| L.UnOp (IntToPtr i, L.UnOp ((Coerce r), L.BinOp (PlusI, e1, e2))) -> begin
 	    match e1, e2 with
 		L.UnOp ((PtrToInt (Signed, _)), L.Lval (lv, Ptr)), L.Const (CInt c) ->
-		      let ptr_sz = Config.size_of_ptr in
+		      let ptr_sz = size_of_scalar Config.size_of_ptr Ptr in
 		      let d = domain_of_typ (Signed, ptr_sz) in
 			if contains d r then 
 			  let e1 = L.Lval (lv, Ptr) in
@@ -75,7 +75,7 @@ object
 		  let e = L.UnOp (IntToPtr i, L.UnOp ((Coerce r), L.BinOp (PlusI, e2, e1))) in
 		    process_exp e
 	      | L.UnOp ((PtrToInt (Signed, _)), L.Lval (lv, Ptr)), L.Lval (_, (Int _)) ->
-		      let ptr_sz = Config.size_of_ptr in
+		      let ptr_sz = size_of_scalar Config.size_of_ptr Ptr in
 		      let d = domain_of_typ (Signed, ptr_sz) in
 			if contains d r then 
 			  let e1 = L.Lval (lv, Ptr) in
