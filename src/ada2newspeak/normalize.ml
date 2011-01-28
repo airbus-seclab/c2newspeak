@@ -634,8 +634,9 @@ and normalize_binop bop e1 e2 xpec =
 		      | None -> !set_package
 		    in
 		    let (sc,( act_name, spec, top)) =
-		      Sym.find_subprogram ~silent:true gtbl (packg, n) norm_typs xpec
-	      		(fun x -> Symboltbl.find_type gtbl x)
+		      Sym.find_subprogram ~silent:true
+			   gtbl (packg, n) norm_typs xpec
+	      		      (fun x -> Symboltbl.find_type gtbl x)
 	      	    in 
 
 		    let t = match top with	
@@ -696,8 +697,7 @@ and normalize_fcall (n, params) expectedtype =
   let n = mangle_sname n in
     try
       let norm_args = List.map normalize_arg params in
-      let norm_typs = List.map (fun (s,(_,t)) -> (s,t)) norm_args in
-	
+      let norm_typs = List.map (fun (s,(_,t)) -> (s,t)) norm_args in	
       let (sc,(act_name,spec,top)) = 
 	Sym.find_subprogram 
 	  ~silent:true gtbl (add_p n) norm_typs 
@@ -710,7 +710,6 @@ and normalize_fcall (n, params) expectedtype =
       in
 		    
       let effective_args = make_arg_list norm_args spec in
-	
 	Ast.FunctionCall(sc, act_name, effective_args, t),t
 
     with Not_found ->
@@ -952,16 +951,16 @@ and parse_extern_specification name =
     let norm_spec = normalization spec_ast in
       Npkcontext.print_debug "Done parsing extern specification file";
       match norm_spec with
-	  (spec_l, Ast.Spec spec, loc) -> 
-	    let basicdecls = List.fold_left (
-	      fun ctx item -> 
-		match item with
-		    Ast.PackageSpec (m, decls), loc -> 
-		      (Ast.PackageSpec (m, decls), loc)::ctx 
-		  | _ -> ctx 
-	    ) [] spec_l
+	  ( spec_l, Ast.Spec spec, loc ) -> 
+	    let basicdecls =
+	      List.fold_left (
+		fun ctx item -> 
+		  match item with
+		      Ast.PackageSpec (_m, _decls), _loc -> 
+			item::ctx 
+		    |  _   -> ctx 
+	      ) [] spec_l
 	    in
-	   
 	      (basicdecls, spec, loc)
 		
 	| (_, Ast.Body(_), _) -> Npkcontext.report_error
@@ -1143,17 +1142,18 @@ and normalize_basic_decl item loc =
       let r_t = Ada_utils.may subtyp_to_adatyp ret_tp in
       let (pk, o') = mangle_sname o in
       let old = add_p (pk, o')  in
-	(*only dedicated to find_symbols in Symbols*)
+	
+      (*only dedicated to find_symbols in Symbols*)
       let program_args = match updt_arguments with
 	  None -> []  
 	| Some args -> args 
       in
-
 	(* Necessary for possible_type in symbol: only though to avoid 
-	   Ambiguous raised for binop (is_overloaded)*)
+	   Ambiguous raised for binop (is_operator_overloaded)*)
 	if not ( Sym.is_already_defined gtbl n ) then 
 	  Sym.add_subprogram gtbl n program_args r_t
-	;	
+	;
+
 	Sym.add_renaming_decl gtbl
 	  (Sym.current gtbl, n) updt_arguments old;
         []
@@ -1214,7 +1214,7 @@ and normalize_package_spec (name, list_decl) =
     if  (Hashtbl.mem spec_tbl name) 
     then begin  
       match (Hashtbl.find spec_tbl name) with
-	Ast.PackageSpec (_, n_spec),_ ->  n_spec
+	( _ (*Bdecls*), Ast.PackageSpec (_, n_spec),_) ->  n_spec
       | _ ->   Npkcontext.report_error "normalize_package_spec "
              ("Package form in spec_tbl of" ^ name ^ "not as expected");
     end
@@ -1222,7 +1222,7 @@ and normalize_package_spec (name, list_decl) =
       let n_spec = normalize_decls list_decl in
       let spec =  Ast.PackageSpec (name, n_spec) in 
 	(*Sym.add_with gtbl name;*)
-	Hashtbl.add spec_tbl name (spec, Newspeak.unknown_loc);
+	Hashtbl.add spec_tbl name ([], spec, Newspeak.unknown_loc);
 	n_spec
     end
   in
@@ -1513,8 +1513,9 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 		  let (_,(_,t,_)) = Sym.find_variable gtbl mn in  
 		    T.extract_array_range t 
 		with Not_found -> 
-		  
-		  merge_types (normalize_subtyp_ind (nn, None))
+		  let  arrtp = merge_types (normalize_subtyp_ind (nn, None)) in
+		    T.extract_array_range arrtp
+		 
 	    end
 	  | SubtypeRange lv ->  
 	      merge_types (normalize_subtyp_ind (
@@ -2115,7 +2116,8 @@ and normalize_context context =
       match item with
 	| With(nom, spec) -> 
 	    (*if (not (Sym.is_with gtbl nom)) then*)
-	    if (not (Hashtbl.mem spec_tbl nom) && not (Sym.is_ada_pck nom )) then
+	    if (not (Hashtbl.mem spec_tbl nom) &&
+		not (Sym.is_ada_pck nom )) then
 	      begin 
 		let (b_decls, norm_spec, loc) = 
 		  match spec with
@@ -2126,16 +2128,18 @@ and normalize_context context =
 		in
 		  add_extern_spec norm_spec; 
 		  (*Only add b_decls that are not in spec_tbl? *)
-		  Hashtbl.add spec_tbl nom (norm_spec, loc);
+		  Hashtbl.add spec_tbl nom (b_decls, norm_spec, loc);
 		  (b_decls)@((norm_spec, loc)::ctx)
 	      end
 	    else 	
 	      (*Etienne Millon = ctx*)
 	      (*Not found for internal spec like  System *)	
 	      begin try 
-		let with_clause = Hashtbl.find spec_tbl nom in
-		  with_clause::ctx
-	      with Not_found -> ctx (*for "System"*)
+		let (specs, with_clause, l) = 
+		  Hashtbl.find spec_tbl nom in
+		  specs@((with_clause,l)::ctx)
+	      with Not_found ->
+		ctx (*for "System"*)
 	      end
 		
 	| UseContext n  -> 
@@ -2152,7 +2156,6 @@ and normalize_context context =
  *)
     
 and normalization compil_unit = 
- 
   let cu_name = compilation_unit_name compil_unit in
     Npkcontext.print_debug ("Semantic checking " ^ cu_name ^ "...");
     let (context, lib_item,loc) = compil_unit in

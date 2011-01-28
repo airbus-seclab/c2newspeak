@@ -127,7 +127,9 @@ let process () =
   let progs = List.map Newspeak.read !input in
     check progs;
     let p = merge progs in
+      Newspeak.write !output p;
       if !print then Newspeak.dump p
+      
 
 let _ = 
   let anon_fun (f: N.fid) = input := f::!input in

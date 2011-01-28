@@ -1,3 +1,4 @@
+
 (*
   Ada2Newspeak: compiles Ada code into Newspeak. Newspeak is a minimal language
   well-suited for static analysis.
@@ -272,15 +273,35 @@ struct
      (cast_s (find_symbols tbl n))
 
      
+ let find_param_type t_find arg = 
+   let  n =  match arg.param_type with
+     | [] -> Npkcontext.report_error
+    	 "symboltbl:find_subprogram" "unreachable"
+     | x::[]    -> None  , x 
+     | x::y::[] -> Some x, y
+     | _ -> Npkcontext.report_error "symboltbl:find_subprogram"
+    	 "chain of selected names is too deep"
+   in try 
+       begin 
+	 try snd (t_find n)
+    	 with Not_found -> Npkcontext.report_error
+    	   ("Cannot   find type '") "" end
+     with Not_found ->
+       Npkcontext.report_error "Symbtbl:not found" ""
+ 
+   
+   
  let tbl_find_subprogram n_args xpect my_find tbl n =
-    let match_ret_typ xpect z =
+
+   let match_ret_typ xpect z =
       match (xpect, z) with
     	  Some xpec, Some ret -> T.is_compatible xpec ret
-    	| _ -> true
+    	| _ ->  true
     in
     let filter_args norm_args (_, (_, params, _))  =
-       let argtbl = Hashtbl.create 5 in
-       let rec extract_positional_parameters ar =
+
+      let argtbl = Hashtbl.create 5 in
+      let rec extract_positional_parameters ar =
 	match ar with
 	  | []   -> []
 	  | (Some  _, _)::_  ->
@@ -292,41 +313,30 @@ struct
 		  | Some id when Hashtbl.mem argtbl id ->
                       Npkcontext.report_error "tbl_find_subprogram "
 			("Parameter " ^ id ^ " appears twice")
-		  | Some id -> Hashtbl.add argtbl id typ
+		  | Some id ->
+		      Hashtbl.add argtbl id typ
 	      in
 		List.iter process_argument ar;
 		[]
 	  | (None, ty)::tl -> ty::(extract_positional_parameters tl)
       in
-       let make_subt arg  =
-	 let  n =  match arg.param_type with
-    	   | [] -> Npkcontext.report_error
-    	       "symboltbl:find_subprogram" "unreachable"
-    	   | x::[]    -> None  , x 
-	   | x::y::[] -> Some x, y
-    	   | _ -> Npkcontext.report_error "symboltbl:find_subprogram"
-    	       "chain of selected names is too deep"
-    	 in try 
-	     begin 
-	       try snd (my_find n)
-    	       with Not_found -> Npkcontext.report_error
-    		 ("Cannot   find type '") "" end
-    	   with Not_found ->
-    	     Npkcontext.report_error "Symbtbl:not found" ""
-       in
+       let make_subt arg = find_param_type my_find arg in 
+
        let rec are_compatible pos_list spec =
          match pos_list, spec with
            |  [], _  -> (* end of positional parameters *)
-		List.for_all ( function x -> 
-		  try    
-		    let typo  = Hashtbl.find argtbl x.formal_name in
-		      T.is_compatible typo (make_subt x) 
-		  with Not_found -> true
-			     ) spec
+		List.for_all ( fun x -> 
+		    try    
+		      let typo  = Hashtbl.find argtbl x.formal_name in
+			T.is_compatible typo (make_subt x) 
+			  (*Dans le doute, mais ne marche pas pour
+			    les renaming (nouveaux "formal_name" *)
+		    with Not_found -> true
+		) spec
 		  
            | tp::pt, s::st ->
 	       let subtyp = make_subt s in
-	 	 ( T.is_compatible tp subtyp) &&
+		   ( T.is_compatible tp subtyp) &&
 		   ( are_compatible pt st)
 		   
           | _::_,[]     -> 
@@ -344,6 +354,11 @@ struct
 		 ) 
 	 subs
 	)
+
+
+
+
+
 
 
   let tbl_find_variable tbl ?expected_type n =
@@ -635,7 +650,7 @@ let push_saved_context s ctx =
 let library s =
   Tree.nth s 1
 
-(*Only used for renaming (for is_overloaded function)*)
+(*Only used for renaming (for is_operator_d function)*)
 let is_already_defined tbl n = 
    cast_s_no_error (find_symbols (top tbl) n)
      
@@ -732,6 +747,10 @@ let rec find_subprogram_aux s ?(silent=false) (pack,n) n_args xpect t_find use  
       Npkcontext.report_error "Symboltbl.find_subprogram" 
 	("program '" ^ n ^ "'" ^"can not be resolved")
     else 
+     (* let real_prototype = find_subprogram_aux s ~silent (p_opt, n) n_args  xpect t_find false
+     *)
+
+
       let (sc,(act_name,_, top)) =
 	find_subprogram_aux s ~silent (p_opt, n_a) n_args  xpect t_find false
       in
@@ -806,12 +825,84 @@ let rec find_subprogram_aux s ?(silent=false) (pack,n) n_args xpect t_find use  
       in
 	List.iter multiple_renaming names;
 	let nb_solution = List.length !res in 
+	  
 	  if (compare  nb_solution 0 = 0) then
 	    raise Not_found
-	  else if (compare nb_solution 1 > 0) then begin
-	    Npkcontext.report_error "Symboltbl.multiple_renaming"
-	      ("More than one program match spec:'" ^ n ^ "'")
-	  end else
+	      
+	  else if (compare nb_solution 1 > 0) then 
+	    begin 
+	      (*Can be 'are_compatible' limits in tbl_find_subprogram DUE
+		to renaming (new formal parameter name being not tracked...)
+		We try to select the one,  only based on lenght sowill fail
+		when two candidates have the same args length TODO 
+		improve
+	      *)
+	      Npkcontext.report_warning  "Symboltbl.multiple_renaming"
+		("More than one program match spec:'" ^ n ^ "'") 
+	      ;
+	      
+	      let nb_args = List.length n_args in 
+		
+	      let no_default param = 
+		match param.default_value with 
+		    None -> true | _ -> false 
+	      in
+		if (  List.for_all (fun  (_,(_,x,_)) -> 
+				      List.for_all no_default x 
+				   )
+			!res 
+		   ) 
+		then
+		  begin
+		    let hack_filter nb (_,(_,spec,_)) = 
+		      let none_has_default = List.for_all no_default spec in
+			( compare nb  (List.length spec) = 0) &&
+			  ( none_has_default)
+		    in
+		    let filtered_sols = List.filter (
+		      fun x ->  hack_filter nb_args x ) !res
+		    in
+		    let filtered_lgth = List.length filtered_sols 
+		    in
+		      
+		      if (compare filtered_lgth 1 = 0) then 
+			List.hd filtered_sols
+		      else  
+			begin
+			  let possible_combination args (_,(_,spec,_)) = 
+			    (* Order might not be taken into account because,
+			       we do not have info about 
+			    *)
+			    match args, spec with 
+				((_,t)::[], param::[]) ->
+				  T.is_compatible t
+				    (find_param_type t_find param)
+			      | _ -> false
+				  
+			  in
+			  let combined_sols = List.filter (
+			    fun x -> possible_combination n_args x 
+			  )  filtered_sols
+			  in
+			    if ((filtered_lgth  > 1) &&  
+				  (compare (List.length combined_sols) 1 = 0))
+			    then 
+			      List.hd combined_sols
+				
+			    else
+			      Npkcontext.report_error 
+				"Symboltbl.multiple_renaming"
+				("More than one program match spec:'"^ n ^
+				   "' hack is not enough")
+			end
+		  end
+		  else	
+		    Npkcontext.report_error "Symboltbl.multiple_renaming"
+		      ("More than one program match spec:'"^ n ^
+			 "Case: some spec have default value")
+		      
+	    end 
+	  else
 	    List.hd (!res)
 	      
     with Not_found -> 
