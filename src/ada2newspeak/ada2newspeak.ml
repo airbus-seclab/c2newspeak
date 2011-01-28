@@ -59,6 +59,9 @@ let translate prog =
     Npkcontext.forget_loc ();
     tr_prog
 
+
+
+
 (**
  * Parse a file, compile it and translate it into a Npkil representation.
  *)
@@ -109,6 +112,7 @@ let compile (fname: string): Npkil.t =
     let updated_clauses =   
       List.append clauses (List.rev added_clauses ) in
     let n_ast = ( updated_clauses, libs, locat ) in
+
     let norm_tree = normalization fname n_ast in
     let prog = firstpass_translate fname norm_tree in
     let tr_prog = translate prog in
@@ -139,7 +143,7 @@ let extract_no fname =
 let execute () =
     (* TODO: this code should be factored with c2newspeak!!! into x2newspeak *)
   Normalize.init_bodies !Npkcontext.input_files;
-
+     
   let nos = List.map extract_no !Npkcontext.input_files in
     
     let bods = Normalize.bodies_to_add() in
@@ -147,9 +151,11 @@ let execute () =
     let bods_less_files = List.filter (fun x -> not (
 	 List.mem x !Npkcontext.input_files)) bods 
     in
-	let bodies_nos = List.map extract_no (
-	List.rev bods_less_files) 
-	in 
+
+    let bodies_nos = List.map extract_no ( List.rev bods_less_files ) 
+
+
+    in 
       if not !Npkcontext.compile_only then begin
 	Linker.link (List.append bodies_nos nos)
       end
