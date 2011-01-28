@@ -350,8 +350,7 @@ val build : builder -> t -> t
 
 val build_gdecl: builder -> typ -> typ
 
-(* [write name (files, prog, ptr_sz) ] write the program prog, with
-    the list of its file names and the size of pointers to file name. *)
+(** [write name prog] write the program prog *)
 val write : string -> t -> unit
 
 (** [read name] retrieves the list of file names, program and size of
