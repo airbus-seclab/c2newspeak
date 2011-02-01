@@ -1879,10 +1879,14 @@ and normalize_assign_agr nlv t_lv bare_assoc_list loc =
 	  	      let affected = match xx with
 	  		  CInt _
 	  		| CFloat _
-	  		| Lval (Var _) ->
-	  		    normalize_exp ~expected_type:c xx
-	  		| _ -> Npkcontext.report_error "normalize:assign aggregate"
-	  		    "Expected an Integer or a Float"
+	  		| _ -> normalize_exp ~expected_type:c xx
+			(*
+			  | Lval (Var _) ->
+	  		  normalize_exp ~expected_type:c xx
+	  		  | _ -> Npkcontext.report_error 
+			  "normalize:assign aggregate" 
+			  "Expected an Integer or a Float"	
+			*)
 	  	      in
 	  	      let all_values = List.map (
 	  		fun x ->
@@ -1972,10 +1976,12 @@ and normalize_assign_agr nlv t_lv bare_assoc_list loc =
 			let record_lv = Ast.RecordAccess (lv, off, tf) in
 			let affected = match va with  
 			    CInt _ 
-			  | CFloat _  
-			  | Lval (Var _ ) -> normalize_exp ~expected_type:c va
+			  | CFloat _
+			  | _ ->   normalize_exp ~expected_type:c va
+			 (* | Lval (Var _ ) -> normalize_exp ~expected_type:c va
 			  | _ -> Npkcontext.report_error "normalize:assign aggregate"
 			      "Expected an integer or a float"
+			 *)
 			in
 		      	  handle_others record_lv affected [] (List.rev all_values)
 	              end

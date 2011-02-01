@@ -205,8 +205,7 @@ struct
     let fn' (wh,x) =
       match fn x with
 	| None -> None
-	| Some y -> 
-	    Some (wh,y)
+	| Some y ->  Some (wh,y)
     in
       match extract_unique ~filter fn' lst with
 	| None ->     
@@ -228,9 +227,9 @@ struct
   let cast_v ?filter = 
    mkcast "variable"
      (fun s -> match s with
-        | Variable (_,_,_     ,false,_) -> Some s
-        | Variable (_,_,Some _,true ,_) -> Some s
-        | Subprogram (_,[],Some  _)     -> Some s
+        | Variable  (_,_,_    ,false,_)  
+        | Variable  (_,_,Some _,true,_) 
+        | Subprogram( _, [] , Some  _ ) -> Some s
         |_ -> None
      )
      ?filter
@@ -1003,7 +1002,8 @@ let rec make_name_of_lval lv =
 
 
 let get_possible_common_type s lval1 lval2 =
-  let inter l1 l2 =
+
+  let inter l1 l2 =    
     let sym_eq (_,x) (_,y) = 
       let extract_typ symbol = 
 	match symbol with  
@@ -1018,20 +1018,21 @@ let get_possible_common_type s lval1 lval2 =
     in
       List.filter (fun x-> List.exists (fun y-> sym_eq x y) l1) l2
   in   
+
+
   let all_find_symbols stack pk_opt name = 
-    let symb1 = 
-      Tree.fold (fun rf it ->
+    let symb1 = Tree.fold (fun rf it ->
 	List.append rf (find_symbols it name)) [] stack.s_stack 
     in
     let uses = s_get_use stack in
     let context =
-      match  pk_opt with 
-	  None ->  ref (uses) 
+      match pk_opt with 
+	  None ->   ref (uses)
 	| Some pck -> 
 	    if  (List.mem pck uses) then 
 	      ref (uses) 
 	    else
-	      ref (pck::uses) 
+	      ref (pck::uses)
     in 
     let res = ref [] in
       while (!context <> []) do
@@ -1042,15 +1043,51 @@ let get_possible_common_type s lval1 lval2 =
 		res:= List.append !res (find_symbols tbl name)
 	    | None     -> ()
       done;
-      List.append symb1 !res
+
+      (*Case 'R.x' with R is a record with field 'x'*)
+      let res_record = ref [] in
+      let res2 = ref [] in
+	begin
+	  match pk_opt with 
+	      None ->  ()
+	    | Some pck ->  
+		let symb2 = Tree.fold (fun rf it ->
+			List.append rf (find_symbols it pck)
+				      ) [] stack.s_stack 
+		in
+		let context_record =  ref (uses) in
+		  while (!context_record <> []) do
+		    let p = (List.hd !context_record) in
+		      context_record := List.tl !context_record;
+		      match (tbl_find_unit (library stack.s_stack) p) with
+			| Some tbl ->
+			    res_record := List.append
+			      !res_record (find_symbols tbl pck)
+			| None     -> ()
+		  done;
+		  res_record:= List.append symb2 !res_record;
+		  List.iter ( fun x -> 
+				match x with
+			    (scope, Variable( a, t, b, c, d)) -> begin
+			      if T.is_record t then 
+				try 
+				  let tp = snd (T.record_field t name ) in
+				    res2:= (scope, Variable( a, tp, b, c, d))::!res2
+				with _ -> ()
+			    end
+			    (* Could be a procedure field*)
+			  | _ -> ()
+		  ) !res_record 		    
+	end;
+	List.append !res2 (List.append symb1 !res)
   in
     try
       (* Hack: try to add a package name for find_all*)
       let try_add_pck strl =
 	match strl with 
-	    x::[]    -> None   , x
+	    x::[]    -> (None, x)
 	  | y::x::[] -> Some(y), x
-	  | _        -> None   , ListUtils.last strl
+	  | _        -> None, ListUtils.last strl
       in
       let p1, n1 = try_add_pck (make_name_of_lval lval1) in
       let p2, n2 = try_add_pck (make_name_of_lval lval2) in
