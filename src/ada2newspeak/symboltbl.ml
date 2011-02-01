@@ -1075,7 +1075,7 @@ let get_possible_common_type s lval1 lval2 =
 				    res2:= (scope, Variable( a, tp, b, c, d))::!res2
 				with _ -> ()
 			    end
-			    (* Could be a procedure field*)
+			    (*Could be a procedure.field: add this case*)
 			  | _ -> ()
 		  ) !res_record 		    
 	end;

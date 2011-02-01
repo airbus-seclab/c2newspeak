@@ -609,7 +609,6 @@ and normalize_binop bop e1 e2 xpec =
 		
       (* Otherwise : direct translation *)		
       | _ ->  
-	
 	  let bop' = direct_op_trans bop in
 	  let n = Ada_utils.make_operator_name bop in
 	  let expected_type =

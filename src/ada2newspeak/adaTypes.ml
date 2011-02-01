@@ -269,30 +269,6 @@ let represtbl : (t, (data_t * data_t) list) Hashtbl.t = Hashtbl.create 0
 let extract_symbols t =
   match t.base.trait with
     | Enumeration v  -> Some v
-	(* WG Some v
-	begin
-	  try 
-	   let mapping = Hashtbl.find represtbl t in
-	   let lg = List.length mapping in 
-	   if (compare lg (List.length v) <> 0) then
-	   Npkcontext.report_error "extract symbols"
-	   "assertion (same length) failed"
-	   ;
-	   Some ( List.map 
-	   ( fun (x,y) -> 
-	   match y with 
-	   IntVal nat -> 
-	   (x, Newspeak.Nat.to_int nat)
-	   | _ ->   
-	   Npkcontext.report_error 
-	   "extract  symbols"
-	   "assertion (not intval) failed"
-	   ) 
-	   (List.map2 (fun (s,_) (n, _) -> (s,n)) v mapping)
-	   )
-	   with 
-	   Not_found -> Some v
-	   end*)
     | _             -> None
 	
 let extract_access_type t =
@@ -300,8 +276,6 @@ let extract_access_type t =
   | Access te -> te
   | _ -> Npkcontext.report_error "extract_access_type"
            "This type is not an access type, it cannot be dereferenced"
-
-
 
 let is_increasing l =
   match l with
@@ -349,12 +323,6 @@ let handle_enum_repr_clause t l =
 	  (* FIXME check if not frozen *)
 	  
 let  get_enum_litt_value _ x = x
-  (*
-    try let l = Hashtbl.find represtbl t in
-    List.assoc x l
-    with Not_found ->  
-    x
-  *)
 
 (*****************
  * Builtin types *
