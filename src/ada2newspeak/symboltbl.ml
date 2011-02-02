@@ -289,16 +289,13 @@ struct
        Npkcontext.report_error "Symbtbl:not found" ""
  
    
-   
  let tbl_find_subprogram n_args xpect my_find tbl n =
-
    let match_ret_typ xpect z =
       match (xpect, z) with
     	  Some xpec, Some ret -> T.is_compatible xpec ret
     	| _ ->  true
     in
-    let filter_args norm_args (_, (_, params, _))  =
-
+   let filter_args norm_args (_, (_, params, _)) =
       let argtbl = Hashtbl.create 5 in
       let rec extract_positional_parameters ar =
 	match ar with
@@ -344,7 +341,7 @@ struct
       in
       let pos = extract_positional_parameters norm_args in
 	are_compatible pos params 
-    in
+   in
     let subs = find_symbols tbl n in
       (cast_s 
 	 ~filter:(fun x -> let (_, (_sn, _, z)) = x in
@@ -353,11 +350,6 @@ struct
 		 ) 
 	 subs
 	)
-
-
-
-
-
 
 
   let tbl_find_variable tbl ?expected_type n =
@@ -740,16 +732,12 @@ let rec find_type s (package, n) =
     s_find "type" tbl_find_type s ?package n
 
 
-let rec find_subprogram_aux s ?(silent=false) (pack,n) n_args xpect t_find use  =
-  let find_one_renaming  ((p_opt, n_a), params_opt) = 
+let rec find_subprogram_aux s ?(silent=false) (pack,n) n_args xpect t_find use =
+ let find_one_renaming  ((p_opt, n_a), params_opt) = 
     if (eq_renaming  (p_opt, n_a) (pack,n)) then 
       Npkcontext.report_error "Symboltbl.find_subprogram" 
 	("program '" ^ n ^ "'" ^"can not be resolved")
     else 
-     (* let real_prototype = find_subprogram_aux s ~silent (p_opt, n) n_args  xpect t_find false
-     *)
-
-
       let (sc,(act_name,_, top)) =
 	find_subprogram_aux s ~silent (p_opt, n_a) n_args  xpect t_find false
       in
@@ -766,22 +754,20 @@ let rec find_subprogram_aux s ?(silent=false) (pack,n) n_args xpect t_find use  
 	res:=new_spec::(!res)
     with _ -> ()
   in
-    
-
-  (*Looking in use is used in order to look for function in use clause;
-    it is only one level deep *)
+  (* Looking in use is used in order to look for function in use clause;
+     it is only one level deep *)
   let looking_in_use pack use_enabled  tbl_find s find_auxiliary =  
-    let find_pck n  = 
+    let find_pck n = 
       match pack with 
-	  Some p ->  s_find "subprogram" tbl_find s ~package:(p) n 
-	| _ ->       s_find "subprogram" tbl_find s n
+	  Some p -> s_find "subprogram" tbl_find s ~package:(p) n 
+	| _ ->      s_find "subprogram" tbl_find s n
     in
-     let context_orig = ref (s_get_use s) in
-     let context = match pack with 
-	 Some p -> ref (List.find_all ( fun x -> 
-		(compare x p <> 0) && ( compare x "standard" <> 0) 
-				      ) !context_orig 
-		       ) 
+    let context_orig = ref (s_get_use s) in
+    let context = match pack with 
+	Some p -> ref (List.find_all ( fun x -> 
+		 (compare x p <> 0) && ( compare x "standard" <> 0) 
+				     ) !context_orig 
+		      ) 
        | _ -> context_orig
      in        
        try (find_pck n)
@@ -827,7 +813,6 @@ let rec find_subprogram_aux s ?(silent=false) (pack,n) n_args xpect t_find use  
 	  
 	  if (compare  nb_solution 0 = 0) then
 	    raise Not_found
-	      
 	  else if (compare nb_solution 1 > 0) then 
 	    begin 
 	      (*Can be 'are_compatible' limits in tbl_find_subprogram DUE
@@ -847,9 +832,7 @@ let rec find_subprogram_aux s ?(silent=false) (pack,n) n_args xpect t_find use  
 		    None -> true | _ -> false 
 	      in
 		if (  List.for_all (fun  (_,(_,x,_)) -> 
-				      List.for_all no_default x 
-				   )
-			!res 
+				List.for_all no_default x ) !res 
 		   ) 
 		then
 		  begin
@@ -908,7 +891,7 @@ let rec find_subprogram_aux s ?(silent=false) (pack,n) n_args xpect t_find use  
       let tbl_find = 	(tbl_find_subprogram n_args xpect t_find) in
       (*silent = true pour forcer la recursion dans les use*)
       let recursive_call = (fun x -> 
-	find_subprogram_aux s ~silent:true x n_args  xpect t_find false)
+	find_subprogram_aux s ~silent:true x n_args xpect t_find false)
       in
 	looking_in_use pack use tbl_find s recursive_call
 	

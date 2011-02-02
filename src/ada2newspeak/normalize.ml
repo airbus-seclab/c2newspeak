@@ -692,51 +692,164 @@ and normalize_uop uop exp =
 
 and normalize_fcall (n, params) expectedtype =
   (* Maybe this indexed expression is an array-value *)
-  let n = Symboltbl.make_name_of_lval n in
-  try 
-    let n = mangle_sname n in
-    try
-      let norm_args = List.map normalize_arg params in
-      let norm_typs = List.map (fun (s,(_,t)) -> (s,t)) norm_args in	
-      let (sc,(act_name,spec,top)) = 
-	Sym.find_subprogram 
-	  ~silent:true gtbl (add_p n) norm_typs 
-	  expectedtype (fun x -> Symboltbl.find_type gtbl x) 
-	in
-      let t = match top with 
-	| None -> Npkcontext.report_error "normalize_fcall"
-            "Expected function, got procedure"
-	| Some top -> top
-      in
-		    
-      let effective_args = make_arg_list norm_args spec in
-	Ast.FunctionCall(sc, act_name, effective_args, t),t
-
-    with Not_found ->
-      try 
-	(*To do double checked because conversion de tablo
-	  contraint/non contraint cf 8.2 *)
+  let nm = Symboltbl.make_name_of_lval n in
+    try 
+      let nmg = mangle_sname nm in
 	begin
-	  let (sc,(act_id, t,_)) = 
-	    Sym.find_variable_with_error_report gtbl n 
-	  in
-	  let tc = fst (T.extract_array_types t) in
-	  let params' = List.map snd params in
-	  let lv = Ast.Var (sc, act_id, t) in
-	    Ast.Lval (Ast.ArrayAccess(lv, List.map normalize_exp params'))
-	      ,tc
+	  try
+	    let norm_args = List.map normalize_arg params in
+	    let norm_typs = List.map (fun (s,(_,t)) -> (s,t)) norm_args in	
+	    let (sc,(act_name,spec,top)) = 
+	      Sym.find_subprogram 
+		~silent:true gtbl (add_p nmg) norm_typs 
+		expectedtype (fun x -> Symboltbl.find_type gtbl x) 
+	    in	      
+	    let t = match top with 
+	      | None -> Npkcontext.report_error "normalize_fcall"
+		  "Expected function, got procedure"
+	      | Some top -> top
+	    in
+	    let effective_args = make_arg_list norm_args spec in
+	      Ast.FunctionCall(sc, act_name, effective_args, t),t
+	  with _ ->
+	    try
+	      (*ERROR = cas du 'P.FN_RETURNING_ARRAY(x)'*) 
+	      begin
+
+		let  (sc,( fid, _, top)) =
+		  Sym.find_subprogram 
+		    ~silent:true gtbl (add_p nmg) [] None
+		    (fun x -> Symboltbl.find_type gtbl x) 
+		in
+
+
+		let t = match top with Some e -> e | _ -> raise Not_found in 
+		let (arr_t, _) = T.extract_array_types t in 
+		let x = Temps.to_string 0 (Temps.Value_of fid) in
+		let loc = Npkcontext.get_loc () in 
+		  Sym.add_variable gtbl x loc t;
+		  let bd= Ast.ObjectDecl (x, t, Ast.Variable, None) in 
+		  let lv_aff = Ast.Var (Sym.Lexical, x, t) in
+		  let norm_args = List.map (fun x -> 
+					      snd (normalize_arg x)
+					   ) params 
+		  in	   
+		  let exp_aff= Ast.FunctionCall (sc, fid, [], t), t in 
+		  let affect = [Ast.Assign ( lv_aff, exp_aff ), loc] in 
+		  let instr  = Ast.Block(
+		    [Ast.BasicDecl bd, loc], affect) 
+		  in
+		  let lv= Ast.Var (Sym.Lexical, x, t) in
+	
+		  let expr= Ast.Lval (Ast.ArrayAccess (
+					lv, norm_args)
+				     ) 
+		  in
+		    Ast.BlkExp ( [instr, loc], (expr, arr_t)), arr_t
+		 
+	      end	  
+	    with _ ->  
+	      begin
+	      try 
+		(*To do double checked because conversion de tablo
+		  contraint/non contraint cf 8.2 *)
+		let (sc,(act_id, t,_)) = 
+		  Sym.find_variable_with_error_report gtbl nmg
+		in
+		let tc = fst (T.extract_array_types t) in
+		let params' = List.map snd params in
+		let lv = Ast.Var (sc, act_id, t) in
+		  Ast.Lval (Ast.ArrayAccess(
+			      lv, List.map normalize_exp params')
+			   ) , tc
+		    
+	      with Invalid_argument _ | Not_found ->
+		try 
+		  (* could be 'lv.fld(1)', 
+		     fld a field (with array type) see t424
+		  *)
+		  match nmg with 
+		    | Some f, fld -> 
+			let (sc,(act_name, t,_)) = 
+			  Sym.find_variable_with_error_report gtbl (None,f) 
+			in
+			  if (T.is_record t) then 
+			    let (off, tf) = T.record_field t fld in	
+			      if (T.is_array tf) then 
+				let tc = fst (T.extract_array_types tf) in
+				let params' = List.map snd params in
+				  if (compare (List.length params') 1 = 0) then
+				    Ast.Lval (
+				      Ast.ArrayAccess(  
+					Ast.RecordAccess
+					  ( Ast.Var(sc, act_name, t)
+					      , off
+						, tf
+					  )
+					  , List.map normalize_exp params'
+				      )
+				    ), tc
+				  else 
+				    Npkcontext.report_error "normalize_fcall"
+				      "f.ret(1) case, only handled for a 1-D array"
+			      else raise Not_found
+			  else raise Not_found
+			    
+		    | _ -> raise Not_found
+			
+		with _ ->  
+		  (*Variable not found in gtbl could be a 'cast'*)
+		  try
+      		    let   (_, cast_t) = Sym.find_type gtbl nmg in
+      		      if (compare (List.length params) 1 <> 0) then    
+      			Npkcontext.report_error "normalize_fcall"
+      			  "Cast only handled for single variable"
+		      ;
+      		      let param =  List.hd params in
+			(*Il y a cast, la valeur castée ne doit 
+			  pas etre checke cf t457*)
+      		      let  (norm_exp, arg_t)= normalize_exp (snd param) in
+      			
+			if (not (T.is_compatible cast_t arg_t))
+			then 
+			  (*WG  TO DO print_warning *)
+			  print_endline  ( "\nL = "
+      					   ^ T.print cast_t
+      					   ^ "\nR = "
+      					   ^ T.print arg_t
+      					 )
+			;
+			(*norm_exp, cast_t*)
+			Ast.Cast (arg_t, cast_t, norm_exp), cast_t
+			  
+      		  with _ ->  
+		    (*See t437: "=" undefined operator case*)
+		    if (   (compare (make_operator_name Eq) (snd nmg) = 0)
+			&& (compare (List.length params)  2 = 0 )
+		       ) then
+		      begin 
+			Npkcontext.report_warning 
+			  "normalize_fcall" 
+			  "Be carefull binary operator not explicitely declared"; 
+			let n_args = List.map normalize_arg params in
+			let el1 = snd (List.nth n_args 0) in 
+			let el2 = snd (List.nth n_args 1) in 
+			  Ast.Binary (Ast.Eq,  el1,  el2 ) , T.boolean
+		      end
+		    else 
+		      Npkcontext.report_error "normalize_fcall" "Function not found"
+	    end
 	end
-      with Invalid_argument _ | Not_found ->
-	try (* could be 'lv.fld(1)', fld being a record field 
-	       (with array type) see t424
-	    *)
-	  match n with 
-	    | Some f, fld -> 
+    with _ -> (*For mangle too deep error*)
+      match nm  with 
+	  a::(b::c::[]) -> 
+	    begin
+	      try
 		let (sc,(act_name, t,_)) = 
-		  Sym.find_variable_with_error_report gtbl (None,f) 
+		  Sym.find_variable_with_error_report gtbl (Some a, b) 
 		in
 		  if (T.is_record t) then 
-		    let (off, tf) = T.record_field t fld in	
+		    let (off, tf) = T.record_field t c in	
 		      if (T.is_array tf) then 
 			let tc = fst (T.extract_array_types tf) in
 			let params' = List.map snd params in
@@ -750,128 +863,54 @@ and normalize_fcall (n, params) expectedtype =
 				  )
 				  , List.map normalize_exp params'
 			      )
-			    ), tc
+			  ), tc
 			  else 
 			    Npkcontext.report_error "normalize_fcall"
-			    "f.ret(1) case, only handled for a 1-D array"
+			      "a.b.c '(Some a, b) case' length of params list <> 1"
 		      else raise Not_found
 		  else raise Not_found
-		    
-	    | _ -> raise Not_found
-		
-	with _ ->   (*Variable not found in gtbl could be a 'cast'*)
-	  try
-      	    let   (_, cast_t) = Sym.find_type gtbl n in
-      	      if (compare (List.length params) 1 <> 0) then    
-      		Npkcontext.report_error "normalize_fcall"
-      		  "Cast only handled for single variable"
-	      ;
-      	      let param =  List.hd params in
-		(*Il y a cast, la valeur castée ne doit 
-		  pas etre checke cf t457*)
-      	      let  (norm_exp, arg_t)= normalize_exp (snd param) in
-      		
-		if (not (T.is_compatible cast_t arg_t))
-		then 
-		  (*WG  TO DO print_warning *)
-		  print_endline  ( "\nL = "
-      				   ^ T.print cast_t
-      				   ^ "\nR = "
-      				   ^ T.print arg_t
-      				 )
-		;
-		(*norm_exp, cast_t*)
-		Ast.Cast (arg_t, cast_t, norm_exp), cast_t
-		 
-      	  with _ ->  
-	    (*See t437: "=" undefined operator case*)
-	    if ( (compare (make_operator_name Eq)  (snd n) = 0) &&
-		 (compare (List.length params)  2 = 0 )
-	       ) then
-	      begin 
-		Npkcontext.report_warning 
-		  "normalize_fcall" "Be carefull binary operator not explicitely declared"; 
-		let n_args = List.map normalize_arg params in
-		let el1 = snd (List.nth n_args 0) in 
-		let el2 = snd (List.nth n_args 1) in 
-		  Ast.Binary (Ast.Eq,  el1,  el2 ) , T.boolean
-	      end
-	    else 
-		Npkcontext.report_error "normalize_fcall" "Function not found"
-
-
-  with _ -> (*For mangle too deep error*)
-    match n with 
-	a::(b::c::[]) -> 
-	  begin
-	  try
-	    let (sc,(act_name, t,_)) = 
-	      Sym.find_variable_with_error_report gtbl (Some a, b) 
-	    in
-	      if (T.is_record t) then 
-		let (off, tf) = T.record_field t c in	
-		  if (T.is_array tf) then 
-		    let tc = fst (T.extract_array_types tf) in
-		    let params' = List.map snd params in
-		      if (compare (List.length params') 1 = 0) then
-			Ast.Lval (
-			  Ast.ArrayAccess(  
-			    Ast.RecordAccess
-			      ( Ast.Var(sc, act_name, t)
-				  , off
-				    , tf
-			      )
-			      , List.map normalize_exp params'
-			  )
-			), tc
-		      else 
-			Npkcontext.report_error "normalize_fcall"
-			  "a.b.c '(Some a, b) case' length of params list <> 1"
-		  else raise Not_found
-	      else raise Not_found
-	  with _ ->  
-	
-	    try
-	      let (sc,(act_name, t,_)) = 
-		Sym.find_variable_with_error_report gtbl  (add_p (None, a))
-	      in
-		if (T.is_record t) then 
-		  begin
-		  let (offb, tfb) = T.record_field t b in
-		    if (T.is_record tfb) then 
-		      let (offc, tfc) = T.record_field tfb c in
-			if (T.is_array tfc) then 
-			  let tc = fst (T.extract_array_types tfc) in
-			  let params' = List.map snd params in
-			    if (compare (List.length params') 1 = 0) then
-			      let b = Ast.RecordAccess
-				( Ast.Var(sc, act_name, t)
-				    , offb
-				      , tfb
-				)
-			      in
-				Ast.Lval (
-		 		  Ast.ArrayAccess(  
-				    Ast.RecordAccess
-				      ( b (*Ast.Var(sc, act_name, t)*)
-					  , offc
-					    , tfc
+	      with _ ->  
+		try
+		  let (sc,(act_name, t,_)) = 
+		    Sym.find_variable_with_error_report gtbl  (add_p (None, a))
+		  in
+		    if (T.is_record t) then 
+		      begin
+			let (offb, tfb) = T.record_field t b in
+			  if (T.is_record tfb) then 
+			    let (offc, tfc) = T.record_field tfb c in
+			      if (T.is_array tfc) then 
+				let tc = fst (T.extract_array_types tfc) in
+				let params' = List.map snd params in
+				  if (compare (List.length params') 1 = 0) then
+				    let b = Ast.RecordAccess
+				      ( Ast.Var(sc, act_name, t)
+					  , offb
+					    , tfb
 				      )
-				      , List.map normalize_exp params'
-				  )
-				), tc
-			    else 
-			     Npkcontext.report_error "normalize_fcall"
-		   	     "a.b.c'(None, a)'case, length of params list<>1"
-			else raise Not_found	 
+				    in
+				      Ast.Lval (
+		 			Ast.ArrayAccess(  
+					  Ast.RecordAccess
+					    ( b (*Ast.Var(sc, act_name, t)*)
+						, offc
+						  , tfc
+					    )
+					    , List.map normalize_exp params'
+					)
+				      ), tc
+				  else 
+				    Npkcontext.report_error "normalize_fcall"
+		   		      "a.b.c'(None, a)'case, length of params list<>1"
+			      else raise Not_found	 
+			  else raise Not_found
+		      end
 		    else raise Not_found
-		  end
-		else raise Not_found
-	    with _ ->  Npkcontext.report_error "normalize _fcall "
-              " a.b.c(..) case: find_variable_with_error "
+		with _ ->  Npkcontext.report_error "normalize _fcall "
+		  " a.b.c(..) case: find_variable_with_error "
 	  end	    
-      | _ -> Npkcontext.report_error "mangle_sname"
-                  "chain of selected names is too deep"
+	| _ -> Npkcontext.report_error "mangle_sname"
+            "chain of selected names is too    deep"
 
 
 
@@ -1062,8 +1101,9 @@ and normalize_params_cur param =
                   "chain of selected names is too deep"
 	    
   in
-  (*This function adds packing name info in parameter type label of specifications, 
-    requires: type is in standard, and type is not already precised by a package *)
+  (*This function adds packing name info in parameter type label of 
+    specifications, requires: type is in standard, and type is not 
+    already precised by a package *)
   let add_pack pack param =  
     let p_typ = param.param_type in
        if (is_basic_or_pref_typ p_typ) then
