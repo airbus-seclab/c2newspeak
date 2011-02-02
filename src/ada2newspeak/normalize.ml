@@ -693,7 +693,8 @@ and normalize_uop uop exp =
 and normalize_fcall (n, params) expectedtype =
   (* Maybe this indexed expression is an array-value *)
   let n = Symboltbl.make_name_of_lval n in
-  let n = mangle_sname n in
+  try 
+    let n = mangle_sname n in
     try
       let norm_args = List.map normalize_arg params in
       let norm_typs = List.map (fun (s,(_,t)) -> (s,t)) norm_args in	
@@ -726,8 +727,8 @@ and normalize_fcall (n, params) expectedtype =
 	      ,tc
 	end
       with Invalid_argument _ | Not_found ->
-	try (*could be 'lv.field(1)', field a record field 
-	      (with array type) see t424
+	try (* could be 'lv.fld(1)', fld being a record field 
+	       (with array type) see t424
 	    *)
 	  match n with 
 	    | Some f, fld -> 
@@ -752,7 +753,7 @@ and normalize_fcall (n, params) expectedtype =
 			    ), tc
 			  else 
 			    Npkcontext.report_error "normalize_fcall"
-			      " f.ret(1) case, only handled for a 1-D array"
+			    "f.ret(1) case, only handled for a 1-D array"
 		      else raise Not_found
 		  else raise Not_found
 		    
@@ -797,8 +798,83 @@ and normalize_fcall (n, params) expectedtype =
 	      end
 	    else 
 		Npkcontext.report_error "normalize_fcall" "Function not found"
-	    
-	      
+
+
+  with _ -> (*For mangle too deep error*)
+    match n with 
+	a::(b::c::[]) -> 
+	  begin
+	  try
+	    let (sc,(act_name, t,_)) = 
+	      Sym.find_variable_with_error_report gtbl (Some a, b) 
+	    in
+	      if (T.is_record t) then 
+		let (off, tf) = T.record_field t c in	
+		  if (T.is_array tf) then 
+		    let tc = fst (T.extract_array_types tf) in
+		    let params' = List.map snd params in
+		      if (compare (List.length params') 1 = 0) then
+			Ast.Lval (
+			  Ast.ArrayAccess(  
+			    Ast.RecordAccess
+			      ( Ast.Var(sc, act_name, t)
+				  , off
+				    , tf
+			      )
+			      , List.map normalize_exp params'
+			  )
+			), tc
+		      else 
+			Npkcontext.report_error "normalize_fcall"
+			  "a.b.c '(Some a, b) case' length of params list <> 1"
+		  else raise Not_found
+	      else raise Not_found
+	  with _ ->  
+	
+	    try
+	      let (sc,(act_name, t,_)) = 
+		Sym.find_variable_with_error_report gtbl  (add_p (None, a))
+	      in
+		if (T.is_record t) then 
+		  begin
+		  let (offb, tfb) = T.record_field t b in
+		    if (T.is_record tfb) then 
+		      let (offc, tfc) = T.record_field tfb c in
+			if (T.is_array tfc) then 
+			  let tc = fst (T.extract_array_types tfc) in
+			  let params' = List.map snd params in
+			    if (compare (List.length params') 1 = 0) then
+			      let b = Ast.RecordAccess
+				( Ast.Var(sc, act_name, t)
+				    , offb
+				      , tfb
+				)
+			      in
+				Ast.Lval (
+		 		  Ast.ArrayAccess(  
+				    Ast.RecordAccess
+				      ( b (*Ast.Var(sc, act_name, t)*)
+					  , offc
+					    , tfc
+				      )
+				      , List.map normalize_exp params'
+				  )
+				), tc
+			    else 
+			     Npkcontext.report_error "normalize_fcall"
+		   	     "a.b.c'(None, a)'case, length of params list<>1"
+			else raise Not_found	 
+		    else raise Not_found
+		  end
+		else raise Not_found
+	    with _ ->  Npkcontext.report_error "normalize _fcall "
+              " a.b.c(..) case: find_variable_with_error "
+	  end	    
+      | _ -> Npkcontext.report_error "mangle_sname"
+                  "chain of selected names is too deep"
+
+
+
 and eval_range (exp1, exp2) =
   let norm_exp1 = normalize_exp exp1
   and norm_exp2 = normalize_exp exp2 in
