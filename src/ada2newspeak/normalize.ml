@@ -869,10 +869,10 @@ and normalize_fcall (n, params) expectedtype =
 			      "a.b.c '(Some a, b) case' length of params list <> 1"
 		      else raise Not_found
 		  else raise Not_found
-	      with _ ->  
+	      with _ -> 
 		try
 		  let (sc,(act_name, t,_)) = 
-		    Sym.find_variable_with_error_report gtbl  (add_p (None, a))
+		    Sym.find_variable_with_error_report gtbl  (None, a)
 		  in
 		    if (T.is_record t) then 
 		      begin
@@ -902,10 +902,10 @@ and normalize_fcall (n, params) expectedtype =
 				  else 
 				    Npkcontext.report_error "normalize_fcall"
 		   		      "a.b.c'(None, a)'case, length of params list<>1"
-			      else raise Not_found	 
-			  else raise Not_found
+			      else begin print_endline "1"; raise Not_found	  end 
+			  else begin print_endline "2"; raise Not_found end
 		      end
-		    else raise Not_found
+		    else  begin print_endline "3"; raise Not_found end
 		with _ ->  Npkcontext.report_error "normalize _fcall "
 		  " a.b.c(..) case: find_variable_with_error "
 	  end	    
@@ -1856,10 +1856,9 @@ and normalize_assign_agr nlv t_lv bare_assoc_list loc =
      *   - replace 'others' with them
      *)
       match T.extract_array_types t_lv with
-	| (tc, [ti]) -> begin (*code deplace cf plus bas*)
-	    
+	| (tc, [ti]) -> 
+	    begin
 	    let other_list = match others_opt with
-
 	      | None         -> []
 	      | Some oth_exp ->
 		  begin
@@ -1881,6 +1880,7 @@ and normalize_assign_agr nlv t_lv bare_assoc_list loc =
 	    in
 	    
 	    let assoc_list' = List.map (fun (x,y) -> CInt x,y) assoc_list in
+	    
 	    let rec are_all_flds ll = 
 	      match ll with
 		  [] -> true
@@ -1889,13 +1889,12 @@ and normalize_assign_agr nlv t_lv bare_assoc_list loc =
 		    | _ -> false
 	    in
 	      List.rev (
-		  List.flatten (
-		    List.map (
-
-		      fun (aggr_k, aggr_v) ->(* id[aggr_k] <- aggr_v *)
+	        List.flatten (
+		  List.map (
+		    fun (aggr_k, aggr_v) ->(* id[aggr_k] <- aggr_v *)
+		      
+		      let key  = normalize_exp aggr_k in
 			
-			let key  = normalize_exp aggr_k in
-			  
 			match aggr_v with
 			    Aggregate (NamedAggr ll) when (are_all_flds ll) ->
  			      let array_lv = Ast.ArrayAccess (nlv, [key]) in
@@ -1941,23 +1940,23 @@ and normalize_assign_agr nlv t_lv bare_assoc_list loc =
 				      "unexpected empty list case"
 				  | hd::[] -> List.map (f hd) m
 				  | hd::tl ->
-				      let fst_map = List.map (f hd) m in
-					List.append fst_map (bimapping f tl m )
+				     let fst_map = List.map (f hd) m in
+				     List.append fst_map (bimapping f tl m)
 			      in
 				
 			      let rec build_assign idxs top_lvs vl =
 				match idxs with 
-				    [] -> 
-				      List.map (fun x->Ast.Assign(x,vl), loc) top_lvs
+				    [] -> List.map ( fun x -> 
+				       Ast.Assign (x,vl), loc ) top_lvs
 				  | hd::tl -> 
-				      let new_top_lvs = 
-					let buildaccess x y = 
-					  let key = insert_constant (T.IntVal y )  in
-					    Ast.ArrayAccess (x, [key])
-					in
-					  bimapping  buildaccess top_lvs hd
-				      in 
-					build_assign tl new_top_lvs vl
+				     let new_top_lvs = 
+				       let buildaccess x y = 
+					 let key = insert_constant (T.IntVal y )  in
+					   Ast.ArrayAccess (x, [key])
+				       in
+					 bimapping  buildaccess top_lvs hd
+				     in 
+				       build_assign tl new_top_lvs vl
 			      in 
 				build_assign 
 				  (depiler_type tc)
@@ -1995,13 +1994,6 @@ and normalize_assign_agr nlv t_lv bare_assoc_list loc =
 	  		  CInt _
 	  		| CFloat _
 	  		| _ -> normalize_exp ~expected_type:c xx
-			(*
-			  | Lval (Var _) ->
-	  		  normalize_exp ~expected_type:c xx
-	  		  | _ -> Npkcontext.report_error 
-			  "normalize:assign aggregate" 
-			  "Expected an Integer or a Float"	
-			*)
 	  	      in
 	  	      let all_values = List.map (
 	  		fun x ->
@@ -2011,18 +2003,51 @@ and normalize_assign_agr nlv t_lv bare_assoc_list loc =
 	  	      in
 	  		handle_others nlv affected [] (List.rev all_values)
 			  
-	  	  | _ ->  Npkcontext.report_error "aggregate"
-	  	      "matrix type case not handled"
+		  | _ -> begin
+		     match (assoc_list, others_opt)  with 
+		      ( aggreg_vals  , None ) -> 
+			List.fold_left ( fun res (v, agg) -> 
+			  match agg with 
+			    | Aggregate (NamedAggr select_exps) ->  
+			       let k = insert_constant (T.IntVal v)  in
+			       let vlv = Ast.ArrayAccess (nlv, [k]) in 
+			       let snd_idx = [List.hd (List.tl twotwolist)] 
+			       in  
+			       let new_array_t = T.new_array c snd_idx in
+			       (*List of array access to array access ...*)
+			       let array_of_arrays =  normalize_assign_agr 
+				 vlv  new_array_t select_exps loc
+			       in
+			       let hack_arrays = List.map ( fun x -> 
+				 match x with 
+				    Ast.Assign (
+				      Ast.ArrayAccess ( 
+					Ast.ArrayAccess (lv, [key]),[key2]
+				      )
+					, value), loc  -> 
+				      Ast.Assign (Ast.ArrayAccess 
+		  			  (lv, [key; key2]), value), loc
+				   |  _ -> Npkcontext.report_error 
+					"aggregate"
+	  				 ("matrix type case not handled"^
+					 " not array acess of arrayacess")
+				   ) array_of_arrays in			 
+				 
+				 List.append res hack_arrays
+
+			    | _ ->  Npkcontext.report_error "aggregate"
+	  			"matrix type case not handled (Not Named)"
+			) [] aggreg_vals 
+		       | _ ->  Npkcontext.report_error "aggregate"
+	  		   "matrix type case not handled"
+		    end
 	      end
-	| _ ->
-	    Npkcontext.report_error "aggregate"
-              "Unexpected type"
+	  | _ ->
+	      Npkcontext.report_error "aggregate"
+		"Unexpected type"
 	    
     (* end of array_case *)
   in
-
-
-
 
   let record_case _ =
     let module FieldSet = Set.Make (String) in
@@ -2047,7 +2072,6 @@ and normalize_assign_agr nlv t_lv bare_assoc_list loc =
 		 "Expected a field name in aggregate"
 	) ([],None) sel_vals
     in
-
     
     let (assoc_list,other) = filter_aggregate bare_assoc_list in
       
@@ -2107,7 +2131,12 @@ and normalize_assign_agr nlv t_lv bare_assoc_list loc =
 		      let other_l = getfields_other tf (List.map fst assoc_l) other in
 			
 			handle_record record_lv tf (assoc_l @ other_l) 
-	
+
+
+		 |  Aggregate (NamedAggr assoc_l) when (T.is_array tf) ->
+		      let array_lv = Ast.RecordAccess (lv, off, tf) in
+			normalize_assign_agr array_lv tf assoc_l loc
+		    	
 		 | _ -> 
 		     (*cas ususel *)
 		     let v = normalize_exp ~expected_type:tf aggr_val in

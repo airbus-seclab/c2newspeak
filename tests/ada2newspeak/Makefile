@@ -69,12 +69,13 @@ TESTS=t001 t002 t003 t004 t005 t006 t007 t008 t009 t010 \
       t441           t444           t447      t449 t450 \
                      t454 t455 t456 t457 t458 t459 t460 \
       t461 t462 t463 t464 t465 t466           t469 t470 \
-      t471 t472 t473 t474 t475      t477 t478 t479 t480 
+      t471 t472 t473 t474 t475      t477 t478 t479 t480 \
+      t481 t483 t484 t485
 
 include ../common.Makefile
 
 # add   t053 t098 t266 t284 t401     
-# to do t428
+# to do t428 t482
 # clean warning in t434 
 
 t033: t210 t316
