@@ -861,70 +861,53 @@ and normalize_fcall (n, params) expectedtype =
 	    end
 	end
     with _ -> (*For mangle too deep error*)
+              (*nm has at least 3 elements *)
+      (*build_rec for building record acces based on a 'a.b.c'(...)
+	expression
+      *)
+      let rec build_rec t lv fields = 
+	match fields with 
+	  | [] ->  
+	      if (T.is_array t) then 
+		let tc = fst (T.extract_array_types t) in
+		  (tc, lv) 
+	      else raise Not_found
+	  | hd::tl -> 
+	      if (T.is_record t) then 
+		let (off, tf) = T.record_field t hd in	
+		let n_lv = Ast.RecordAccess(lv, off, tf) in
+   		  build_rec tf n_lv tl 
+	      else raise Not_found
+      in		
+
       match nm  with 
-	  a::(b::c::[]) -> 
-	    begin
-	      try
-		let (sc,(act_name, t,_)) = 
-		  Sym.find_variable_with_error_report gtbl (Some a, b) 
-		in
-		  if (T.is_record t) then 
-		    let (off, tf) = T.record_field t c in	
-		      if (T.is_array tf) then 
-			let tc = fst (T.extract_array_types tf) in
-			let params' = List.map snd params in
-			  if (compare (List.length params') 1 = 0) then
-			    Ast.Lval (
-			      Ast.ArrayAccess(  
-				Ast.RecordAccess
-				  ( Ast.Var(sc, act_name, t)
-				      , off
-					, tf
-				  )
-				  , List.map normalize_exp params'
-			      )
-			  ), tc
-			  else 
-			    Npkcontext.report_error "normalize_fcall"
-			      "a.b.c '(Some a, b) case' length of params list <> 1"
-		      else raise Not_found
-		  else raise Not_found
-	      with _ -> 
-		try
-		  let (sc,(act_name, t,_)) = 
-		    Sym.find_variable_with_error_report gtbl  (None, a)
-		  in
-		    if (T.is_record t) then 
-		      begin
-			let (offb, tfb) = T.record_field t b in
-			  if (T.is_record tfb) then 
-			    let (offc, tfc) = T.record_field tfb c in
-			      if (T.is_array tfc) then 
-				let tc = fst (T.extract_array_types tfc) in
-				let params' = List.map snd params in
-				let b = Ast.RecordAccess
-				  ( Ast.Var(sc, act_name, t)
-				      , offb
-					, tfb
-				  )
-				in
-				  Ast.Lval (
-		 		    Ast.ArrayAccess(  
-				      Ast.RecordAccess
-					( b (*Ast.Var(sc, act_name, t)*)
-					    , offc
-					      , tfc
-					)
-					, List.map normalize_exp params'
-				    )
-				  ), tc
-			      else begin print_endline "1"; raise Not_found	  end 
-			  else begin print_endline "2"; raise Not_found end
-		      end
-		    else  begin print_endline "3"; raise Not_found end
-		with _ ->  Npkcontext.report_error "normalize _fcall "
-		  " a.b.c(..) case: find_variable_with_error "
-	  end	    
+	a::(b::etc) -> begin
+	  let params'   = List.map snd params            in
+	  let n_params  = List.map normalize_exp params' in 
+
+	  try
+	    let (sc,(act_name, t,_)) = 
+	      Sym.find_variable_with_error_report gtbl (Some a, b) 
+	    in
+	    let lv_name   = Ast.Var(sc, act_name, t)       in 
+	    let (tc, blv) = build_rec t lv_name etc        in
+	
+	      Ast.Lval (Ast.ArrayAccess(blv, n_params)) ,tc
+
+	  with _ -> 
+	    try
+	      let (sc,(act_name, t,_)) = 
+		Sym.find_variable_with_error_report gtbl  (None, a)
+	      in
+	      let lv_name   = Ast.Var(sc, act_name, t)       in 
+	      let (tc, blv) = build_rec t lv_name (b::etc)   in
+	  	Ast.Lval (Ast.ArrayAccess(blv, n_params)) ,tc
+		
+	    with _ ->  Npkcontext.report_error "normalize _fcall "
+	      " a.b.c(..) case: find_variable_with_error "
+	end
+	  
+
 	| _ -> Npkcontext.report_error "mangle_sname"
             ("chain of selected names is too deep: "^(String.concat ", " (nm)))
 
