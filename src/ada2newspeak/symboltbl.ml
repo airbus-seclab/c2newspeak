@@ -700,6 +700,7 @@ let find_variable s ?expected_type name =
       let (x, (n, y, _, z)) = find_variable_value s ?expected_type name in
 	(x, (n, y, z))
   in
+
     find name
 
 let report_variable_not_found (_, n) = 
