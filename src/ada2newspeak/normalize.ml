@@ -307,6 +307,7 @@ let parse_package_specification name =
           "internal error : specification expected, body found"
 
 let rec normalize_exp ?expected_type exp =
+  (*  print_endline  ("______ = "^(  Print_syntax_ada.exp_to_string exp));*)
   match exp with
     | CInt   x -> Ast.CInt   x, (match expected_type with
                                 | Some t -> t
@@ -828,7 +829,6 @@ and normalize_fcall (n, params) expectedtype =
 			(*Il y a cast, la valeur castée ne doit 
 			  pas etre checke cf t457*)
       		      let  (norm_exp, arg_t)= normalize_exp (snd param) in
-      			
 			if (not (T.is_compatible cast_t arg_t))
 			then 
 			  (*WG  TO DO print_warning *)
@@ -901,26 +901,22 @@ and normalize_fcall (n, params) expectedtype =
 			      if (T.is_array tfc) then 
 				let tc = fst (T.extract_array_types tfc) in
 				let params' = List.map snd params in
-				  if (compare (List.length params') 1 = 0) then
-				    let b = Ast.RecordAccess
-				      ( Ast.Var(sc, act_name, t)
-					  , offb
-					    , tfb
-				      )
-				    in
-				      Ast.Lval (
-		 			Ast.ArrayAccess(  
-					  Ast.RecordAccess
-					    ( b (*Ast.Var(sc, act_name, t)*)
-						, offc
-						  , tfc
-					    )
-					    , List.map normalize_exp params'
+				let b = Ast.RecordAccess
+				  ( Ast.Var(sc, act_name, t)
+				      , offb
+					, tfb
+				  )
+				in
+				  Ast.Lval (
+		 		    Ast.ArrayAccess(  
+				      Ast.RecordAccess
+					( b (*Ast.Var(sc, act_name, t)*)
+					    , offc
+					      , tfc
 					)
-				      ), tc
-				  else 
-				    Npkcontext.report_error "normalize_fcall"
-		   		      "a.b.c'(None, a)'case, length of params list<>1"
+					, List.map normalize_exp params'
+				    )
+				  ), tc
 			      else begin print_endline "1"; raise Not_found	  end 
 			  else begin print_endline "2"; raise Not_found end
 		      end
@@ -929,7 +925,7 @@ and normalize_fcall (n, params) expectedtype =
 		  " a.b.c(..) case: find_variable_with_error "
 	  end	    
 	| _ -> Npkcontext.report_error "mangle_sname"
-            "chain of selected names is too    deep"
+            ("chain of selected names is too deep: "^(String.concat ", " (nm)))
 
 
 
