@@ -1,7 +1,7 @@
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans, Olivier Levillain, Sarah Zennou
+  Copyright (C) 2007-2011  Charles Hymans, Olivier Levillain, Sarah Zennou
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -54,6 +54,7 @@ let find_field f r =
   with Not_found -> 
     Npkcontext.report_error "Firstpass.translate_lv" 
       ("unknown field '"^f^"' in union or structure")
+
 
 (* [next_aligned o x] returns the smallest integer greater or equal than o,
    which is equal to 0 modulo x *)
@@ -555,9 +556,35 @@ let translate prog =
 
 	| Offsetof (t, f) -> 
 	    let (r, _, _) = translate_comp (TypedC.comp_of_typ t) in
-	    let (o, _) = find_field f r in
+	    let o 	  = find_offset_field f r in
 	      C.exp_of_int (o / Config.size_of_byte)
-	      
+	  
+    and find_offset_field f r =
+      let translate c =
+	match c with
+	  | Unknown s -> 
+	      Npkcontext.report_error "Csyntax.comp_of_typ" 
+		("incomplete struct or union type " ^ s)
+	  | Known (fields, k) -> 
+	      let (r, _, _) = 
+		if k then translate_struct fields
+		else translate_union fields
+	      in r
+      in
+      let rec find e =
+	match e with
+	    OffComp t -> 0, translate t
+	  | OffField (e', f, t) ->
+	      let o, r = find e' in
+	      let o', _ = find_field f r in
+		o+o', translate t
+      in
+	match f with
+	    OIdent f -> fst (find_field f r)
+	  | OField (e, f) ->
+	      let o', r' = find e in
+	      let o, _ = find_field f r' in
+		o+o'    
     in
       translate e
 

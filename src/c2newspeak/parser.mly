@@ -592,7 +592,7 @@ expression:
     exp_of_int 0
   }
 | OFFSETOF 
-  LPAREN type_name COMMA IDENTIFIER RPAREN { Offsetof (build_type_decl $3, $5) }
+  LPAREN type_name COMMA offsetof_member RPAREN { Offsetof (build_type_decl $3, $5) }
 | PLUSPLUS   expression    %prec prefix_OP { OpExp (Plus, $2, false) }
 | MINUSMINUS expression    %prec prefix_OP { OpExp (Minus, $2, false) }
 | AMPERSAND  expression    %prec prefix_OP { AddrOf $2 }
@@ -673,6 +673,14 @@ expression:
 | expression assignment_operator
                    expression     %prec EQ { Set ($1, $2, $3) }
 ;;
+
+aux_offsetof_member:
+  IDENTIFIER { OffComp $1 }
+| aux_offsetof_member DOT IDENTIFIER { OffField ($1, $3) }
+
+offsetof_member:
+  IDENTIFIER { OIdent $1 }
+| aux_offsetof_member DOT IDENTIFIER { OField ($1, $3) }
 
 expression_sequence:
   expression                               { $1 }
