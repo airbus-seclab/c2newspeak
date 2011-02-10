@@ -126,7 +126,27 @@ and exp_to_string exp = match exp with
                                              |  Some e ->
                                                  "("^exp_to_string e^")"
                                 )
-  | Aggregate _ -> "... aggregate ..."
+  | Aggregate l -> 
+      let print_agge agg_exp = 
+	let sel, exp = agg_exp in
+	let selstring = 
+	  match  sel with
+	    | AggrField  str -> str
+	    | AggrExp    exp -> (exp_to_string exp)
+	    | AggrRange  (exp1, exp2)->  
+		((exp_to_string exp1)^".."^(exp_to_string exp2))
+	    | AggrOthers     -> "OTHERS"
+	in
+	  (selstring^" => "^(exp_to_string exp))
+	  
+      in
+      match l with 
+	  NamedAggr       aggelist -> 
+	    String.concat ", \n"  (List.map print_agge aggelist)
+	| PositionalAggr  elist   -> 
+	    String.concat ", \n"  (List.map exp_to_string elist)
+	    
+
 
 and subtyp_indication_to_string (subtyp_ref, contrainte) =
   "("^(name_to_string subtyp_ref)^", "

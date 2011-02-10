@@ -307,7 +307,6 @@ let parse_package_specification name =
           "internal error : specification expected, body found"
 
 let rec normalize_exp ?expected_type exp =
-  (*  print_endline  ("______ = "^(  Print_syntax_ada.exp_to_string exp));*)
   match exp with
     | CInt   x -> Ast.CInt   x, (match expected_type with
                                 | Some t -> t
@@ -472,6 +471,8 @@ let rec normalize_exp ?expected_type exp =
 	   
       end
     | Aggregate _ ->
+(*	print_endline  ("__aggr____ = "^(  Print_syntax_ada.exp_to_string exp));
+*)
         Npkcontext.report_error "normalize_exp"
           "Array aggregate found without direct lvalue"
  
@@ -2152,6 +2153,31 @@ and normalize_assign_agr nlv t_lv bare_assoc_list loc =
 		      let array_lv = Ast.RecordAccess (lv, off, tf) in
 			normalize_assign_agr array_lv tf assoc_l loc
 		    	
+
+		 |  Aggregate (PositionalAggr vals ) when (T.is_record tf)  ->
+		      let flds = T.all_record_fields tf in
+			if (compare (List.length flds) (List.length vals) = 0) then
+			  begin	    
+			    let lv_tf = Ast.RecordAccess (lv, off, tf) in
+			     List.concat (
+			      List.map2 ( fun x v -> 
+			       let (off_p, typ_p) =  T.record_field tf x in
+			       let norm_v = normalize_exp ~expected_type:typ_p v  in 
+			       let lv_p = Ast.RecordAccess (lv_tf, off_p, typ_p) in
+				 [Ast.Assign (lv_p, norm_v), loc]
+					)
+				flds   vals
+			     )
+			  end
+			else 
+			  Npkcontext.report_error "normalize_assign_agr"
+			"Unexpected PositionalAggr in record case "
+			  
+			  
+			  
+		 |  Aggregate (PositionalAggr _ )  when (T.is_array tf) ->
+		      Npkcontext.report_error "normalize_assign_agr"
+			"Unexpected   PositionalAggr in array case "
 		 | _ -> 
 		     (*cas ususel *)
 		     let v = normalize_exp ~expected_type:tf aggr_val in
