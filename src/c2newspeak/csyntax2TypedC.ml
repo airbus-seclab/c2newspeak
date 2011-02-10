@@ -1,7 +1,7 @@
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2009  Charles Hymans
+  Copyright (C) 2009, 2011  Charles Hymans, Sarah Zennou
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -21,6 +21,9 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
+
+  Sarah Zennou
+  sarah(dot)zennou(at)eads(dot)net
 *)
 
 open Csyntax
@@ -411,7 +414,9 @@ let process (fname, globals) =
       | SizeofE e -> 
 	  let (_, t) = translate_lv e in
 	    (C.Sizeof t, C.uint_typ)
-      | Offsetof (t, f) -> (C.Offsetof (translate_typ t, f), C.uint_typ)
+      | Offsetof (t, e) -> 
+	  let e' = translate_offset_exp e in
+	  (C.Offsetof (translate_typ t, e'), C.uint_typ)
       | Str x -> 
 	  let len = C.exp_of_int ((String.length x) + 1) in
 	    (C.Str x, C.Array (C.char_typ, Some len))
@@ -689,6 +694,28 @@ let process (fname, globals) =
       | [] -> ([], C.Void)
       
   and translate_field_decl (t, x, _) = (x, translate_typ t)
+
+  and translate_offset_exp e =
+    let find t =
+      try 
+	let t' = Hashtbl.find comptbl t in
+	  t'
+      with Not_found ->
+	Npkcontext.report_error "Csyntax2TypedC.translate_offset_exp"
+	  ("unknown struct/union "^t)
+    in
+    let rec translate e =
+      match e with
+	| OffComp t -> begin
+	    C.OffComp (find t)
+	  end
+	| OffField (e', f') ->
+	    C.OffField(translate e', f', find f')
+    in
+      match e with
+	  OIdent t 	 -> C.OIdent t
+	| OField (t, f) -> C.OField (translate t, f)
+
 
   and translate_init t x =
     match (x, t) with

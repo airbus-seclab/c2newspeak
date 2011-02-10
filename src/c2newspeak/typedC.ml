@@ -1,7 +1,7 @@
 (*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2009  Charles Hymans
+  Copyright (C) 2009, 2011  Charles Hymans, Sarah Zennou
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -21,6 +21,9 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
+
+  Sarah Zennou
+  sarah(dot)zennou(at)eads(dot)net
 *)
 (* TODO: after typing do:
    side-effects removal: (lv++, lv+=e
@@ -128,7 +131,7 @@ and exp =
     | Binop of ((binop * typ) * typ_exp * typ_exp)
     | Call of (funexp * ftyp * typ_exp list)
     | Sizeof of typ
-    | Offsetof of (typ * string)
+    | Offsetof of (typ * offset_exp)
     | Str of string
     | FunName
     | Cast of (typ_exp * typ)
@@ -160,6 +163,15 @@ and binop =
   | BOr
   | Shiftl
   | Shiftr
+
+and aux_offset_exp = 
+  | OffComp of aux_comp 
+  | OffField of aux_offset_exp * string * aux_comp
+
+and offset_exp =
+  | OIdent of string
+  | OField of aux_offset_exp * string
+
 
 let char_kind = (Newspeak.Signed, Config.size_of_char)
 

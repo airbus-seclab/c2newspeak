@@ -117,7 +117,7 @@ and exp =
     | Call of (exp * exp list)
     | Sizeof of typ
     | SizeofE of exp
-    | Offsetof of (typ * string)
+    | Offsetof of (typ * offset_exp)
     | Str of string
     | FunName
     | Cast of (exp * typ)
@@ -146,6 +146,14 @@ and binop =
     | BOr
     | Shiftl
     | Shiftr
+
+and aux_offset_exp =
+    OffComp of string
+  | OffField of aux_offset_exp * string
+
+and offset_exp =
+  | OIdent of string
+  | OField of aux_offset_exp * string
 
 let char_kind = (Signed, Config.size_of_char)
 
