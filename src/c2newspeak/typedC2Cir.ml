@@ -615,11 +615,13 @@ let translate prog =
 	      let o', r', s  = find f in
 	      let o' 	     = let o, _ = find_field tab r' in o+o' in
 	      let o 	     = Nat.to_int (Cir.eval_exp (translate_exp false e)) in 
+	      let o = o*sz in
+	      let o = if o = 0 then o else o-1 in
 		(*TODO optimize: e is translated twice *)
 		if o <= len then begin 
 		  let o2, _ = find_field s r in
 		  let sz = C.size_of_typ t in
-		    o' + o*sz -1 + o2 
+		    o' + o + o2 
 		end
 		else Npkcontext.report_error "TypedC2Cir.find_offset_field"
 		  "array access in offsetof is out of bounds"
