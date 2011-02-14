@@ -34,17 +34,17 @@
 module Nat = Newspeak.Nat
 
 type t = {
-  global_variables: (string * glbinfo) list;
+  global_variables     : (string * glbinfo) list;
   function_declarations: (string * fundec) list;
-  user_specifications: assertion list
+  user_specifications  : assertion list
 }
 (* TODO: put the location inside the decl?? *)
 and glbinfo = (decl * Newspeak.location)
 
 and fundec = {
   function_type: ftyp;
-  body: blk;
-  position: Newspeak.location;
+  body	       : blk;
+  position     : Newspeak.location;
 }
 
 and assertion = spec_token list
@@ -165,12 +165,13 @@ and binop =
   | Shiftr
 
 and aux_offset_exp = 
-  | OffComp of aux_comp 
+  | OffComp of string * aux_comp 
   | OffField of aux_offset_exp * string * aux_comp
 
 and offset_exp =
   | OIdent of string
   | OField of aux_offset_exp * string
+  | OArray of aux_offset_exp * string * typ_exp
 
 
 let char_kind = (Newspeak.Signed, Config.size_of_char)

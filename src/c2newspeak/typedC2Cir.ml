@@ -52,7 +52,7 @@ let default_lbl = 3
 let find_field f r =
   try List.assoc f r 
   with Not_found -> 
-    Npkcontext.report_error "Firstpass.translate_lv" 
+    Npkcontext.report_error "TypedC2Cir.translate_lv" 
       ("unknown field '"^f^"' in union or structure")
 
 
@@ -138,11 +138,11 @@ let translate prog =
   let fundefs = Hashtbl.create 100 in
   let init = ref [] in
     
-(* TODO: used_globals and one pass could be removed, if cir had a structure
-   type with only the name and a hashtbl of structure names to type!!!, 
-   should be done!*)
+  (* TODO: used_globals and one pass could be removed, if cir had a structure
+     type with only the name and a hashtbl of structure names to type!!!, 
+     should be done!*)
   let used_globals = Hashtbl.create 100 in
-  (* Used to generate static variables names *)
+    (* Used to generate static variables names *)
   let current_fun = ref "" in
 
   let tmp_cnt = ref 0 in
@@ -178,7 +178,7 @@ let translate prog =
 		  ("global variable "^x^" initialized twice")
       with Not_found -> (t, loc, storage)
     in
-(* TODO: remove used_globals in firstpass, done in cir2npkil?? *)
+      (* TODO: remove used_globals in firstpass, done in cir2npkil?? *)
       Hashtbl.replace used_globals name info
   in
 
@@ -194,21 +194,21 @@ let translate prog =
     match t2 with
 	Comp (TypedC.Known (f, false)) 
 	  when not (TypedC.equals_typ t1 t2) ->
-	  if not (List.exists (fun (_, f_t) -> f_t = t1) f) 
-	  then Npkcontext.report_error "Firstpass.cast" "incompatible type";
-	  (e, t1)
+	    if not (List.exists (fun (_, f_t) -> f_t = t1) f) 
+	    then Npkcontext.report_error "Firstpass.cast" "incompatible type";
+	    (e, t1)
       | _ -> 	     
 	  let t1' = translate_typ t1 in
 	  let t2' = translate_typ t2 in
 	    (C.cast (e, t1') t2', t2)
 
-(* TODO: this should be simplified because a bit is done already in 
-   csyntax2TypedC!!! *)
+  (* TODO: this should be simplified because a bit is done already in 
+     csyntax2TypedC!!! *)
   and translate_init t x =
     let res = ref [] in
     let rec translate o t x =
       match (x, t) with
-(* TODO: move this case to csyntax2TypedC?? *)
+	  (* TODO: move this case to csyntax2TypedC?? *)
 	  ((Data (Str str, _)|Sequence ([(None, Data (Str str, _))])), 
 	   Array (Int (_, n), _)) when n = Config.size_of_char ->
 	    let seq = seq_of_string str in
@@ -220,7 +220,7 @@ let translate prog =
 	    let (e, _) = cast (e, t1) t in
 	      res := (o, translate_typ t, e)::!res;
 	      t
-	      
+		
 	| (Sequence seq, Array (t, len)) -> 
 	    let n = 
 	      match translate_array_len len with
@@ -229,7 +229,7 @@ let translate prog =
 	    in
 	      translate_sequence o t n seq;
 	      Array (t, Some (exp_of_int n))
-	
+		
 	| (Sequence seq, Comp (TypedC.Known (f, true))) ->
 	    let (f, _, _) = translate_struct f in
 	      translate_field_sequence o f seq;
@@ -256,7 +256,7 @@ let translate prog =
 	| (Sequence _, _) -> 
 	    Npkcontext.report_error "Firstpass.translate_init"
 	      "this type of initialization not implemented yet"
-	  
+	      
     and translate_field_sequence o fields seq =
       let rec remove f l =
 	match l with 
@@ -274,8 +274,8 @@ let translate prog =
 	match seq with
 	    [] -> List.iter (fun (_, (f_o, t)) -> 
 			       let f_o = o + f_o in
-			       ignore (fill_with_zeros f_o t)) not_init
-		  
+				 ignore (fill_with_zeros f_o t)) not_init
+	      
 	  | (fname, hd)::seq when not_init <> [] -> begin
 	      try 
 		let name, (f_o, t) = 
@@ -309,7 +309,7 @@ let translate prog =
 		"extra initializer for structure" Npkcontext.DirtySyntax
 		
       in fold fields seq (List.hd fields)
-	  
+	   
     and translate_sequence o t n seq =
       match seq with
 	  (None, hd)::tl when n > 0 -> 
@@ -320,7 +320,7 @@ let translate prog =
 	    Npkcontext.report_error 
 	      "Firstpass.translate_init.translate_sequence" 
 	      "anonymous initializer expected for array"
-	    
+	      
 	| _::_ -> 
 	    Npkcontext.report_accept_warning 
 	      "Firstpass.translate_init.translate_sequence" 
@@ -401,7 +401,6 @@ let translate prog =
 	    C.Shift (lv, o)
 
       | Index (e, (t, len), (idx, idx_t)) -> 
-	  (* TODO: think about this is_array, a bit hacky!! *)
 	  let lv = translate_lv e in
 	  let n = translate_array_len len in
 	  let i = translate_exp false (idx, idx_t) in
@@ -428,8 +427,8 @@ let translate prog =
 	  translate_lv lv
 
       | BlkExp (blk, is_after) -> 
-(* TODO: simplify translate_blk_exp so that it is unnecessary to throw away
-   a value with _ !!! *)
+	  (* TODO: simplify translate_blk_exp so that it is unnecessary to throw away
+	     a value with _ !!! *)
 	  let (body, (e, _)) = translate_blk_exp blk in
 	  let lv =
 	    match e with
@@ -447,15 +446,15 @@ let translate prog =
     try
       let (i, typ) = i in
 	check_index_type i typ;
-      let len = 
-	try C.length_of_array n lv 
-	with Invalid_argument _ when !Npkcontext.accept_flex_array -> 
-	  raise Exit
-      in
-      let sz = C.exp_of_int (size_of t) in
-      let o = C.Unop (K.Belongs_tmp (Nat.zero, len), i) in
-      let o = C.Binop (N.MultI, o, sz) in
-	C.Shift (lv, o)
+	let len = 
+	  try C.length_of_array n lv 
+	  with Invalid_argument _ when !Npkcontext.accept_flex_array -> 
+	    raise Exit
+	in
+	let sz = C.exp_of_int (size_of t) in
+	let o = C.Unop (K.Belongs_tmp (Nat.zero, len), i) in
+	let o = C.Binop (N.MultI, o, sz) in
+	  C.Shift (lv, o)
     with Exit -> 
       let e = C.remove_fst_deref lv in
       let e = translate_binop false (Plus, Ptr t) (e, Ptr t) i in
@@ -465,12 +464,12 @@ let translate prog =
     let rec translate e =
       match e with
 	  Cst (c, _) -> C.Const c
-	    	    
+	    
 	| Local _ | Global _  
 	| Field _ | Index _ | Deref _ | OpExp _ | Str _ | FunName -> 
 	    let lv = translate_lv e in
 	      C.Lval (lv, translate_typ t)
-			    
+		
 	| AddrOf (Index (lv, (t, len), (Cst (C.CInt i, _), _)), _)
 	    when Nat.compare i Nat.zero = 0 ->
 	    let lv = translate_lv lv in
@@ -480,7 +479,7 @@ let translate prog =
 	    let base = 
 	      AddrOf (Index (lv, (t, len), (exp_of_int 0, int_typ)), t') 
 	    in
-	      (*Cas AddrOf Access, the access is check to detected integers*)  
+	      (*Case AddrOf Access, the access is check to detected integers*)  
 	    let access  = translate_exp is_sz e in
 	      check_index_type access (snd e);
 	      translate (Binop ((Plus, Ptr t), (base, Ptr t), e))
@@ -488,7 +487,7 @@ let translate prog =
 	| AddrOf (lv, t) -> addr_of (translate_lv lv, t)
 
 	| Unop x -> C.Unop (translate_unop x)
-		
+	    
 	| Binop ((op, t), (e1, t1), (e2, t2)) -> 
 	    let e1 = translate_exp is_sz (e1, t1) in
 	    let e2 = translate_exp is_sz (e2, t2) in
@@ -524,7 +523,7 @@ let translate prog =
 	    let (e, _) = cast (e, t1) t2 in
 	      e
 
-		(* TODO: introduce type funexp in corec??*)
+	(* TODO: introduce type funexp in corec??*)
 	| Call (e, (Some args_t, ret_t), args) -> 
 	    let e = translate_funexp e in
 	      (* here translate_args refines args_t and this is useful 
@@ -540,7 +539,7 @@ let translate prog =
 	| Call _ -> 
 	    Npkcontext.report_error "Firstpass.translate_exp" 
 	      "unreachable code"
-	
+	      
 	| Set set ->
 	    Npkcontext.report_accept_warning "Firstpass.translate_exp" 
 	      "assignment within expression" Npkcontext.DirtySyntax;
@@ -549,7 +548,7 @@ let translate prog =
 	    let (lv', t', _) = set in
 	    let e = C.Lval (lv', t') in
 	      C.BlkExp ((C.Set set, loc)::[], e, false)
-	      		  
+	      	
 	| BlkExp (blk, is_after) -> 
 	    let (body, (e, _)) = translate_blk_exp blk in
 	      C.BlkExp (body, e, is_after)
@@ -558,12 +557,12 @@ let translate prog =
 	    let (r, _, _) = translate_comp (TypedC.comp_of_typ t) in
 	    let o 	  = find_offset_field f r in
 	      C.exp_of_int (o / Config.size_of_byte)
-	  
+		
     and find_offset_field f r =
       let translate c =
 	match c with
 	  | Unknown s -> 
-	      Npkcontext.report_error "Csyntax.comp_of_typ" 
+	      Npkcontext.report_error "TypedC2Cir.translate" 
 		("incomplete struct or union type " ^ s)
 	  | Known (fields, k) -> 
 	      let (r, _, _) = 
@@ -573,18 +572,57 @@ let translate prog =
       in
       let rec find e =
 	match e with
-	    OffComp t -> 0, translate t
+	    OffComp (s, t) -> 0, translate t, s
 	  | OffField (e', f, t) ->
-	      let o, r = find e' in
+	      let o, r , s	= find e' in
 	      let o', _ = find_field f r in
-		o+o', translate t
+		o+o', translate t, s
+      in
+      let rec check f tab =
+	let translate_cmp c =
+	  match c with
+	      Unknown s ->
+		Npkcontext.report_error "TypedC2Cir.check" 
+		  ("incomplete struct/union "^s)
+	    | Known (c, _) -> 
+		try 
+		  match find_field tab c with
+		      Array (t, Some  _) as a -> 
+			let t' = translate_typ a in
+			  C.size_of_typ t', translate_typ t
+			    (*TODO optimize: t is translated twice *)
+		    | Array _ ->
+			Npkcontext.report_error "TypedC2Cir.check" 
+			  "unknown size of struct/union field"
+		    | _ 	   ->  Npkcontext.report_error "TypedC2Cir.check" 
+			"expected struct/union field of type array"
+		with Not_found -> Npkcontext.report_error "TypedC2Cir.check" 
+		  ("unknown field " ^tab) 
+	in
+	match f with
+	    OffComp (_, c) 
+	  | OffField (_, _, c) -> translate_cmp c	     
       in
 	match f with
-	    OIdent f -> fst (find_field f r)
+	    OIdent f 	  -> fst (find_field f r)
 	  | OField (e, f) ->
-	      let o', r' = find e in
-	      let o, _ = find_field f r' in
-		o+o'    
+	      let o', r', s = find e in
+	      let o, _ 	 = find_field f r' in
+	      let o2, _ = find_field s r in 
+		o+o'+o2
+	  | OArray (f, tab, e) ->
+	      let len, t     = check f tab in
+	      let o', r', s  = find f in
+	      let o' 	     = let o, _ = find_field tab r' in o+o' in
+	      let o 	     = Nat.to_int (Cir.eval_exp (translate_exp false e)) in 
+		(*TODO optimize: e is translated twice *)
+		if o <= len then begin 
+		  let o2, _ = find_field s r in
+		  let sz = C.size_of_typ t in
+		    o' + o*sz -1 + o2 
+		end
+		else Npkcontext.report_error "TypedC2Cir.find_offset_field"
+		  "array access in offsetof is out of bounds"
     in
       translate e
 
@@ -600,8 +638,8 @@ let translate prog =
       | _ -> 
 	  Npkcontext.report_error "Firstpass.deref_typ" "pointer type expected"
 	    
-(* TODO: code cleanup: get rid of call to length_of_array in cir2npkil 
-   with AddrOf and put it in here *)
+  (* TODO: code cleanup: get rid of call to length_of_array in cir2npkil 
+     with AddrOf and put it in here *)
   and addr_of (e, t) = 
     match (e, t) with
 	(C.Global f, Fun (Some args_t, ret_t)) -> 
@@ -664,13 +702,13 @@ let translate prog =
 	    let (e, _) = cast (e, int_typ) (Ptr char_typ) in
 	      (e::[], (Va_arg, id)::[])
 	| (_, (Va_arg, id)::[]) -> 
-	    let (args, sz) = translate_va_args args in
-	    let loc = Npkcontext.get_loc () in
-	    let sz = if sz mod 8 = 0 then sz/8 else (sz/8)+1 in
-	    let t = Array (char_typ, Some (exp_of_int sz)) in
+	    let (args, sz)   = translate_va_args args in
+	    let loc 	     = Npkcontext.get_loc () in
+	    let sz 	     = if sz mod 8 = 0 then sz/8 else (sz/8)+1 in
+	    let t 	     = Array (char_typ, Some (exp_of_int sz)) in
 	    let (_, decl, v) = gen_tmp t in
-	    let e = addr_of (v, t) in
-	    let init = init_va_args loc v args in
+	    let e 	     = addr_of (v, t) in
+	    let init 	     = init_va_args loc v args in
 	      ((C.BlkExp (decl::init, e, false))::[], (Va_arg, id)::[])
 
 	| ((e, t1)::args, (t2, id)::args_t) ->
@@ -796,12 +834,12 @@ let translate prog =
 	  let i = 
 	    try Nat.to_int (C.eval_exp e) 
 	    with Invalid_argument _ -> 
-(* TODO: should print the expression e?? *)
+	      (* TODO: should print the expression e?? *)
 	      Npkcontext.report_error "Firstpass.translate_typ" 
 		"invalid size for array"
 	  in
 	    if (i < 0) || (i > Config.max_array_length) then begin
-(* TODO: should print the expression e?? *)
+	      (* TODO: should print the expression e?? *)
 	      Npkcontext.report_error "Firstpass.translate_typ" 
 		"invalid size for array"
 	    end;
@@ -854,16 +892,16 @@ let translate prog =
 	  (Exp (e, t), _)::[] when ends_with_exp -> 
 	    let e = translate_exp false (e, t) in
 	      (([], []), Some (e, t))
-	    
+		
 	| (LocalDecl (x, d), loc)::body -> begin
 	    Npkcontext.set_loc loc;
 	    let decl = translate_local_decl loc x d in
 	    let (body, e) = translate_blk_aux ends_with_exp body in
 	      ((decl@body, []), e)
 	  end
-	(* TODO: do the case where suffix is <> [] *)
-	(* TODO: remove body, suffix from For, use goto and labels
-	   remove break. *)
+	    (* TODO: do the case where suffix is <> [] *)
+	    (* TODO: remove body, suffix from For, use goto and labels
+	       remove break. *)
 	| ((Label lbl, loc) as stmt)::tl -> 
 	    let lbl = translate_lbl lbl in
 	    let tl = 
@@ -919,7 +957,7 @@ let translate prog =
 	  let e = translate_exp false (e, t) in
 	    (C.Exp e, loc)::[]
 
-	(* type and translate_stmt *)
+  (* type and translate_stmt *)
   and translate_stmt (x, loc) = 
     Npkcontext.set_loc loc;
     match x with
@@ -940,31 +978,31 @@ let translate prog =
 	  let blk2 = translate_blk blk2 in
 	    translate_if loc (e, blk1, blk2)
 
-(* TODO: why is it necessary to have a block construction with None? *)
+      (* TODO: why is it necessary to have a block construction with None? *)
       | Block body -> (C.Block (translate_blk body, None), loc)::[]
 
       | DoWhile (body, e) -> 
-	  let body = translate_blk body in
+	  let body = translate_blk body					 in
 	  let guard = translate_stmt (If (e, [], (Break, loc)::[]), loc) in
-	  let body = (C.Block (body@guard, Some cnt_lbl), loc)::[] in
+	  let body = (C.Block (body@guard, Some cnt_lbl), loc)::[]	 in
 	    (C.Block ((C.Loop body, loc)::[], Some brk_lbl), loc)::[]
 
       | For (init, e, body, suffix) ->
-	  let init = (C.Block (translate_blk init, Some cnt_lbl), loc) in
-	  let guard = translate_stmt (If (e, [], (Break, loc)::[]), loc) in
-	  let body = translate_blk body in
-	  let body = (C.Block (guard@body, Some cnt_lbl), loc) in
-	  let suffix = translate_blk suffix in
-	  let loop = (C.Loop (body::suffix), loc) in
+	  let init   = (C.Block (translate_blk init, Some cnt_lbl), loc)  in
+	  let guard  = translate_stmt (If (e, [], (Break, loc)::[]), loc) in
+	  let body   = translate_blk body				  in
+	  let body   = (C.Block (guard@body, Some cnt_lbl), loc)	  in
+	  let suffix = translate_blk suffix				  in
+	  let loop   = (C.Loop (body::suffix), loc)			  in
 	    (C.Block (init::loop::[], Some brk_lbl), loc)::[]
 
       | CSwitch (e, choices, default) -> 
-	  let e 		 = translate_exp false e in
-	  let (last_lbl, switch) = translate_switch choices in
-	  let default_action 	 = (C.Goto default_lbl, loc)::[] in
-	  let switch 		 = (C.Switch (e, switch, default_action), loc)::[] in
-	  let body 		 = translate_cases (last_lbl, switch) choices in
-	  let default 		 = translate_blk default in
+	  let e 		 = translate_exp false e			    in
+	  let (last_lbl, switch) = translate_switch choices			    in
+	  let default_action 	 = (C.Goto default_lbl, loc)::[]		    in
+	  let switch 		 = (C.Switch (e, switch, default_action), loc)::[]  in
+	  let body 		 = translate_cases (last_lbl, switch) choices	    in
+	  let default 		 = translate_blk default			    in
 	  let body 		 = (C.Block (body, Some default_lbl), loc)::default in
 	    (C.Block (body, Some brk_lbl), loc)::[]
 
@@ -979,19 +1017,20 @@ let translate prog =
     match x with
 	SymbolToken x 	  -> C.SymbolToken x
       | IdentToken x 	  -> C.IdentToken x
+      | CstToken c 	  -> C.CstToken c
       | LvalToken (lv, t) -> 
 	  let lv = translate_lv lv in
-	  let t = translate_typ t in
+	  let t  = translate_typ t in
 	    C.LvalToken (lv, t)
-      | CstToken c 	  -> C.CstToken c
+    
 
-(* TODO: think about this: simplify *)
+  (* TODO: think about this: simplify *)
   and translate_if loc (e, blk1, blk2) =
     (* restores the location that may have been destroyed during 
        the translation of blk1 and blk2
     *)
     Npkcontext.set_loc loc;
-(* TODO: this is a bit of a hack!! *)
+    (* TODO: this is a bit of a hack!! *)
     let rec select (blk1, blk2) =
       match (blk1, blk2) with
 	  (_::(C.Guard c, _)::_, blk) when C.exp_is_false c -> blk
@@ -1005,7 +1044,7 @@ let translate prog =
       match e with
 	  IfExp (Cst (C.CInt c, _), (t, _), _, _) 
 	    when (Nat.compare c Nat.zero <> 0)->
-	    translate_guard t
+	      translate_guard t
 	| IfExp (Cst (C.CInt c, _), _, (f, _), _) 
 	    when (Nat.compare c Nat.zero = 0) -> 
 	    translate_guard f
@@ -1075,9 +1114,9 @@ let translate prog =
   and normalize_binop is_sz (op, t) (e1, t1) (e2, t2) =
     let cast e t = fst (cast e t) in
       match (op, t1, t2) with
-(* TODO: this should be put in the typing phase!! *)
-(* Would simplify this normalization as the operation is not modified!!! *)
-(* Maybe possible to just have to do two casts!! *)
+	  (* TODO: this should be put in the typing phase!! *)
+	  (* Would simplify this normalization as the operation is not modified!!! *)
+	  (* Maybe possible to just have to do two casts!! *)
 	| (Minus, Ptr _, Int _) -> 
 	    let e2 = 
 	      translate_binop is_sz (Minus, t2) (C.exp_of_int 0, t2) (e2, t2) 
@@ -1109,7 +1148,7 @@ let translate prog =
 	      (op, (e1, t), (e2, t))
 		
 	| (Plus, Int _, Ptr _) -> (Plus, (e2, t2), (e1, t1))
-	      
+	    
 	| _ -> (op, (e1, t1), (e2, t2))
 	    
   and translate_binop is_sz (op, t) e1 e2 =
@@ -1155,7 +1194,7 @@ let translate prog =
 	   types *)
 	| (Gt, _, _) -> N.Gt (translate_scalar_typ t1)
 	| (Eq, _, _) -> N.Eq (translate_scalar_typ t1)
-	    	    
+	    
 	| _ ->
 	    Npkcontext.report_error "Firstpass.translate_binop" 
 	      "unexpected binary operator and arguments"
@@ -1187,7 +1226,7 @@ let translate prog =
     let e = 
       match (op, t) with
 	  (Not, Ptr _) -> 
-(* TODO: this is a bit of a hack, have Nil in cir?? *)
+	    (* TODO: this is a bit of a hack, have Nil in cir?? *)
 	    let nil = 
 	      C.Unop (K.Cast (N.Int C.int_kind, N.Ptr), C.exp_of_int 0) 
 	    in
@@ -1213,7 +1252,7 @@ let translate prog =
       | Bitfield (k, _) -> align_of (Int k)
       | _ -> size_of t
 
-(* TODO: simplify code of global declaration!!! *)
+  (* TODO: simplify code of global declaration!!! *)
   and declare_global extern x name t init =
     update_global x name (t, K.Extern);
     let (t, init) = translate_glb_init name t init in
@@ -1231,10 +1270,10 @@ let translate prog =
 	    Npkcontext.report_error "Firstpass.translate_global" 
 	      "unreachable code"
     in
-    let (_, args) = add_formals ft in
-    let body = translate_blk declaration.body in
-    let body = (C.Block (body, Some ret_lbl), declaration.position)::[] in
-    let ftyp = translate_ftyp ft in
+    let (_, args)   = add_formals ft in
+    let body 	    = translate_blk declaration.body in
+    let body 	    = (C.Block (body, Some ret_lbl), declaration.position)::[] in
+    let ftyp 	    = translate_ftyp ft in
     let declaration = 
       {
 	C.arg_identifiers = args;
@@ -1249,9 +1288,9 @@ let translate prog =
       lbl_cnt := default_lbl
   in
     
-(* TODO: a tad hacky!! Think about it *)
-(* TODO: could be done in the parser *)
-(* TODO: should be done in csyntax2CoreC *)
+  (* TODO: a tad hacky!! Think about it *)
+  (* TODO: could be done in the parser *)
+  (* TODO: should be done in csyntax2CoreC *)
   let translate_global (x, (d, loc)) =
     Npkcontext.set_loc loc;
     (* TODO:TODO:TODO: remove static?? *)
@@ -1268,20 +1307,20 @@ let translate prog =
       ()
   in
 
-(* TODO: a tad inefficient *)
-(* seems necessary because of 536.c and 540.c and 679.c 
-   maybe should really think about this and be stricter
-   so as to perform everything in one pass
-   Or better: should do all typing first.
-   Then compile.
-*)
+    (* TODO: a tad inefficient *)
+    (* seems necessary because of 536.c and 540.c and 679.c 
+       maybe should really think about this and be stricter
+       so as to perform everything in one pass
+       Or better: should do all typing first.
+       Then compile.
+    *)
     init := 
       List.map (translate_assertion (Newspeak.dummy_loc "TODO!")) 
 	prog.user_specifications;
     List.iter translate_global prog.global_variables;
     List.iter translate_fundecl prog.function_declarations;
-(* TODO: optimization: could remove this phase if cir had a type 
-   structure of name 
-   and all the structures' type were in a hashtbl *)
+    (* TODO: optimization: could remove this phase if cir had a type 
+       structure of name 
+       and all the structures' type were in a hashtbl *)
     Hashtbl.iter add_glbdecl used_globals;
-      { C.globals = glbdecls; C.init = !init; C.fundecs = fundefs }
+    { C.globals = glbdecls; C.init = !init; C.fundecs = fundefs }

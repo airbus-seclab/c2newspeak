@@ -148,6 +148,7 @@ and aux_offset_exp =
 and offset_exp =
   | OIdent of string
   | OField of aux_offset_exp * string
+  | OArray of aux_offset_exp * string * exp
 
 val exp_of_int: int -> exp
 

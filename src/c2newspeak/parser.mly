@@ -681,6 +681,7 @@ aux_offsetof_member:
 offsetof_member:
   IDENTIFIER { OIdent $1 }
 | aux_offsetof_member DOT IDENTIFIER { OField ($1, $3) }
+| aux_offsetof_member DOT IDENTIFIER LBRACKET expression RBRACKET { OArray ($1, $3, $5) }
 
 expression_sequence:
   expression                               { $1 }

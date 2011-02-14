@@ -375,14 +375,14 @@ let process (fname, globals) =
 	  let (op, t2) = translate_unop op t1 in
 	    (C.Unop (op, t1, e), t2)
       | Binop (op, e1, e2) -> 
-	  let (e1, t1) = translate_exp e1 in
-	  let (e2, t2) = translate_exp e2 in
+	  let (e1, t1) 		= translate_exp e1 in
+	  let (e2, t2) 		= translate_exp e2 in
 	  let (op, t_in, t_out) = translate_binop op t1 t2 in
 	    (C.Binop ((op, t_in), (e1, t1), (e2, t2)), t_out)
       | IfExp (c, e1, e2) -> 
-	  let (c, _) = translate_exp c in
-	  let (e1, t1) = translate_exp e1 in
-	  let (e2, t2) = translate_exp e2 in
+	  let (c, _) 	  = translate_exp c in
+	  let (e1, t1) 	  = translate_exp e1 in
+	  let (e2, t2) 	  = translate_exp e2 in
 	  let (e1, e2, t) = 
 	    match (t1, t2) with
 		(C.Ptr _, C.Int _) | (C.Float _, C.Int _) -> 
@@ -405,10 +405,10 @@ let process (fname, globals) =
 	    (* TODO: could simplify this?!!! *)
 	    (C.IfExp (c, (e1, t), (e2, t), t), t)
       | Call (f, args) -> 
-	  let (f, ft) = translate_funexp f in
+	  let (f, ft) 	      = translate_funexp f in
 	  let (args, actuals) = translate_args args in
-	  let ft = refine_ftyp f ft actuals in
-	  let (_, ret_t) = ft in
+	  let ft 	      = refine_ftyp f ft actuals in
+	  let (_, ret_t)      = ft in
 	    (C.Call (f, ft, args), ret_t)
       | Sizeof t -> (C.Sizeof (translate_typ t), C.uint_typ)
       | SizeofE e -> 
@@ -706,15 +706,15 @@ let process (fname, globals) =
     in
     let rec translate e =
       match e with
-	| OffComp t -> begin
-	    C.OffComp (find t)
-	  end
+	| OffComp t ->
+	    C.OffComp (t, (find t))
 	| OffField (e', f') ->
 	    C.OffField(translate e', f', find f')
     in
       match e with
-	  OIdent t 	 -> C.OIdent t
-	| OField (t, f) -> C.OField (translate t, f)
+	  OIdent t 	     -> C.OIdent t
+	| OField (t, f)      -> C.OField (translate t, f)
+	| OArray (t, tab, e) -> C.OArray (translate t, tab, translate_exp e)
 
 
   and translate_init t x =

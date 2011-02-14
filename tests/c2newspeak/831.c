@@ -1,15 +1,14 @@
 struct s1 {
- void (*f)(void);
+  int t[10];
 };
 
 
 struct s2 {
-  int i;
   struct s1 s1;
 };
 
 void g(void)
 {
   int n;
-  n = __builtin_offsetof(struct s2, s1.f);
+  n = __builtin_offsetof(struct s2, s1.t[2]);
 }

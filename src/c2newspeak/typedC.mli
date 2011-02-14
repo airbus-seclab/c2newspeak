@@ -31,52 +31,52 @@
 *)
 
 type t = {
-  global_variables: (string * glbinfo) list;
+  global_variables     : (string * glbinfo) list;
   function_declarations: (string * fundec) list;
-  user_specifications: assertion list
+  user_specifications  : assertion list
 }
 
 and glbinfo = (decl * Newspeak.location)
 
 and fundec = {
   function_type: ftyp;
-  body: blk;
-  position: Newspeak.location;
+  body	       : blk;
+  position     : Newspeak.location;
 }
 
 and assertion = spec_token list
 
 and spec_token = 
     | SymbolToken of char
-    | IdentToken of string
-    | LvalToken of typ_exp
-    | CstToken of Cir.cst
+    | IdentToken  of string
+    | LvalToken	  of typ_exp
+    | CstToken	  of Cir.cst
 
 and decl = {
-  name: string;
-  t: typ;
-  is_static: bool;
-  is_extern: bool;
+  name		: string;
+  t		: typ;
+  is_static	: bool;
+  is_extern	: bool;
   initialization: init option
 }
 
-and compdef = (field_decl list * is_struct)
+and compdef    = (field_decl list * is_struct)
 
-and is_struct = bool
+and is_struct  = bool
 
 and field_decl = (string * typ)
 
-and ftyp = (typ * string) list option * typ
+and ftyp       = (typ * string) list option * typ
 
-and typ =
+and typ        =
     | Void
-    | Int of Newspeak.ikind
+    | Int      of Newspeak.ikind
     | Bitfield of (Newspeak.ikind * exp)
-    | Float of int
-    | Ptr of typ
-    | Array of array_typ
-    | Comp of aux_comp 
-    | Fun of ftyp
+    | Float    of int
+    | Ptr      of typ
+    | Array    of array_typ
+    | Comp     of aux_comp 
+    | Fun      of ftyp
     | Va_arg
 
 and aux_comp = Unknown of string | Known of compdef
@@ -93,45 +93,45 @@ and blk = stmt list
 
 and stmtkind =
   | LocalDecl of (string * decl)
-  | If of (exp * blk * blk)
+  | If	      of (exp * blk * blk)
       (* third parameter is the default case *)
-  | CSwitch of (typ_exp * (exp * blk * Newspeak.location) list * blk)
-  | For of (blk * exp * blk * blk)
-  | DoWhile of (blk * exp)
-  | Exp of typ_exp
+  | CSwitch   of (typ_exp * (exp * blk * Newspeak.location) list * blk)
+  | For	      of (blk * exp * blk * blk)
+  | DoWhile   of (blk * exp)
+  | Exp	      of typ_exp
   | Break
   | Continue
   | Return
-  | Block of blk
-  | Goto of lbl
-  | Label of lbl
-  | UserSpec of assertion
+  | Block     of blk
+  | Goto      of lbl
+  | Label     of lbl
+  | UserSpec  of assertion
 
 and lbl = string
 
 and exp = 
-    | Cst of (Cir.cst * typ)
-    | Local of string
-    | Global of string
-    | Field of (typ_exp * string)
-    | Index of (exp * array_typ * typ_exp)
-    | Deref of typ_exp
-    | AddrOf of typ_exp
-    | Unop of (unop * typ * exp)
-    | IfExp of (exp * typ_exp * typ_exp * typ)
-    | Binop of ((binop * typ) * typ_exp * typ_exp)
-    | Call of (funexp * ftyp * typ_exp list)
-    | Sizeof of typ
+    | Cst      of (Cir.cst * typ)
+    | Local    of string
+    | Global   of string
+    | Field    of (typ_exp * string)
+    | Index    of (exp * array_typ * typ_exp)
+    | Deref    of typ_exp
+    | AddrOf   of typ_exp
+    | Unop     of (unop * typ * exp)
+    | IfExp    of (exp * typ_exp * typ_exp * typ)
+    | Binop    of ((binop * typ) * typ_exp * typ_exp)
+    | Call     of (funexp * ftyp * typ_exp list)
+    | Sizeof   of typ
     | Offsetof of (typ * offset_exp)
-    | Str of string
+    | Str      of string
     | FunName
-    | Cast of (typ_exp * typ)
+    | Cast     of (typ_exp * typ)
 (* None is a regular assignment *)
-    | Set of (typ_exp * (binop * typ) option * typ_exp)
+    | Set      of (typ_exp * (binop * typ) option * typ_exp)
 (* boolean is true if the operation is applied after the evaluation of the 
    expression *)
-    | OpExp of ((binop * typ) * typ_exp * bool)
-    | BlkExp of (blk * bool)
+    | OpExp    of ((binop * typ) * typ_exp * bool)
+    | BlkExp   of (blk * bool)
 
 and funexp =
     Fname of string
@@ -157,37 +157,38 @@ and binop =
 
 
 and aux_offset_exp = 
-  | OffComp of aux_comp 
-  | OffField of aux_offset_exp * string * aux_comp
+  | OffComp of string * aux_comp (* the string is the name of the aux_comp *)
+  | OffField of aux_offset_exp * string * aux_comp (* the string is the name of the last field *)
 
 and offset_exp =
   | OIdent of string
   | OField of aux_offset_exp * string
+  | OArray of aux_offset_exp * string * typ_exp
 
-val char_typ: typ
-val uint_typ: typ
-val int_typ: typ
+val char_typ	 : typ
+val uint_typ	 : typ
+val int_typ	 : typ
 
-val exp_of_char: char -> exp
+val exp_of_char	 : char -> exp
 
-val exp_of_int: int -> exp
+val exp_of_int	 : int -> exp
 
-val ftyp_of_typ: typ -> ftyp
+val ftyp_of_typ	 : typ -> ftyp
 
-val deref_typ: typ -> typ
+val deref_typ	 : typ -> typ
 
-val min_ftyp: ftyp -> ftyp -> ftyp
+val min_ftyp	 : ftyp -> ftyp -> ftyp
 
-val min_typ: typ -> typ -> typ
+val min_typ	 : typ -> typ -> typ
 
 val string_of_exp: exp -> string
 
 val string_of_typ: typ -> string
 
-val ftyp_of_typ: typ -> ftyp
+val ftyp_of_typ	 : typ -> ftyp
 
-val promote: Newspeak.ikind -> Newspeak.ikind
+val promote	 : Newspeak.ikind -> Newspeak.ikind
 
-val comp_of_typ: typ -> (field_decl list * bool)
+val comp_of_typ	 : typ -> (field_decl list * bool)
 
-val equals_typ: typ -> typ -> bool
+val equals_typ	 : typ -> typ -> bool
