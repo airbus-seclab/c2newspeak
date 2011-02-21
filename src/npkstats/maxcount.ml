@@ -170,7 +170,7 @@ let print (exact, st) xout =
       | Some cout ->
           let s =
             List.fold_left (fun s (t, c, n) ->
-                              s^"<stats type=\""^t^"\" class=\""^c^"\" val=\""^symb^n^"\"></stats>\n"
+                              s^"<stats type=\""^t^"\" class=\""^c^"\" val=\""^n^"\"></stats>\n"
                            ) "" [("analysis", s1, nb) ; ("analysis", s2, sz) ; 
                                  ("Functions", s3, call_depth) ; ("Statements", s4, loop_depth)]
           in
