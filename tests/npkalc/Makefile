@@ -24,7 +24,7 @@
 COMMAND=$(C2NEWSPEAK) $*.c -o $*.npk > /dev/null 2>&1; \
         $(NPKALC) -f $*.config $*.npk
 PREREQ=%.c %.config
-TESTS=000 001 002 003 004 005
+TESTS=000 001 002 003 004 005 006
 CLEANFILES=*.npk
 
 include ../common.Makefile

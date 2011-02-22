@@ -4,7 +4,7 @@ module Set = Set.Make(String)
 
 type info = {
   callers: Set.t;
-  file: string
+  file: string option
 }
 
 type t = (string, info) Hashtbl.t
@@ -17,7 +17,7 @@ let compute prog =
       let info = { info with callers = Set.add f info.callers } in
 	Hashtbl.replace callgraph g info
     with Not_found -> 
-      let info = { file = "missing definition"; callers = Set.singleton f } in
+      let info = { file = None; callers = Set.singleton f } in
 	Hashtbl.add callgraph g info
   in
   let current_function = ref "" in
@@ -27,7 +27,7 @@ let compute prog =
     let info = 
       {
 	callers = Set.empty;
-	file = filename
+	file = Some filename
       }
     in
       Hashtbl.add callgraph f info
@@ -63,5 +63,7 @@ let get_callers callgraph f =
 	
 let get_position callgraph f =
   let info = Hashtbl.find callgraph f in
-    info.file
+    match info.file with
+	None -> raise Not_found
+      | Some filename -> filename
   
