@@ -958,9 +958,9 @@ type_specifier:
 | ENUM IDENTIFIER                        { Enum None }
 | ENUM IDENTIFIER 
   LBRACE enum_list RBRACE                { Enum (Some $4) }
+| VA_LIST                                { Va_arg }
 | TYPEOF LPAREN type_specifier RPAREN    { $3 }
 | TYPEOF LPAREN IDENTIFIER RPAREN        { Typeof $3 }
-| VA_LIST                                { Va_arg }
 ;;
 
 
@@ -1088,6 +1088,12 @@ attribute_name:
 	    "packed attribute" Npkcontext.Pack;
 	  []
       | (("__nonnull__" | "__nonnull"), _) -> []
+      | _ -> raise Parsing.Parse_error
+  }
+| IDENTIFIER LPAREN LPAREN INTEGER SHIFTL
+  LPAREN INTEGER RPAREN RPAREN RPAREN    {
+    match $1 with
+	"__aligned__" -> []
       | _ -> raise Parsing.Parse_error
   }
 | IDENTIFIER LPAREN LPAREN 
