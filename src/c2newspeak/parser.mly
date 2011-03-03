@@ -1054,6 +1054,7 @@ attribute_name:
       | "__deprecated__" | "deprecated" | "__malloc__" 
       | "__warn_unused_result__" | "warn_unused_result"
       | "__unused__" | "unused" 
+      | "no_instrument_function"
       | "__artificial__" | "__cold__" | "cold" -> ()
       | "dllimport" -> 
 	  Npkcontext.report_warning "Parser.attribute" 
