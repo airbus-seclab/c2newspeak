@@ -505,24 +505,20 @@ let translate compil_unit =
     let storage = match i with
       | None -> Npkil.Declared false
       | Some init_stmt ->
-          begin
-            init := (translate_block init_stmt) @ (!init);
-            Npkil.Declared true
-          end
+          init := (translate_block init_stmt) @ (!init);
+          Npkil.Declared true
     in
       Hashtbl.add globals tr_name (tr_typ, loc, storage)
   in
-
+    
   let rec translate_global_basic_declaration (basic, loc) =
     match basic with
-      | ObjectDecl(ident, subtyp, _, init_o) -> begin
+      | ObjectDecl(ident, subtyp, _, init_o) -> 
 	  let tr_typ = T.translate subtyp in
           let init =
             if !extern then None else init_o
           in
 	    add_global loc tr_typ init ident
-	    
-	end
       | SpecDecl spec -> translate_spec spec
       | NumberDecl _ -> ()
 

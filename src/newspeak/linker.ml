@@ -312,10 +312,11 @@ let merge_storages name prev_loc prev_storage storage =
             let (file, _, _) = loc in
               ", in file "^file^" variable "
               ^name^" should probably be extern"
-            end else begin
-              " (previous definition: "
-              ^(Newspeak.string_of_loc prev_loc)^")"
-            end
+            end 
+	  else begin
+            " (previous definition: "
+            ^(Newspeak.string_of_loc prev_loc)^")"
+          end
         in
           Npkcontext.report_accept_warning "Npklink.update_glob_link"
             ("multiple definitions of global variable "^name^info) 
