@@ -4,8 +4,8 @@ type base_typ =
     | Void 
     | Integer of ikind
     | Float of int
-    | Struct of (string * field list option)
-    | Union of (string * field list option)
+(* structure or union: identifier, is_struct, field declaration*)
+    | Composite of (string * bool * field list option)
     | Name of string
     | Enum of ((string * Csyntax.exp option) list) option
     | Va_arg

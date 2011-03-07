@@ -26,9 +26,7 @@
 %{
 open Csyntax
 open Lexing
-open Synthack
-
-let struct_cnt = ref 0
+module T = Synthack
 
 let new_id =
   let c = ref 0 in
@@ -36,6 +34,7 @@ let new_id =
     incr c;
     !c
 
+let struct_cnt = ref 0
 let gen_struct_id () = 
   incr struct_cnt;
   "anon_struct"^(string_of_int !struct_cnt)
@@ -270,14 +269,14 @@ function_declarator:
       old_parameter_declaration_list       { 
     Npkcontext.report_accept_warning "Parser.declarator"
       "deprecated style of function definition" Npkcontext.DirtySyntax;
-	($1, Function ($2, build_funparams $4 $6))
+	($1, T.Function ($2, build_funparams $4 $6))
   }
 | direct_declarator 
       LPAREN identifier_list RPAREN
       old_parameter_declaration_list       { 
     Npkcontext.report_accept_warning "Parser.declarator"
       "deprecated style of function definition" Npkcontext.DirtySyntax;
-    (0, Function ($1, build_funparams $3 $5))
+    (0, T.Function ($1, build_funparams $3 $5))
   }
 ;;
 
@@ -295,10 +294,10 @@ declaration:
 typeof_declaration:
 type_qualifier_list TYPEOF LPAREN 
 type_specifier pointer RPAREN 
-type_qualifier_list ident_or_tname { ($4, [( ($5, Variable ($8, get_loc ())), []) , None])}
+type_qualifier_list ident_or_tname          { ($4, [( ($5, T.Variable ($8, get_loc ())), []) , None])}
 ;;
 init_declarator_list:
-                                            { (((0, Abstract), []), None)::[] }
+                                            { (((0, T.Abstract), []), None)::[] }
 | non_empty_init_declarator_list            { $1 }
 ;;
 
@@ -329,15 +328,15 @@ declarator:
 ;;
 
 direct_declarator:
-  ident_or_tname                           { (0, Variable ($1, get_loc ())) }
+  ident_or_tname                           { (0, T.Variable ($1, get_loc ())) }
 | LPAREN declarator RPAREN                 { $2 }
 | direct_declarator LBRACKET 
-      expression_sequence RBRACKET         { (0, Array ($1, Some $3)) }
+      expression_sequence RBRACKET         { (0, T.Array ($1, Some $3)) }
 | direct_declarator LBRACKET 
-      type_qualifier_list RBRACKET         { (0, Array ($1, None)) }
+      type_qualifier_list RBRACKET         { (0, T.Array ($1, None)) }
 | direct_declarator 
-  LPAREN parameter_list RPAREN             { (0, Function ($1, $3)) }
-| direct_declarator LPAREN RPAREN          { (0, Function ($1, [])) }
+  LPAREN parameter_list RPAREN             { (0, T.Function ($1, $3)) }
+| direct_declarator LPAREN RPAREN          { (0, T.Function ($1, [])) }
 ;;
 
 identifier_list:
@@ -357,7 +356,7 @@ struct_declarator:
 | COLON expression                         { 
     Npkcontext.report_accept_warning "Parser.struct_declarator"
       "anonymous field declaration in structure" Npkcontext.DirtySyntax;
-    ((0, Abstract), Some $2) 
+    ((0, T.Abstract), Some $2) 
   }
 ;;
 
@@ -386,11 +385,11 @@ parameter_declaration:
   declaration_specifiers declarator        { ($1, $2) }
 | declaration_specifiers 
   abstract_declarator                      { ($1, $2) }
-| declaration_specifiers                   { ($1, (0, Abstract)) }
+| declaration_specifiers                   { ($1, (0, T.Abstract)) }
 ;;
 
 type_name:
-  declaration_specifiers                   { ($1, (0, Abstract)) }
+  declaration_specifiers                   { ($1, (0, T.Abstract)) }
 | declaration_specifiers
   abstract_declarator                      { ($1, $2) }
 ;;
@@ -754,7 +753,7 @@ init_list:
 ;;
 
 abstract_declarator:
-  pointer                                  { ($1, Abstract) }
+  pointer                                  { ($1, T.Abstract) }
 | direct_abstract_declarator               { $1 }
 | pointer direct_abstract_declarator       { 
     let (ptr, decl) = $2 in
@@ -762,17 +761,20 @@ abstract_declarator:
   }
 ;;
 
+// TODO: try to factor cases more
 direct_abstract_declarator:
   LPAREN abstract_declarator RPAREN        { $2 }
-| LBRACKET type_qualifier_list RBRACKET    { (0, Array ((0, Abstract), None)) }
+| LBRACKET type_qualifier_list RBRACKET    { 
+    (0, T.Array ((0, T.Abstract), None)) 
+  }
 | LBRACKET expression_sequence RBRACKET    { 
-    (0, Array ((0, Abstract), Some $2)) 
+    (0, T.Array ((0, T.Abstract), Some $2)) 
   }
 | direct_abstract_declarator 
-  LBRACKET expression_sequence RBRACKET    { (0, Array ($1, Some $3)) }
+  LBRACKET expression_sequence RBRACKET    { (0, T.Array ($1, Some $3)) }
 | direct_abstract_declarator 
-  LPAREN parameter_list RPAREN             { (0, Function ($1, $3)) }
-| direct_abstract_declarator LPAREN RPAREN { (0, Function ($1, [])) }
+  LPAREN parameter_list RPAREN             { (0, T.Function ($1, $3)) }
+| direct_abstract_declarator LPAREN RPAREN { (0, T.Function ($1, [])) }
 ;;
 
 pointer:
@@ -792,7 +794,7 @@ parameter_list:
 | parameter_declaration                    { $1::[] }
 | ELLIPSIS                                 {
     let loc = get_loc () in
-      (Va_arg, (0, Variable ("__builtin_newspeak_va_arg", loc)))::[] 
+      (T.Va_arg, (0, T.Variable ("__builtin_newspeak_va_arg", loc)))::[] 
   }
 ;;
 
@@ -870,97 +872,101 @@ ftyp:
 ;;
 
 type_specifier:
-  VOID                                   { Void }
-| ityp                                   { Integer (Newspeak.Signed, $1) }
+  VOID                                   { T.Void }
+| ityp                                   { T.Integer (Newspeak.Signed, $1) }
 | SIGNED ityp                            {
     Npkcontext.report_strict_warning "Parser.type_specifier" 
       "signed specifier not necessary";
-    Integer (Newspeak.Signed, $2)
+    T.Integer (Newspeak.Signed, $2)
   }
 | LONG LONG UNSIGNED INT                 {
     Npkcontext.report_strict_warning "Parser.type_specifier"
       ("'long long unsigned int' is not normalized : "
       ^"use 'unsigned long long int' instead");
-    Integer (Newspeak.Unsigned, Config.size_of_longlong)
+    T.Integer (Newspeak.Unsigned, Config.size_of_longlong)
   }
-| UNSIGNED ityp                          { Integer (Newspeak.Unsigned, $2) }
+| UNSIGNED ityp                          { T.Integer (Newspeak.Unsigned, $2) }
 | UNSIGNED                               { 
     Npkcontext.report_strict_warning "Parser.type_specifier"
       "unspecified integer kind";
-    Integer (Newspeak.Unsigned, Config.size_of_int) 
+    T.Integer (Newspeak.Unsigned, Config.size_of_int) 
   }
 
 | LONG SIGNED INT                        {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long signed int' is not normalized: "
        ^"use 'signed long int' instead");
-    Integer (Newspeak.Signed, Config.size_of_long)
-      }
+    T.Integer (Newspeak.Signed, Config.size_of_long)
+  }
 
 | LONG SIGNED                            {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long signed' is not normalized: "
        ^"use 'signed long int' instead");
-    Integer (Newspeak.Signed, Config.size_of_long)
-      }
+    T.Integer (Newspeak.Signed, Config.size_of_long)
+  }
 
 | LONG UNSIGNED INT                        {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long unsigned int' is not normalized: "
        ^"use 'unsigned long int' instead");
-    Integer (Newspeak.Unsigned, Config.size_of_long)
+    T.Integer (Newspeak.Unsigned, Config.size_of_long)
   }
 
 | LONG UNSIGNED                            {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long unsigned' is not normalized: "
        ^"use 'unsigned long int' instead");
-    Integer (Newspeak.Unsigned, Config.size_of_long)
+    T.Integer (Newspeak.Unsigned, Config.size_of_long)
   }
 
 | SHORT SIGNED INT                        {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short signed int' is not normalized: "
        ^"use 'signed short int' instead");
-    Integer (Newspeak.Signed, Config.size_of_short)
-      }
+    T.Integer (Newspeak.Signed, Config.size_of_short)
+  }
 
 | SHORT SIGNED                            {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short signed' is not normalized: "
        ^"use 'signed short int' instead");
-    Integer (Newspeak.Signed, Config.size_of_short)
-      }
+    T.Integer (Newspeak.Signed, Config.size_of_short)
+  }
 
 | SHORT UNSIGNED INT                        {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short unsigned int' is not normalized: "
        ^"use 'unsigned short int' instead");
-    Integer (Newspeak.Unsigned, Config.size_of_short)
+    T.Integer (Newspeak.Unsigned, Config.size_of_short)
   }
 
 | SHORT UNSIGNED                            {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short unsigned' is not normalized: "
        ^"use 'unsigned short int' instead");
-    Integer (Newspeak.Unsigned, Config.size_of_short)
+    T.Integer (Newspeak.Unsigned, Config.size_of_short)
   }
 
-| ftyp                                   { Float $1 }
-| STRUCT field_blk                       { Struct (gen_struct_id (), Some $2) }
-| STRUCT ident_or_tname                  { Struct ($2, None) }
-| STRUCT ident_or_tname field_blk        { Struct ($2, Some $3) }
-| UNION field_blk                        { Union (gen_struct_id (), Some $2) }
-| UNION ident_or_tname                   { Union ($2, None) }
-| UNION ident_or_tname field_blk         { Union ($2, Some $3) }
-| TYPEDEF_NAME                           { Name $1 }
-| ENUM LBRACE enum_list RBRACE           { Enum (Some $3) }
-| ENUM IDENTIFIER                        { Enum None }
+| ftyp                                   { T.Float $1 }
+| STRUCT field_blk                       { 
+    T.Composite (gen_struct_id (), true, Some $2) 
+  }
+| STRUCT ident_or_tname                  { T.Composite ($2, true, None) }
+| STRUCT ident_or_tname field_blk        { T.Composite ($2, true, Some $3) }
+| UNION field_blk                        { 
+    T.Composite (gen_struct_id (), false, Some $2) 
+  }
+| UNION ident_or_tname                   { T.Composite ($2, false, None) }
+| UNION ident_or_tname field_blk         { T.Composite ($2, false, Some $3) }
+| TYPEDEF_NAME                           { T.Name $1 }
+| ENUM LBRACE enum_list RBRACE           { T.Enum (Some $3) }
+| ENUM IDENTIFIER                        { T.Enum None }
 | ENUM IDENTIFIER 
-  LBRACE enum_list RBRACE                { Enum (Some $4) }
-| VA_LIST                                { Va_arg }
+  LBRACE enum_list RBRACE                { T.Enum (Some $4) }
+| VA_LIST                                { T.Va_arg }
 | TYPEOF LPAREN type_specifier RPAREN    { $3 }
-| TYPEOF LPAREN IDENTIFIER RPAREN        { Typeof $3 }
+| TYPEOF LPAREN IDENTIFIER RPAREN        { T.Typeof $3 }
 ;;
 
 
@@ -1028,7 +1034,7 @@ field_declaration:
 | declaration_specifiers                   { 
     Npkcontext.report_accept_warning "Parser.field_declaration"
       "anonymous field declaration in structure" Npkcontext.DirtySyntax;
-    flatten_field_decl ($1, ((0, Abstract), None)::[]) 
+    flatten_field_decl ($1, ((0, T.Abstract), None)::[]) 
   }
 ;;
 
