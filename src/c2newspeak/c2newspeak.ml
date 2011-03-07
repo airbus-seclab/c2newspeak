@@ -56,19 +56,11 @@ let extract_no fname =
 
 let execute () =
   (* TODO: this code should be factored with ada2newspeak!! into x2newspeak *)
-  match !Npkcontext.input_files with
-      file::[] 
-	when !Npkcontext.compile_only && (!Npkcontext.output_file <> "") ->
-	  let prog = compile file in
-	    Npkil.write !Npkcontext.output_file prog;
-	    Npkcontext.dump_xml_warns ()
-	      
-    | files ->
-	let nos = List.map extract_no files in
-	  if not !Npkcontext.compile_only then begin 
-	    Linker.link nos;
-	    Npkcontext.dump_xml_warns ()
-	  end
+  let nos = List.map extract_no !Npkcontext.input_files in
+    if not !Npkcontext.compile_only then begin 
+      Linker.link nos;
+      Npkcontext.dump_xml_warns ()
+    end
 	    
 let _ =
   X2newspeak.process Params.version_string Params.comment_string execute
