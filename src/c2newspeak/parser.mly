@@ -866,40 +866,40 @@ field_blk:
 ;;
 
 ftyp:
-  FLOAT                                  { Config.size_of_float }
-| DOUBLE                                 { Config.size_of_double }
-| LONG DOUBLE                            { Config.size_of_longdouble }
+  FLOAT                                   { Config.size_of_float }
+| DOUBLE                                  { Config.size_of_double }
+| LONG DOUBLE                             { Config.size_of_longdouble }
 ;;
 
 type_specifier:
-  VOID                                   { T.Void }
-| ityp                                   { T.Integer (Newspeak.Signed, $1) }
-| SIGNED ityp                            {
+  VOID                                    { T.Void }
+| ityp                                    { T.Integer (Newspeak.Signed, $1) }
+| SIGNED ityp                             {
     Npkcontext.report_strict_warning "Parser.type_specifier" 
       "signed specifier not necessary";
     T.Integer (Newspeak.Signed, $2)
   }
-| LONG LONG UNSIGNED INT                 {
+| LONG LONG UNSIGNED INT                  {
     Npkcontext.report_strict_warning "Parser.type_specifier"
       ("'long long unsigned int' is not normalized : "
       ^"use 'unsigned long long int' instead");
     T.Integer (Newspeak.Unsigned, Config.size_of_longlong)
   }
-| UNSIGNED ityp                          { T.Integer (Newspeak.Unsigned, $2) }
-| UNSIGNED                               { 
+| UNSIGNED ityp                           { T.Integer (Newspeak.Unsigned, $2) }
+| UNSIGNED                                { 
     Npkcontext.report_strict_warning "Parser.type_specifier"
       "unspecified integer kind";
     T.Integer (Newspeak.Unsigned, Config.size_of_int) 
   }
 
-| LONG SIGNED INT                        {
+| LONG SIGNED INT                         {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long signed int' is not normalized: "
        ^"use 'signed long int' instead");
     T.Integer (Newspeak.Signed, Config.size_of_long)
   }
 
-| LONG SIGNED                            {
+| LONG SIGNED                             {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long signed' is not normalized: "
        ^"use 'signed long int' instead");
@@ -920,55 +920,54 @@ type_specifier:
     T.Integer (Newspeak.Unsigned, Config.size_of_long)
   }
 
-| SHORT SIGNED INT                        {
+| SHORT SIGNED INT                         {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short signed int' is not normalized: "
        ^"use 'signed short int' instead");
     T.Integer (Newspeak.Signed, Config.size_of_short)
   }
 
-| SHORT SIGNED                            {
+| SHORT SIGNED                             {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short signed' is not normalized: "
        ^"use 'signed short int' instead");
     T.Integer (Newspeak.Signed, Config.size_of_short)
   }
 
-| SHORT UNSIGNED INT                        {
+| SHORT UNSIGNED INT                       {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short unsigned int' is not normalized: "
        ^"use 'unsigned short int' instead");
     T.Integer (Newspeak.Unsigned, Config.size_of_short)
   }
 
-| SHORT UNSIGNED                            {
+| SHORT UNSIGNED                           {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short unsigned' is not normalized: "
        ^"use 'unsigned short int' instead");
     T.Integer (Newspeak.Unsigned, Config.size_of_short)
   }
 
-| ftyp                                   { T.Float $1 }
-| STRUCT field_blk                       { 
-    T.Composite (gen_struct_id (), true, Some $2) 
+| ftyp                                     { T.Float $1 }
+| struct_or_union field_blk                { 
+    T.Composite (gen_struct_id (), $1, Some $2) 
   }
-| STRUCT ident_or_tname                  { T.Composite ($2, true, None) }
-| STRUCT ident_or_tname field_blk        { T.Composite ($2, true, Some $3) }
-| UNION field_blk                        { 
-    T.Composite (gen_struct_id (), false, Some $2) 
-  }
-| UNION ident_or_tname                   { T.Composite ($2, false, None) }
-| UNION ident_or_tname field_blk         { T.Composite ($2, false, Some $3) }
-| TYPEDEF_NAME                           { T.Name $1 }
-| ENUM LBRACE enum_list RBRACE           { T.Enum (Some $3) }
-| ENUM IDENTIFIER                        { T.Enum None }
+| struct_or_union ident_or_tname           { T.Composite ($2, $1, None) }
+| struct_or_union ident_or_tname field_blk { T.Composite ($2, $1, Some $3) }
+| TYPEDEF_NAME                             { T.Name $1 }
+| ENUM LBRACE enum_list RBRACE             { T.Enum (Some $3) }
+| ENUM IDENTIFIER                          { T.Enum None }
 | ENUM IDENTIFIER 
-  LBRACE enum_list RBRACE                { T.Enum (Some $4) }
-| VA_LIST                                { T.Va_arg }
-| TYPEOF LPAREN type_specifier RPAREN    { $3 }
-| TYPEOF LPAREN IDENTIFIER RPAREN        { T.Typeof $3 }
+  LBRACE enum_list RBRACE                  { T.Enum (Some $4) }
+| VA_LIST                                  { T.Va_arg }
+| TYPEOF LPAREN type_specifier RPAREN      { $3 }
+| TYPEOF LPAREN IDENTIFIER RPAREN          { T.Typeof $3 }
 ;;
 
+struct_or_union:
+  STRUCT                                   { true }
+| UNION                                    { false }
+;;
 
 //Section that is dependent on version of the compiler (standard ANSI or GNU)
 //TODO: find a way to factor some of these, possible!!!
