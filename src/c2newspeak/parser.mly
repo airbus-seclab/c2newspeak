@@ -418,10 +418,6 @@ statement_list:
 
 statement:
   IDENTIFIER COLON statement               { (Label $1, get_loc ())::$3 }
-| declaration SEMICOLON                    { build_stmtdecl false false $1 }
-| STATIC declaration SEMICOLON             { build_stmtdecl true false $2 }
-| EXTERN declaration SEMICOLON             { build_stmtdecl false true $2 }
-| TYPEDEF declaration SEMICOLON            { build_typedef $2 }
 | IF LPAREN expression_sequence RPAREN
       statement           %prec below_ELSE {
     [If (normalize_bexp $3, $5, []), get_loc ()] 
@@ -432,23 +428,31 @@ statement:
   }
 | switch_stmt                              { [CSwitch $1, get_loc ()] }
 | iteration_statement                      { [$1, get_loc ()] }
-| RETURN expression_sequence SEMICOLON              { 
+| NPK                                      { (UserSpec $1, get_loc ())::[] }
+| compound_statement                       { [Block $1, get_loc ()] }
+| simple_statement SEMICOLON               { $1 }
+;;
+
+simple_statement:
+| declaration                              { build_stmtdecl false false $1 }
+| STATIC declaration                       { build_stmtdecl true false $2 }
+| EXTERN declaration                       { build_stmtdecl false true $2 }
+| TYPEDEF declaration                      { build_typedef $2 }
+| RETURN expression_sequence               { 
     let loc = get_loc () in
       (Exp (Set (RetVar, None, $2)), loc)::(Return, loc)::[]
   }
-| RETURN SEMICOLON                         { [Return, get_loc ()] }
-| expression_sequence SEMICOLON            { [Exp $1, get_loc ()] }
-| BREAK SEMICOLON                          { [Break, get_loc ()] }
-| CONTINUE SEMICOLON                       { [Continue, get_loc ()] }
-| GOTO IDENTIFIER SEMICOLON                { 
+| RETURN                                   { [Return, get_loc ()] }
+| expression_sequence                      { [Exp $1, get_loc ()] }
+| BREAK                                    { [Break, get_loc ()] }
+| CONTINUE                                 { [Continue, get_loc ()] }
+| GOTO IDENTIFIER                          { 
     Npkcontext.report_accept_warning "Parser.statement" "goto statement"
       Npkcontext.ForwardGoto;
     [Goto $2, get_loc ()] 
   }
-| compound_statement                       { [Block $1, get_loc ()] }
-| SEMICOLON                                { [] }
-| asm SEMICOLON                            { [] }
-| NPK                                      { (UserSpec $1, get_loc ())::[] }
+|                                          { [] }
+| asm                                      { [] }
 ;;
 
 asm:

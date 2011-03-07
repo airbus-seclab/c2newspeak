@@ -68,6 +68,8 @@ let init_tbls () =
 let _ = 
   init_tbls ()
 
+(* TODO: try to remove this syntactic hack by rewriting the parser,
+   but is it even possible? *)
 let define_type x t = Hashtbl.add typedefs x t
 
 let is_type x = Hashtbl.mem typedefs x
