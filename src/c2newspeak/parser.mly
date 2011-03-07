@@ -949,19 +949,26 @@ type_specifier:
   }
 
 | ftyp                                     { T.Float $1 }
-| struct_or_union identifier_option 
+| struct_or_union composite_identifier_option 
   field_blk_option                         { T.Composite ($2, $1, $3) }
 | TYPEDEF_NAME                             { T.Name $1 }
-| ENUM LBRACE enum_list RBRACE             { T.Enum (Some $3) }
-| ENUM IDENTIFIER                          { T.Enum None }
-| ENUM IDENTIFIER 
-  LBRACE enum_list RBRACE                  { T.Enum (Some $4) }
+| ENUM identifier_option enum_values       { T.Enum $3 }
 | VA_LIST                                  { T.Va_arg }
 | TYPEOF LPAREN type_specifier RPAREN      { $3 }
 | TYPEOF LPAREN IDENTIFIER RPAREN          { T.Typeof $3 }
 ;;
 
 identifier_option:
+  IDENTIFIER                               { }
+|                                          { }
+;;
+
+enum_values:
+  LBRACE enum_list RBRACE                  { Some $2 }
+|                                          { None }
+;;
+
+composite_identifier_option:
   ident_or_tname                           { $1 }
 |                                          { gen_struct_id () }
 ;;
