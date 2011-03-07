@@ -953,7 +953,10 @@ type_specifier:
   }
 
 | ftyp                                     { T.Float $1 }
-| struct_or_union composite_identifier_option 
+| struct_or_union field_blk                { 
+    T.Composite (gen_struct_id (), $1, Some $2) 
+  }
+| struct_or_union ident_or_tname
   field_blk_option                         { T.Composite ($2, $1, $3) }
 | TYPEDEF_NAME                             { T.Name $1 }
 | ENUM identifier_option enum_values       { T.Enum $3 }
@@ -970,11 +973,6 @@ identifier_option:
 enum_values:
   LBRACE enum_list RBRACE                  { Some $2 }
 |                                          { None }
-;;
-
-composite_identifier_option:
-  ident_or_tname                           { $1 }
-|                                          { gen_struct_id () }
 ;;
 
 field_blk_option:
