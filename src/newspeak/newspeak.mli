@@ -115,17 +115,17 @@ and globals = (string, typ) Hashtbl.t
 and src_lang = C | ADA
 
 and stmtkind =
-    Set of (lval * exp * scalar_t)
-  | Copy of (lval * lval * size_t)
-  | Guard of exp
-  | Decl of (string * typ * blk)
-  | Select of (blk * blk)
-  | InfLoop of blk
-  | DoWith of (blk * lbl)
-  | Goto of lbl
+    Set	     of (lval * exp * scalar_t)
+  | Copy     of (lval * lval * size_t)
+  | Guard    of exp
+  | Decl     of (string * typ * blk)
+  | Select   of (blk * blk)
+  | InfLoop  of blk
+  | DoWith   of (blk * lbl)
+  | Goto     of lbl
 (* TODO: maybe should use a record rather than a tuple? *)
 (* arguments, function type, function expression, return left values *)
-  | Call of ((exp * typ) list * funexp * (lval * typ) list)
+  | Call     of ((exp * typ) list * funexp * (lval * typ) list)
   | UserSpec of assertion
 
 and specs = assertion list
@@ -134,27 +134,27 @@ and assertion = spec_token list
 
 and spec_token =
   | SymbolToken of char
-  | IdentToken of string
-  | LvalToken of (lval * typ)
-  | CstToken of cst
+  | IdentToken  of string
+  | LvalToken   of (lval * typ)
+  | CstToken    of cst
 
 and stmt = stmtkind * location
 
 and blk = stmt list
 
 and lval =
-    Local of string
+    Local  of string
   | Global of string
-  | Deref of (exp * size_t)
-  | Shift of (lval * exp)
+  | Deref  of (exp * size_t)
+  | Shift  of (lval * exp)
 
 and exp =
-    Const of cst
-  | Lval of (lval * typ)
-  | AddrOf of lval
+    Const     of cst
+  | Lval      of (lval * typ)
+  | AddrOf    of lval
   | AddrOfFun of (fid * ftyp)
-  | UnOp of (unop * exp)
-  | BinOp of (binop * exp * exp)
+  | UnOp      of (unop * exp)
+  | BinOp     of (binop * exp * exp)
 
 and cst = 
     CInt of Nat.t
@@ -166,7 +166,7 @@ and ftyp = typ list * typ list
 
 and typ =
     Scalar of scalar_t
-  | Array of (typ * length)
+  | Array  of (typ * length)
   | Region of (field list * size_t)
 
 and scalar_t =
@@ -182,14 +182,14 @@ and funexp =
   | FunDeref of exp
 
 and unop =
-    Belongs of bounds
-  | Coerce of bounds
-  | Focus of size_t
+    Belongs  of bounds
+  | Coerce   of bounds
+  | Focus    of size_t
   | Not
-  | BNot of bounds
+  | BNot     of bounds
   | PtrToInt of ikind
   | IntToPtr of ikind
-  | Cast of (scalar_t * scalar_t) (** source type => dest type *)
+  | Cast     of (scalar_t * scalar_t) (** source type => dest type *)
 
 and binop =
 (* Integer operations *)
@@ -223,9 +223,9 @@ val dummy_loc: string -> location
 
 (* {1 Constants} *)
 
-val zero : exp
-val one : exp
-val zero_f : exp
+val zero: exp
+val one: exp
+val zero_f: exp
 
 (* {1 Manipulation and Simplifications} *)
 

@@ -171,7 +171,7 @@ let build_funparams params types =
 let report_asm tokens =
   let loc = "Parser.report_asm" in
   let tokens = ListUtils.to_string (fun x -> x) "' '" tokens in
-  let msg = "asm directive '"^tokens^"'" in
+  let msg = "assembly directive '"^tokens^"'" in
     Npkcontext.report_ignore_warning loc msg Npkcontext.Asm
 %}
 
