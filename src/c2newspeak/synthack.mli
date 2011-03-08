@@ -5,7 +5,7 @@ type base_typ =
     | Integer of ikind
     | Float of int
 (* structure or union: identifier, is_struct, field declaration*)
-    | Composite of (string * bool * field list option)
+    | Composite of (bool * (string * field list option))
     | Name of string
     | Enum of ((string * Csyntax.exp option) list) option
     | Va_arg

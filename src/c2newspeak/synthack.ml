@@ -32,7 +32,7 @@ type base_typ =
     | Void 
     | Integer of ikind
     | Float of int
-    | Composite of (string * bool * field list option)
+    | Composite of (bool * (string * field list option))
     | Name of string
     | Enum of ((string * B.exp option) list) option
     | Va_arg
@@ -109,13 +109,13 @@ let rec normalize_base_typ t =
 	    Npkcontext.report_error "Synthack.normalize_base_typ" 
 	      ("unknown type "^x)
 	end
-      | Composite (n, _, _) -> B.Comp n
+      | Composite (_, (n, _)) -> B.Comp n
       | Typeof v -> B.Typeof (B.Var v)
       | Enum _ -> B.Int C.int_kind
   in
     (sdecls, t)
 
-and normalize_compdef (n, is_struct, f) =
+and normalize_compdef (is_struct, (n, f)) =
   match f with
       None -> []
     | Some f -> 

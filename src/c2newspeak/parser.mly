@@ -451,8 +451,8 @@ simple_statement:
       Npkcontext.ForwardGoto;
     [Goto $2, get_loc ()] 
   }
-|                                          { [] }
 | asm                                      { [] }
+|                                          { [] }
 ;;
 
 asm:
@@ -953,16 +953,23 @@ type_specifier:
   }
 
 | ftyp                                     { T.Float $1 }
-| struct_or_union field_blk                { 
-    T.Composite (gen_struct_id (), $1, Some $2) 
-  }
-| struct_or_union ident_or_tname
-  field_blk_option                         { T.Composite ($2, $1, $3) }
+| struct_or_union composite_arguments      { T.Composite ($1, $2) }
 | TYPEDEF_NAME                             { T.Name $1 }
 | ENUM enum_arguments                      { T.Enum $2 }
 | VA_LIST                                  { T.Va_arg }
 | TYPEOF LPAREN type_specifier RPAREN      { $3 }
 | TYPEOF LPAREN IDENTIFIER RPAREN          { T.Typeof $3 }
+;;
+
+struct_or_union:
+  STRUCT                                   { true }
+| UNION                                    { false }
+;;
+
+composite_arguments:
+  field_blk                                { (gen_struct_id (), Some $1) }
+| ident_or_tname                           { ($1, None) }
+| ident_or_tname field_blk                 { ($1, Some $2) }
 ;;
 
 enum_arguments:
@@ -973,16 +980,6 @@ enum_arguments:
 
 enum_values:
   LBRACE enum_list RBRACE                  { Some $2 }
-;;
-
-field_blk_option:
-  field_blk                                { Some $1 }
-|                                          { None }
-;;
-
-struct_or_union:
-  STRUCT                                   { true }
-| UNION                                    { false }
 ;;
 
 //Section that is dependent on version of the compiler (standard ANSI or GNU)
