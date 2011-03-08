@@ -1,4 +1,4 @@
-Warning: 768.c:29#0: asm directive 'rorl %1,%0' '=r' 'I' '0' 'cc' ignored
+Warning: 768.c:29#0: assembly directive 'rorl %1,%0' '=r' 'I' '0' 'cc' ignored
 Newspeak output
 ---------------
 void (768.c:26#5)^main(void) {

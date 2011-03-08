@@ -1,4 +1,4 @@
-Warning: 797.c:3#0: asm directive 'bla' 'bla' ignored
+Warning: 797.c:3#0: assembly directive 'bla' 'bla' ignored
 Newspeak output
 ---------------
 void (797.c:1#5)^main(void) {

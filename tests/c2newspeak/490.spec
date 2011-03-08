@@ -1,4 +1,4 @@
-Warning: 490.c:36#0: asm directive ' lda [%1]1, %0 ' '=r' 'r' ignored
+Warning: 490.c:36#0: assembly directive ' lda [%1]1, %0 ' '=r' 'r' ignored
 Newspeak output
 ---------------
 void (490.c:29#5)^main(void) {
