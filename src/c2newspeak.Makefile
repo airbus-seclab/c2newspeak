@@ -35,7 +35,7 @@ newspeak.FILES= \
 
 c2newspeak.FILES=\
         pp_syntax pp_parser pp_lexer \
-        bareSyntax bare2C csyntax typedC synthack gnuc parser lexer \
+        csyntax synthack bareSyntax bare2C typedC gnuc parser lexer \
         gotoElimination \
         csyntax2TypedC typedC2Cir compiler \
 	params c2newspeak

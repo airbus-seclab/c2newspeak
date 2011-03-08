@@ -63,15 +63,17 @@ let append_gnu_symbols globals =
 let parse fname = 
   Npkcontext.print_debug ("Parsing "^fname^"...");
   let prog = parse_file fname in
+  let prog = append_gnu_symbols prog in
     Npkcontext.forget_loc ();
-    Npkcontext.print_size (Csyntax.size_of prog);
-    let prog = append_gnu_symbols prog in
-      Npkcontext.forget_loc ();
-      Npkcontext.print_debug "Parsing done.";
-      if !Npkcontext.verb_ast then Csyntax.print prog;
-      (fname, prog)
+    (fname, prog)
 
-let bare2C (fname, prog) = (fname, Bare2C.process prog)
+let bare2C (fname, prog) = 
+  let prog = Bare2C.process prog in
+    Npkcontext.print_size (Csyntax.size_of prog);
+    Npkcontext.forget_loc ();
+    Npkcontext.print_debug "Parsing done.";
+    if !Npkcontext.verb_ast then Csyntax.print prog;
+    (fname, prog)
 
 let remove_gotos (fname, prog) = 
   if not !Npkcontext.accept_goto then (fname, prog)

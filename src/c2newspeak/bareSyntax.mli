@@ -23,4 +23,11 @@
   email: charles.hymans@penjili.org
 *)
 
-type t = Csyntax.t
+type t  = (global * Newspeak.location) list
+
+and global = 
+    FunctionDef of (bool * ((Synthack.base_typ * Synthack.var_modifier) * Csyntax.blk))
+  | GlbDecl of ((bool * bool) * (Synthack.base_typ * ((Synthack.var_modifier * Newspeak.size_t list) * Csyntax.init option) list))
+  | GlbTypedef of (Synthack.base_typ * ((Synthack.var_modifier * Newspeak.size_t list) * Csyntax.init option) list)
+  | GlbUserSpec of Csyntax.assertion
+
