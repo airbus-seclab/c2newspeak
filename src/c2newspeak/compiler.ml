@@ -71,6 +71,8 @@ let parse fname =
       if !Npkcontext.verb_ast then Csyntax.print prog;
       (fname, prog)
 
+let bare2C (fname, prog) = (fname, Bare2C.process prog)
+
 let remove_gotos (fname, prog) = 
   if not !Npkcontext.accept_goto then (fname, prog)
   else begin
@@ -103,6 +105,7 @@ let translate_cir2npkil prog =
 
 let compile fname =
   let prog = parse fname in
+  let prog = bare2C prog in
   let prog = remove_gotos prog in
   let prog = add_types prog in
   let prog = translate_typedC2cir prog in
