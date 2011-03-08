@@ -28,16 +28,21 @@ open Csyntax
 open Lexing
 module T = Synthack
 
-let new_id =
-  let c = ref 0 in
-  fun _ ->
-    incr c;
-    !c
+let gen_tmp_id =
+  let tmp_cnt = ref 0 in
+  let gen_tmp_id () = 
+    incr tmp_cnt;
+    Temps.to_string !tmp_cnt (Temps.Misc "parser")
+  in
+    gen_tmp_id
 
-let struct_cnt = ref 0
-let gen_struct_id () = 
-  incr struct_cnt;
-  "anon_struct"^(string_of_int !struct_cnt)
+let gen_struct_id = 
+  let struct_cnt = ref 0 in
+  let gen_struct_id () =
+    incr struct_cnt;
+    "anon_struct"^(string_of_int !struct_cnt)
+  in
+    gen_struct_id
   
 (* TODO: write checks for all the syntax that is thrown away in these functions
    !! *)
@@ -623,7 +628,7 @@ expression:
 	initialization = Some (Sequence $4) 
       } 
     in
-    let id = Temps.to_string (new_id ()) (Temps.Misc "parser") in
+    let id = gen_tmp_id () in
     let decl = (LocalDecl (id, VDecl d), loc) in
     let e = (Exp (Var id), loc) in
       Npkcontext.report_accept_warning "Parser.cast_expression" 
@@ -670,7 +675,7 @@ expression:
 	initialization = Some (Data e)
       }
     in
-    let id = Temps.to_string (new_id ()) (Temps.Misc "parser") in
+    let id = gen_tmp_id () in
     let decl = (LocalDecl (id, VDecl d), loc) in
     let e' = Var id in
       BlkExp( [ decl; ( Exp (IfExp(e', e', $4)), loc ) ] )
