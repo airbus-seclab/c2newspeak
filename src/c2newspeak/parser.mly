@@ -252,14 +252,14 @@ function_declarator:
       old_parameter_declaration_list       { 
     Npkcontext.report_accept_warning "Parser.declarator"
       "deprecated style of function definition" Npkcontext.DirtySyntax;
-	($1, T.Function ($2, build_funparams $4 $6))
+	($1, BareSyntax.Function ($2, build_funparams $4 $6))
   }
 | direct_declarator 
       LPAREN identifier_list RPAREN
       old_parameter_declaration_list       { 
     Npkcontext.report_accept_warning "Parser.declarator"
       "deprecated style of function definition" Npkcontext.DirtySyntax;
-    (0, T.Function ($1, build_funparams $3 $5))
+    (0, BareSyntax.Function ($1, build_funparams $3 $5))
   }
 ;;
 
@@ -277,10 +277,10 @@ declaration:
 typeof_declaration:
 type_qualifier_list TYPEOF LPAREN 
 type_specifier pointer RPAREN 
-type_qualifier_list ident_or_tname          { ($4, [( ($5, T.Variable ($8, get_loc ())), []) , None])}
+type_qualifier_list ident_or_tname          { ($4, [( ($5, BareSyntax.Variable ($8, get_loc ())), []) , None])}
 ;;
 init_declarator_list:
-                                            { (((0, T.Abstract), []), None)::[] }
+                                            { (((0, BareSyntax.Abstract), []), None)::[] }
 | non_empty_init_declarator_list            { $1 }
 ;;
 
@@ -311,15 +311,15 @@ declarator:
 ;;
 
 direct_declarator:
-  ident_or_tname                           { (0, T.Variable ($1, get_loc ())) }
+  ident_or_tname                           { (0, BareSyntax.Variable ($1, get_loc ())) }
 | LPAREN declarator RPAREN                 { $2 }
 | direct_declarator LBRACKET 
-      expression_sequence RBRACKET         { (0, T.Array ($1, Some $3)) }
+      expression_sequence RBRACKET         { (0, BareSyntax.Array ($1, Some $3)) }
 | direct_declarator LBRACKET 
-      type_qualifier_list RBRACKET         { (0, T.Array ($1, None)) }
+      type_qualifier_list RBRACKET         { (0, BareSyntax.Array ($1, None)) }
 | direct_declarator 
-  LPAREN parameter_list RPAREN             { (0, T.Function ($1, $3)) }
-| direct_declarator LPAREN RPAREN          { (0, T.Function ($1, [])) }
+  LPAREN parameter_list RPAREN             { (0, BareSyntax.Function ($1, $3)) }
+| direct_declarator LPAREN RPAREN          { (0, BareSyntax.Function ($1, [])) }
 ;;
 
 identifier_list:
@@ -339,7 +339,7 @@ struct_declarator:
 | COLON expression                         { 
     Npkcontext.report_accept_warning "Parser.struct_declarator"
       "anonymous field declaration in structure" Npkcontext.DirtySyntax;
-    ((0, T.Abstract), Some $2) 
+    ((0, BareSyntax.Abstract), Some $2) 
   }
 ;;
 
@@ -368,11 +368,11 @@ parameter_declaration:
   declaration_specifiers declarator        { ($1, $2) }
 | declaration_specifiers 
   abstract_declarator                      { ($1, $2) }
-| declaration_specifiers                   { ($1, (0, T.Abstract)) }
+| declaration_specifiers                   { ($1, (0, BareSyntax.Abstract)) }
 ;;
 
 type_name:
-  declaration_specifiers                   { ($1, (0, T.Abstract)) }
+  declaration_specifiers                   { ($1, (0, BareSyntax.Abstract)) }
 | declaration_specifiers
   abstract_declarator                      { ($1, $2) }
 ;;
@@ -469,27 +469,27 @@ iteration_statement:
 | FOR LPAREN assignment_expression_list SEMICOLON 
       expression_statement
       assignment_expression_list RPAREN
-      statement                            { For($3, normalize_bexp $5, $8, $6) }
+      statement                            { For ($3, normalize_bexp $5, $8, $6) }
 | FOR LPAREN SEMICOLON 
       expression_statement
       assignment_expression_list RPAREN
       statement                            { 
 	Npkcontext.report_warning "Parser.iteration_statement" 
 	  "init statement expected";
-	For([], normalize_bexp $4, $7, $5) 
+	For ([], normalize_bexp $4, $7, $5) 
       }
 | FOR LPAREN assignment_expression_list SEMICOLON 
       expression_statement RPAREN
       statement                            { 
 	Npkcontext.report_warning "Parser.iteration_statement" 
 	  "increment statement expected";
-	For($3, normalize_bexp $5, $7, []) 
+	For ($3, normalize_bexp $5, $7, []) 
       }
 | FOR LPAREN SEMICOLON expression_statement RPAREN
       statement                            { 
 	Npkcontext.report_warning "Parser.iteration_statement" 
 	  "init statement expected";
-	For([], normalize_bexp $4, $6, []) 
+	For ([], normalize_bexp $4, $6, []) 
       }
 | WHILE LPAREN expression_sequence RPAREN 
   statement                                { For ([], normalize_bexp $3, $5, [])
@@ -746,7 +746,7 @@ init_list:
 ;;
 
 abstract_declarator:
-  pointer                                  { ($1, T.Abstract) }
+  pointer                                  { ($1, BareSyntax.Abstract) }
 | direct_abstract_declarator               { $1 }
 | pointer direct_abstract_declarator       { 
     let (ptr, decl) = $2 in
@@ -758,16 +758,16 @@ abstract_declarator:
 direct_abstract_declarator:
   LPAREN abstract_declarator RPAREN        { $2 }
 | LBRACKET type_qualifier_list RBRACKET    { 
-    (0, T.Array ((0, T.Abstract), None)) 
+    (0, BareSyntax.Array ((0, BareSyntax.Abstract), None)) 
   }
 | LBRACKET expression_sequence RBRACKET    { 
-    (0, T.Array ((0, T.Abstract), Some $2)) 
+    (0, BareSyntax.Array ((0, BareSyntax.Abstract), Some $2)) 
   }
 | direct_abstract_declarator 
-  LBRACKET expression_sequence RBRACKET    { (0, T.Array ($1, Some $3)) }
+  LBRACKET expression_sequence RBRACKET    { (0, BareSyntax.Array ($1, Some $3)) }
 | direct_abstract_declarator 
-  LPAREN parameter_list RPAREN             { (0, T.Function ($1, $3)) }
-| direct_abstract_declarator LPAREN RPAREN { (0, T.Function ($1, [])) }
+  LPAREN parameter_list RPAREN             { (0, BareSyntax.Function ($1, $3)) }
+| direct_abstract_declarator LPAREN RPAREN { (0, BareSyntax.Function ($1, [])) }
 ;;
 
 pointer:
@@ -787,7 +787,7 @@ parameter_list:
 | parameter_declaration                    { $1::[] }
 | ELLIPSIS                                 {
     let loc = get_loc () in
-      (T.Va_arg, (0, T.Variable ("__builtin_newspeak_va_arg", loc)))::[] 
+      (BareSyntax.Va_arg, (0, BareSyntax.Variable ("__builtin_newspeak_va_arg", loc)))::[] 
   }
 ;;
 
@@ -865,89 +865,89 @@ ftyp:
 ;;
 
 type_specifier:
-  VOID                                    { T.Void }
-| ityp                                    { T.Integer (Newspeak.Signed, $1) }
+  VOID                                    { BareSyntax.Void }
+| ityp                                    { BareSyntax.Integer (Newspeak.Signed, $1) }
 | SIGNED ityp                             {
     Npkcontext.report_strict_warning "Parser.type_specifier" 
       "signed specifier not necessary";
-    T.Integer (Newspeak.Signed, $2)
+    BareSyntax.Integer (Newspeak.Signed, $2)
   }
 | LONG LONG UNSIGNED INT                  {
     Npkcontext.report_strict_warning "Parser.type_specifier"
       ("'long long unsigned int' is not normalized : "
       ^"use 'unsigned long long int' instead");
-    T.Integer (Newspeak.Unsigned, Config.size_of_longlong)
+    BareSyntax.Integer (Newspeak.Unsigned, Config.size_of_longlong)
   }
-| UNSIGNED ityp                           { T.Integer (Newspeak.Unsigned, $2) }
+| UNSIGNED ityp                           { BareSyntax.Integer (Newspeak.Unsigned, $2) }
 | UNSIGNED                                { 
     Npkcontext.report_strict_warning "Parser.type_specifier"
       "unspecified integer kind";
-    T.Integer (Newspeak.Unsigned, Config.size_of_int) 
+    BareSyntax.Integer (Newspeak.Unsigned, Config.size_of_int) 
   }
 
 | LONG SIGNED INT                         {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long signed int' is not normalized: "
        ^"use 'signed long int' instead");
-    T.Integer (Newspeak.Signed, Config.size_of_long)
+    BareSyntax.Integer (Newspeak.Signed, Config.size_of_long)
   }
 
 | LONG SIGNED                             {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long signed' is not normalized: "
        ^"use 'signed long int' instead");
-    T.Integer (Newspeak.Signed, Config.size_of_long)
+    BareSyntax.Integer (Newspeak.Signed, Config.size_of_long)
   }
 
 | LONG UNSIGNED INT                        {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long unsigned int' is not normalized: "
        ^"use 'unsigned long int' instead");
-    T.Integer (Newspeak.Unsigned, Config.size_of_long)
+    BareSyntax.Integer (Newspeak.Unsigned, Config.size_of_long)
   }
 
 | LONG UNSIGNED                            {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long unsigned' is not normalized: "
        ^"use 'unsigned long int' instead");
-    T.Integer (Newspeak.Unsigned, Config.size_of_long)
+    BareSyntax.Integer (Newspeak.Unsigned, Config.size_of_long)
   }
 
 | SHORT SIGNED INT                         {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short signed int' is not normalized: "
        ^"use 'signed short int' instead");
-    T.Integer (Newspeak.Signed, Config.size_of_short)
+    BareSyntax.Integer (Newspeak.Signed, Config.size_of_short)
   }
 
 | SHORT SIGNED                             {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short signed' is not normalized: "
        ^"use 'signed short int' instead");
-    T.Integer (Newspeak.Signed, Config.size_of_short)
+    BareSyntax.Integer (Newspeak.Signed, Config.size_of_short)
   }
 
 | SHORT UNSIGNED INT                       {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short unsigned int' is not normalized: "
        ^"use 'unsigned short int' instead");
-    T.Integer (Newspeak.Unsigned, Config.size_of_short)
+    BareSyntax.Integer (Newspeak.Unsigned, Config.size_of_short)
   }
 
 | SHORT UNSIGNED                           {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short unsigned' is not normalized: "
        ^"use 'unsigned short int' instead");
-    T.Integer (Newspeak.Unsigned, Config.size_of_short)
+    BareSyntax.Integer (Newspeak.Unsigned, Config.size_of_short)
   }
 
-| ftyp                                     { T.Float $1 }
-| struct_or_union composite_arguments      { T.Composite ($1, $2) }
-| TYPEDEF_NAME                             { T.Name $1 }
-| ENUM enum_arguments                      { T.Enum $2 }
-| VA_LIST                                  { T.Va_arg }
+| ftyp                                     { BareSyntax.Float $1 }
+| struct_or_union composite_arguments      { BareSyntax.Composite ($1, $2) }
+| TYPEDEF_NAME                             { BareSyntax.Name $1 }
+| ENUM enum_arguments                      { BareSyntax.Enum $2 }
+| VA_LIST                                  { BareSyntax.Va_arg }
 | TYPEOF LPAREN type_specifier RPAREN      { $3 }
-| TYPEOF LPAREN IDENTIFIER RPAREN          { T.Typeof $3 }
+| TYPEOF LPAREN IDENTIFIER RPAREN          { BareSyntax.Typeof $3 }
 ;;
 
 struct_or_union:
@@ -1034,7 +1034,7 @@ field_declaration:
 | declaration_specifiers                   { 
     Npkcontext.report_accept_warning "Parser.field_declaration"
       "anonymous field declaration in structure" Npkcontext.DirtySyntax;
-    flatten_field_decl ($1, ((0, T.Abstract), None)::[]) 
+    flatten_field_decl ($1, ((0, BareSyntax.Abstract), None)::[]) 
   }
 ;;
 

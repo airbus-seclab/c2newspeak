@@ -23,11 +23,34 @@
   email: charles.hymans@penjili.org
 *)
 
-type t  = (global * Newspeak.location) list
+type base_typ =
+    | Void 
+    | Integer of Newspeak.ikind
+    | Float of int
+    | Composite of (bool * (string * field list option))
+    | Name of string
+    | Enum of ((string * Csyntax.exp option) list) option
+    | Va_arg
+    | Typeof of string
 
+and var_modifier = (int * modifier)
+
+and modifier = 
+    | Abstract
+    | Variable of (string * Newspeak.location)
+    | Function of (var_modifier * decl list)
+    | Array of (var_modifier * Csyntax.exp option)
+
+and decl = (base_typ * var_modifier)
+
+and field = (base_typ * var_modifier * Csyntax.exp option)
+
+type t = (global * Newspeak.location) list
+
+(* TODO: cleanup, simplify types *)
 and global = 
-    FunctionDef of (bool * ((Synthack.base_typ * Synthack.var_modifier) * Csyntax.blk))
-  | GlbDecl of ((bool * bool) * (Synthack.base_typ * ((Synthack.var_modifier * Newspeak.size_t list) * Csyntax.init option) list))
-  | GlbTypedef of (Synthack.base_typ * ((Synthack.var_modifier * Newspeak.size_t list) * Csyntax.init option) list)
+    FunctionDef of (bool * ((base_typ * var_modifier) * Csyntax.blk))
+  | GlbDecl of ((bool * bool) * (base_typ * ((var_modifier * Newspeak.size_t list) * Csyntax.init option) list))
+  | GlbTypedef of (base_typ * ((var_modifier * Newspeak.size_t list) * Csyntax.init option) list)
   | GlbUserSpec of Csyntax.assertion
 

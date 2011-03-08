@@ -24,31 +24,10 @@
 *)
 
 open Newspeak
+open BareSyntax
 
 module B = Csyntax
 module C = Cir
-
-type base_typ =
-    | Void 
-    | Integer of ikind
-    | Float of int
-    | Composite of (bool * (string * field list option))
-    | Name of string
-    | Enum of ((string * B.exp option) list) option
-    | Va_arg
-    | Typeof of string
-
-and var_modifier = (int * modifier)
-
-and modifier = 
-    | Abstract
-    | Variable of (string * location)
-    | Function of (var_modifier * decl list)
-    | Array of (var_modifier * B.exp option)
-
-and decl = (base_typ * var_modifier)
-
-and field = (base_typ * var_modifier * B.exp option)
 
 type vdecl = (B.typ * string option * location)
 type sdecls = (string * B.decl) list
