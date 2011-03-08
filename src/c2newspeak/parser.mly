@@ -416,15 +416,12 @@ statement_list:
 |                                          { [] }
 ;;
 
+// TODO: factor get_loc ()
 statement:
   IDENTIFIER COLON statement               { (Label $1, get_loc ())::$3 }
-| IF LPAREN expression_sequence RPAREN
-      statement           %prec below_ELSE {
-    [If (normalize_bexp $3, $5, []), get_loc ()] 
-  }
 | IF LPAREN expression_sequence RPAREN statement
-  ELSE statement                           { 
-    [If (normalize_bexp $3, $5, $7), get_loc ()] 
+  else_branch_option                       { 
+    [If (normalize_bexp $3, $5, $6), get_loc ()] 
   }
 | switch_stmt                              { [CSwitch $1, get_loc ()] }
 | iteration_statement                      { [$1, get_loc ()] }
@@ -432,6 +429,12 @@ statement:
 | compound_statement                       { [Block $1, get_loc ()] }
 | simple_statement SEMICOLON               { $1 }
 ;;
+
+else_branch_option:
+  ELSE statement                           { $2 }
+|                         %prec below_ELSE { [] }
+;;
+  
 
 simple_statement:
 | declaration                              { build_stmtdecl false false $1 }
