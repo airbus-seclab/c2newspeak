@@ -49,8 +49,11 @@ type t = (global * Newspeak.location) list
 
 (* TODO: cleanup, simplify types *)
 and global = 
-    FunctionDef of (bool * ((base_typ * var_modifier) * Csyntax.blk))
+    FunctionDef of (bool * ((base_typ * var_modifier) * blk))
   | GlbDecl of ((bool * bool) * (base_typ * ((var_modifier * Newspeak.size_t list) * Csyntax.init option) list))
   | GlbTypedef of (base_typ * ((var_modifier * Newspeak.size_t list) * Csyntax.init option) list)
   | GlbUserSpec of Csyntax.assertion
 
+and blk = stmt list
+
+and stmt = (Csyntax.stmtkind * Newspeak.location)
