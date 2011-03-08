@@ -472,11 +472,6 @@ asm:
   LPAREN asm_statement_list RPAREN         { report_asm $4 }
 ;;
 
-volatile_option:
-  VOLATILE                                 { }
-|                                          { }
-;;
-
 asm_statement_list:
   asm_statement                            { $1::[] }
 | asm_statement COLON asm_statement_list   { $1::$3 }
@@ -1001,32 +996,28 @@ enum_values:
 //Section that is dependent on version of the compiler (standard ANSI or GNU)
 //TODO: find a way to factor some of these, possible!!!
 external_declaration:
-  STATIC declaration SEMICOLON             { build_glbdecl (true, false) $2 }
-| function_definition                      { build_fundef false $1 }
+  function_definition                      { build_fundef false $1 }
 | STATIC function_definition               { build_fundef true $2 }
 | INLINE STATIC function_definition        { build_fundef true $3 }
 | ATTRIBUTE LPAREN LPAREN attribute_name_list 
   RPAREN RPAREN STATIC function_definition { build_fundef true $8 }
-// GNU C extension
-| optional_extension 
+| extension_option
   EXTERN function_definition               {
     Npkcontext.report_ignore_warning "Parser.external_declaration" 
       "extern function definition" Npkcontext.ExternFunDef;
     let ((b, m), _) = $3 in
       build_glbdecl (false, false) (b, ((m, []), None)::[])
-}
-| optional_extension TYPEDEF 
-  declaration SEMICOLON                    { build_glbtypedef $3 }
-| EXTENSION declaration SEMICOLON          { build_glbdecl (false, false) $2 }
-| declaration SEMICOLON                    { build_glbdecl (false, false) $1 }
-| optional_extension
-  EXTERN declaration SEMICOLON             { build_glbdecl (false, true) $3 }
-| asm SEMICOLON                            { [] }
+  }
+| global_declaration SEMICOLON             { $1 }
 ;;
 
-optional_extension:
-  EXTENSION                                { }
-|                                          { }
+global_declaration:
+  STATIC declaration                       { build_glbdecl (true, false) $2 }
+| EXTENSION declaration                    { build_glbdecl (false, false) $2 }
+| declaration                              { build_glbdecl (false, false) $1 }
+| extension_option EXTERN declaration      { build_glbdecl (false, true) $3 }
+| extension_option TYPEDEF declaration     { build_glbtypedef $3 }
+| asm                                      { [] }
 ;;
 
 attribute_list:
@@ -1053,7 +1044,7 @@ type_qualifier:
 
 gnuc_field_declaration:
 // GNU C extension
-  optional_extension field_declaration     { $2 }
+  extension_option field_declaration       { $2 }
 ;;
 
 field_declaration:
@@ -1185,3 +1176,14 @@ assertion:
 | constant assertion                       { (CstToken $1)::$2 }
 | EOF                                      { [] }
 ;;
+
+extension_option:
+  EXTENSION                                { }
+|                                          { }
+;;
+
+volatile_option:
+  VOLATILE                                 { }
+|                                          { }
+;;
+
