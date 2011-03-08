@@ -959,16 +959,16 @@ type_specifier:
 | struct_or_union ident_or_tname
   field_blk_option                         { T.Composite ($2, $1, $3) }
 | TYPEDEF_NAME                             { T.Name $1 }
-| ENUM enum_values                         { T.Enum $2 }
-| ENUM IDENTIFIER enum_values_option       { T.Enum $3 }
+| ENUM enum_arguments                      { T.Enum $2 }
 | VA_LIST                                  { T.Va_arg }
 | TYPEOF LPAREN type_specifier RPAREN      { $3 }
 | TYPEOF LPAREN IDENTIFIER RPAREN          { T.Typeof $3 }
 ;;
 
-enum_values_option:
+enum_arguments:
   enum_values                              { $1 }
-|                                          { None }
+| IDENTIFIER                               { None }
+| IDENTIFIER enum_values                   { $2 }
 ;;
 
 enum_values:
