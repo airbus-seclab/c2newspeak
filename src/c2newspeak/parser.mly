@@ -26,6 +26,7 @@
 %{
 open Csyntax
 open Lexing
+(* TODO: change this T to BareSyntax rather than Synthack *)
 module T = Synthack
 
 let gen_tmp_id =
@@ -76,18 +77,7 @@ let process_decls (build_sdecl, build_vdecl) (b, m) =
   let vdecls = List.fold_right build_vdecl m [] in
     sdecls@vdecls
       
-let build_glbdecl (static, extern) d =
-  let build_vdecl l (t, x, loc, init) = 
-    let d = 
-      { t = t; is_static = static; is_extern = extern; initialization = init }
-    in
-    (GlbDecl (x, VDecl d), loc)::l
-  in
-  let loc = get_loc () in
-  let build_sdecl x = (GlbDecl x, loc) in
-    process_decls (build_sdecl, build_vdecl) d
-
-(* TODO: clean this code and find a way to factor with previous function *)
+(* TODO: simplifiy this code!!! *)
 let build_glbtypedef d =
   let build_vdecl l (t, x, _, _) = 
     Synthack.define_type x t;
@@ -134,18 +124,6 @@ let normalize_fun_prologue b m =
   in
     (t, x, loc)
 
-let build_fundef static ((b, m), body) =
-  let (_, (t, x, loc)) = Synthack.normalize_decl (b, m) in
-  let x =
-    match x with
-      | Some x -> x
-      | None -> 
-	  (* TODO: code cleanup remove these things !!! *)
-	  Npkcontext.report_error "Firstpass.translate_global" 
-	    "unknown function name"
-  in
-  let t = Csyntax.ftyp_of_typ t in
-    (FunctionDef (x, t, static, body), loc)::[]
 (* TODO: remove build_glbdecl and process_decl => now in bare2C *)
 let build_type_decl d =
   let (sdecls, (t, _, _)) = Synthack.normalize_decl d in
@@ -996,19 +974,15 @@ enum_values:
 //Section that is dependent on version of the compiler (standard ANSI or GNU)
 //TODO: find a way to factor some of these, possible!!!
 external_declaration:
-  function_definition                      { (BareSyntax.FunctionDef (false, $1), get_loc ())::[] (*$1*) }
-| STATIC function_definition               { (BareSyntax.FunctionDef (true, $2), get_loc ())::[] (*build_fundef true $2*) }
-| INLINE STATIC function_definition        { (BareSyntax.FunctionDef (true, $3), get_loc ())::[](*build_fundef true $3*) }
+  function_definition                      { (BareSyntax.FunctionDef (false, $1), get_loc ())::[] }
+| STATIC function_definition               { (BareSyntax.FunctionDef (true, $2), get_loc ())::[] }
+| INLINE STATIC function_definition        { (BareSyntax.FunctionDef (true, $3), get_loc ())::[] }
 | ATTRIBUTE LPAREN LPAREN attribute_name_list 
-  RPAREN RPAREN STATIC function_definition { (BareSyntax.FunctionDef (true, $8), get_loc ())::[](*build_fundef true $8*) }
+  RPAREN RPAREN STATIC function_definition { (BareSyntax.FunctionDef (true, $8), get_loc ())::[] }
 | extension_option
   EXTERN function_definition               {
     Npkcontext.report_ignore_warning "Parser.external_declaration" 
       "extern function definition" Npkcontext.ExternFunDef;
-(*
-    let ((b, m), _) = $3 in
-      build_glbdecl (false, false) (b, ((m, []), None)::[])
-*)
     let ((b, m), _) = $3 in
       (BareSyntax.GlbDecl ((false, false), (b, ((m, []), None)::[])), get_loc ())::[]
   }
@@ -1016,14 +990,14 @@ external_declaration:
 ;;
 
 global_declaration:
-  STATIC declaration                       { (BareSyntax.GlbDecl ((true, false), $2), get_loc ())::[] (*build_glbdecl (true, false) $2*) }
-| EXTENSION declaration                    { (BareSyntax.GlbDecl ((false, false), $2), get_loc ())::[](*build_glbdecl (false, false) $2*) }
-| declaration                              { (BareSyntax.GlbDecl ((false, false), $1), get_loc ())::[](*build_glbdecl (false, false) $1*) }
-| extension_option EXTERN declaration      { (BareSyntax.GlbDecl ((false, true), $3), get_loc ())::[](*build_glbdecl (false, true) $3*) }
+  STATIC declaration                       { (BareSyntax.GlbDecl ((true, false), $2), get_loc ())::[] }
+| EXTENSION declaration                    { (BareSyntax.GlbDecl ((false, false), $2), get_loc ())::[] }
+| declaration                              { (BareSyntax.GlbDecl ((false, false), $1), get_loc ())::[] }
+| extension_option EXTERN declaration      { (BareSyntax.GlbDecl ((false, true), $3), get_loc ())::[] }
 | extension_option TYPEDEF declaration     { 
 (* TODO: cleanup/simplify *)
     let _ = build_glbtypedef $3 in
-      (BareSyntax.GlbTypedef $3, get_loc ())::[] (*build_glbtypedef $3*) }
+      (BareSyntax.GlbTypedef $3, get_loc ())::[] }
 | asm                                      { [] }
 ;;
 
