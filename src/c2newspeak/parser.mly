@@ -468,9 +468,13 @@ declaration_modifier:
 ;;
 
 asm:
-  ASM LPAREN asm_statement_list RPAREN     { report_asm $3 }
-| ASM VOLATILE 
+  ASM volatile_option 
   LPAREN asm_statement_list RPAREN         { report_asm $4 }
+;;
+
+volatile_option:
+  VOLATILE                                 { }
+|                                          { }
 ;;
 
 asm_statement_list:
