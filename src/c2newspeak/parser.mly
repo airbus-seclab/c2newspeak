@@ -97,7 +97,7 @@ let build_glbtypedef d =
   let build_sdecl x = (GlbDecl x, loc) in
     process_decls (build_sdecl, build_vdecl) d
 
-let build_stmtdecl static extern d =
+let build_stmtdecl (static, extern) d =
 (* TODO: think about cleaning this location thing up!!! *)
 (* for enum decls it seems the location is in double *)
   let build_vdecl l (t, x, loc, init) = 
@@ -442,9 +442,7 @@ else_branch_option:
   
 
 simple_statement:
-| declaration                              { build_stmtdecl false false $1 }
-| STATIC declaration                       { build_stmtdecl true false $2 }
-| EXTERN declaration                       { build_stmtdecl false true $2 }
+  declaration_modifier declaration         { build_stmtdecl $1 $2 }
 | TYPEDEF declaration                      { build_typedef $2 }
 | RETURN expression_sequence               { 
     let loc = get_loc () in
@@ -461,6 +459,12 @@ simple_statement:
   }
 | asm                                      { [] }
 |                                          { [] }
+;;
+
+declaration_modifier:
+                                           { (false, false) }
+| STATIC                                   { (true, false) }
+| EXTERN                                   { (false, true) }
 ;;
 
 asm:
