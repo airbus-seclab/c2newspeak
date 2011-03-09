@@ -627,25 +627,11 @@ expression:
     COLON expression           %prec QMARK {
 	Npkcontext.report_strict_warning "Parser.expression"
 	  "conditional expression";
-	BareSyntax.IfExp ($1, $3, $5)
+	BareSyntax.IfExp ($1, Some $3, $5)
   }
-/* TODO!
 | expression QMARK COLON expression           %prec QMARK {
-    let e = normalize_bexp $1 in
-    let loc = get_loc () in
-    let t = Csyntax.Typeof e in
-    let d = 
-      {
-	t = t; is_static = false; is_extern = false;
-	initialization = Some (Data e)
-      }
-    in
-    let id = gen_tmp_id () in
-    let decl = (LocalDecl (id, VDecl d), loc) in
-    let e' = Var id in
-      BlkExp( [ decl; ( Exp (IfExp(e', e', $4)), loc ) ] )
+    BareSyntax.IfExp ($1, None, $4)
   }
-*/
 | expression assignment_operator
                    expression     %prec EQ { BareSyntax.Set ($1, $2, $3) }
 ;;

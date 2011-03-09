@@ -64,7 +64,7 @@ and exp =
   | Index of (exp * exp)
   | AddrOf of exp
   | Unop of (Csyntax.unop * exp)
-  | IfExp of (exp * exp * exp)
+  | IfExp of (exp * exp option * exp)
   | Binop of (Csyntax.binop * exp * exp)
   | And of (exp * exp)
   | Or of (exp * exp)

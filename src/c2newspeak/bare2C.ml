@@ -293,16 +293,28 @@ and process_exp e =
     | Index (a, i) -> T.Index (process_exp a, process_exp i)
     | AddrOf e -> T.AddrOf (process_exp e)
     | Unop (op, e) -> T.Unop (op, process_exp e)
-    | IfExp (c, e1, e2) -> 
+    | IfExp (c, Some e1, e2) -> 
 (* TODO: factor these function calls = process_bexp *)
 	let c = Csyntax.normalize_bexp (process_exp c) in
 	let e1 = process_exp e1 in
 	let e2 = process_exp e2 in
-(*
-	let e1 = Csyntax.normalize_bexp (process_exp e1) in
-	let e2 = Csyntax.normalize_bexp (process_exp e2) in
-*)
 	  T.IfExp (c, e1, e2)
+    | IfExp (c, None, e2) -> 
+(* TODO: move normalize_bexp into bare2C *)
+	let e = Csyntax.normalize_bexp (process_exp c) in
+	let loc = Npkcontext.get_loc () in
+	let t = T.Typeof e in
+	let d = 
+	  {
+	    T.t = t; is_static = false; is_extern = false;
+	    initialization = Some (T.Data e)
+	  }
+	in
+	let id = gen_tmp_id () in
+	let decl = (T.LocalDecl (id, T.VDecl d), loc) in
+	let e' = T.Var id in
+	let e2 = process_exp e2 in
+	  T.BlkExp( [ decl; ( T.Exp (T.IfExp(e', e', e2)), loc ) ] )
     | Binop (op, e1, e2) -> T.Binop (op, process_exp e1, process_exp e2)
     | And (e1, e2) ->
 	let c = Csyntax.normalize_bexp (process_exp e1) in
@@ -328,6 +340,8 @@ and process_exp e =
     | OpExp (op, e, is_before) -> T.OpExp (op, process_exp e, is_before)
     | BlkExp body -> T.BlkExp (process_blk body)
     | LocalComposite (t, init, loc) -> 
+(* TODO: use Npkcontext.get_loc here, instead of adding a location to the
+   instruction *)
 	let (blk, t) = build_type_blk loc t in
 	let d =
 	  {
