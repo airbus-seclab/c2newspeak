@@ -375,11 +375,7 @@ iteration_statement:
 | FOR LPAREN SEMICOLON 
       expression_statement
       assignment_expression_list RPAREN
-      statement                            { 
-	Npkcontext.report_warning "Parser.iteration_statement" 
-	  "init statement expected";
-	For ([], $4, $7, $5) 
-      }
+      statement                            { For ([], $4, $7, $5) }
 | FOR LPAREN assignment_expression_list SEMICOLON 
       expression_statement RPAREN
       statement                            { 
@@ -388,11 +384,7 @@ iteration_statement:
 	For ($3, $5, $7, []) 
       }
 | FOR LPAREN SEMICOLON expression_statement RPAREN
-    statement                            { 
-      Npkcontext.report_warning "Parser.iteration_statement" 
-	"init statement expected";
-      For ([], $4, $6, []) 
-    }
+    statement                              { For ([], $4, $6, []) }
 | WHILE LPAREN expression_sequence RPAREN 
   statement                                { While ($3, $5) }
 | DO statement

@@ -1,4 +1,4 @@
-Warning: 311.c:30#0: init statement expected
+Warning: 311.c:29#18: init statement expected
 Newspeak output
 ---------------
 void (311.c:26#5)^main(void) {

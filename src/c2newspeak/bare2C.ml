@@ -267,6 +267,10 @@ and process_stmtkind loc x =
 	let condition = Csyntax.normalize_bexp (process_exp condition) in
 	let body = process_blk body in
 	let continue = process_blk continue in
+	  if (init = []) then  begin
+	    Npkcontext.report_warning "Parser.iteration_statement" 
+	      "init statement expected"
+	  end;
 	  (T.For (init, condition, body, continue), loc)::[]
     | While (condition, body) -> 
 	let condition = Csyntax.normalize_bexp (process_exp condition) in
