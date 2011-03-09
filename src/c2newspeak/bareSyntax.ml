@@ -33,6 +33,7 @@ and global =
   | GlbDecl of ((bool * bool) * (base_typ * ((var_modifier * Newspeak.size_t list) * init option) list))
   | GlbTypedef of (base_typ * ((var_modifier * Newspeak.size_t list) * init option) list)
   | GlbUserSpec of Csyntax.assertion
+  | GlbSkip
 
 and blk = stmt list
 

@@ -1,4 +1,4 @@
-Warning: 390.c:31#0: unnecessary semicolon accepted
+Warning: 390.c:27#1: unnecessary semicolon accepted
 Newspeak output
 ---------------
 void (390.c:26#5)^f(void) {

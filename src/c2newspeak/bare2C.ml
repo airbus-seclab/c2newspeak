@@ -428,18 +428,24 @@ let build_glbtypedef loc d =
   let build_sdecl x = (T.GlbDecl x, loc) in
     process_glbdecls (build_sdecl, build_vdecl) d
 
-let process_global loc x =
+let process_global (x, loc) =
+  Npkcontext.set_loc loc;
   match x with
       FunctionDef (static, x) -> build_fundef static x
     | GlbDecl (modifiers, d) -> build_glbdecl loc modifiers d
     | GlbTypedef x -> build_glbtypedef loc x
     | GlbUserSpec x -> (T.GlbUserSpec x, loc)::[]
+    | GlbSkip -> 
+	Npkcontext.report_accept_warning "Parser.translation_unit" 
+	  "unnecessary semicolon" Npkcontext.DirtySyntax;
+	[]
+
 
 let process x = 
   let result = ref [] in
-  let process_global (x, loc) =
+  let process_global x =
 (* TODO: optimization: think about this concatenation, maybe not efficient *)
-    result := (!result)@(process_global loc x)
+    result := (!result)@(process_global x)
   in
     List.iter process_global x;
     !result

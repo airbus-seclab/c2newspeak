@@ -45,8 +45,6 @@ let get_loc () =
   let pos = Parsing.symbol_start_pos () in
     (pos.pos_fname, pos.pos_lnum, pos.pos_cnum-pos.pos_bol)
 
-(* TODO: simplify by having just a function build_decl??? *)
-(* TODO: rename in declare type? *)
 let declare_new_type (_, m) =
   let build_vdecl ((v, _), _) = Synthack.declare_new_type v in
     List.iter build_vdecl m
@@ -135,17 +133,13 @@ try to remove multiple occurence of same pattern: factor as much as possible
 // TODO: simplify parser and link it to C standard sections!!!
 
 parse:
-  translation_unit EOF                      { ($1) }
+  translation_unit EOF                      { $1 }
 ;;
 
 translation_unit:
   NPK translation_unit                      { (GlbUserSpec $1, get_loc ())::$2 }
 | external_declaration translation_unit     { $1@$2 }
-| SEMICOLON translation_unit                { 
-    Npkcontext.report_accept_warning "Parser.translation_unit" 
-      "unnecessary semicolon" Npkcontext.DirtySyntax;
-    $2 
-  }
+| SEMICOLON translation_unit                { (GlbSkip, get_loc ())::$2 }
 |                                           { [] }
 ;;
 
@@ -162,15 +156,15 @@ function_declarator:
   }
 | direct_declarator                        { $1 }
 | pointer direct_declarator 
-      LPAREN identifier_list RPAREN
-      old_parameter_declaration_list       { 
+  LPAREN identifier_list RPAREN
+  old_parameter_declaration_list           { 
     Npkcontext.report_accept_warning "Parser.declarator"
       "deprecated style of function definition" Npkcontext.DirtySyntax;
-	($1, Function ($2, build_funparams $4 $6))
+    ($1, Function ($2, build_funparams $4 $6))
   }
 | direct_declarator 
-      LPAREN identifier_list RPAREN
-      old_parameter_declaration_list       { 
+  LPAREN identifier_list RPAREN
+  old_parameter_declaration_list           { 
     Npkcontext.report_accept_warning "Parser.declarator"
       "deprecated style of function definition" Npkcontext.DirtySyntax;
     (0, Function ($1, build_funparams $3 $5))
