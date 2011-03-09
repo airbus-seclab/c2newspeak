@@ -291,7 +291,7 @@ and process_stmtkind loc x =
 	let body = process_blk body in
 	let condition = Csyntax.normalize_bexp (process_exp condition) in
 	  (T.DoWhile (body, condition), loc)::[]
-    | CSwitch (e, choices, default_body) -> 
+    | CSwitch (e, (choices, default_body)) -> 
 	let e = process_exp e in
 	let choices = List.map process_choice choices in
 	let default_body = process_blk default_body in

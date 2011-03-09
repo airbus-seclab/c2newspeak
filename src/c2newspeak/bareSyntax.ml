@@ -52,7 +52,7 @@ and stmtkind =
   | For of (blk * exp option * blk * blk)
   | While of (exp * blk)
   | DoWhile of (blk * exp)
-  | CSwitch of (exp * (exp * blk * Newspeak.location) list * blk)
+  | CSwitch of (exp * switch_cases)
   | Break
   | Continue
   | Typedef of (base_typ * ((var_modifier * Newspeak.size_t list) * init option) list)
@@ -61,6 +61,8 @@ and stmtkind =
   | UserSpec of Csyntax.assertion
   | Asm
   | Skip
+
+and switch_cases = (exp * blk * Newspeak.location) list * blk
 
 (* TODO: cleanup expressions => factor more with binop ? *)
 and exp =

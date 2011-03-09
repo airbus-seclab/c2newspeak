@@ -385,14 +385,7 @@ assignment_expression_list_option:
 switch_stmt:
   SWITCH LPAREN expression_sequence RPAREN LBRACE
     case_list
-  RBRACE                                   { 
-    let (cases, default) = $6 in
-      (* TODO: all bexp normalizations should be done after typing and 
-	 before firstpass!!!
-	 should remove normalize_bexp from csyntax!!!
-      *)
-      ($3, cases, default) 
-  }
+  RBRACE                                   { ($3, $6) }
 ;;
 
 case_list:
