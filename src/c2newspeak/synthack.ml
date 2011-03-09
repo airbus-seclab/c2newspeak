@@ -32,6 +32,7 @@ module C = Cir
 (** TODO: remove these globals, by putting them as argument of the lexer ??
     and then passing them through the tokens *)
 (* TODO: simplify, the actual value of the type should not be needed!! *)
+(* TODO: put a set instead here *)
 let typedefs = Hashtbl.create 100
 
 (* TODO: not nice, try to remove this init_tbl!!! and the global typedefs *)
@@ -41,7 +42,7 @@ let init_tbls () =
 (* GNU C predefined types *)
 (* TODO: clean up put in gnuc.ml and think about architecture *)
   if !Npkcontext.accept_gnuc 
-  then Hashtbl.add typedefs "_Bool" (B.Int (Newspeak.Unsigned, 1))
+  then Hashtbl.add typedefs "_Bool" ()
 
 (* TODO: think about this, is this call necessary?? *)
 let _ = 
@@ -50,7 +51,7 @@ let _ =
 (* TODO: try to remove this syntactic hack by rewriting the parser,
    but is it even possible? *)
 (* TODO: this is a dummy type, because it should not be necessary => remove alltogether *)
-let define_type x = Hashtbl.add typedefs x (B.Int (Newspeak.Unsigned, 1))
+let define_type x = Hashtbl.add typedefs x ()
 
 (* TODO: dead code? *)
 let is_type x = Hashtbl.mem typedefs x
@@ -84,12 +85,12 @@ let rec normalize_base_typ t =
       | Float n -> B.Float n
       | Void -> B.Void
       | Va_arg -> B.Va_arg
-      | Name x -> begin
-	  try Hashtbl.find typedefs x
-	  with Not_found -> 
+      | Name x -> 
+	  if not (is_type x) then begin
 	    Npkcontext.report_error "Synthack.normalize_base_typ" 
 	      ("unknown type "^x)
-	end
+	  end;
+	  B.Void
       | Composite (_, (n, _)) -> B.Comp n
       | Typeof v -> B.Typeof (B.Var v)
       | Enum _ -> B.Int C.int_kind
