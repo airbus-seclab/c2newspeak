@@ -23,109 +23,38 @@
   email: charles.hymans@penjili.org
 *)
 
-open Newspeak
 open BareSyntax
 
-module B = Csyntax
-module C = Cir
+module Set = Set.Make(String)
 
 (** TODO: remove these globals, by putting them as argument of the lexer ??
     and then passing them through the tokens *)
-(* TODO: simplify, the actual value of the type should not be needed!! *)
-(* TODO: put a set instead here *)
-let typedefs = Hashtbl.create 100
+(* TODO: try to remove this syntactic hack by rewriting the parser,
+   but is it even possible? *)
+let typedefs = ref Set.empty
+
+let add_type x = typedefs := Set.add x !typedefs
 
 (* TODO: not nice, try to remove this init_tbl!!! and the global typedefs *)
 let init_tbls () =
-  Hashtbl.clear typedefs;
+  typedefs := Set.empty;
 (* initialize table of predefined types *)
 (* GNU C predefined types *)
 (* TODO: clean up put in gnuc.ml and think about architecture *)
-  if !Npkcontext.accept_gnuc 
-  then Hashtbl.add typedefs "_Bool" ()
+  if !Npkcontext.accept_gnuc then add_type "_Bool"
 
-(* TODO: think about this, is this call necessary?? *)
-let _ = 
-  init_tbls ()
+let is_type x = Set.mem x !typedefs
 
-(* TODO: try to remove this syntactic hack by rewriting the parser,
-   but is it even possible? *)
-(* TODO: this is a dummy type, because it should not be necessary => remove alltogether *)
-let define_type x = Hashtbl.add typedefs x ()
-
-(* TODO: dead code? *)
-let is_type x = Hashtbl.mem typedefs x
-
-let define_enum e =
-  let rec define_enum e n =
-    match e with
-	(x, v)::tl ->
-	  let n = 
-	    match v with
-		None -> n
-	      | Some n -> n
-	  in
-	  let n' = B.Binop (B.Plus, n, B.exp_of_int 1) in
-	    (x, B.EDecl n)::(define_enum tl n')
-      | [] -> []
-  in
-    define_enum e (B.exp_of_int 0)
-
-let rec normalize_base_typ t =
-  let _ =
-    match t with
-	Integer _ | Float _ | Void | Va_arg | Name _ | Enum None 
-      | Typeof _ -> []
-      | Composite v -> normalize_compdef v
-      | Enum Some _f -> []
-  in
-  let t = 
-    match t with
-	Integer k -> B.Int k
-      | Float n -> B.Float n
-      | Void -> B.Void
-      | Va_arg -> B.Va_arg
-      | Name x -> 
-	  if not (is_type x) then begin
-	    Npkcontext.report_error "Synthack.normalize_base_typ" 
-	      ("unknown type "^x)
-	  end;
-	  B.Void
-      | Composite (_, (n, _)) -> B.Comp n
-      | Typeof v -> B.Typeof (B.Var v)
-      | Enum _ -> B.Int C.int_kind
-  in
-    t
-
-and normalize_compdef (_, (_, f)) =
-  match f with
-      None -> []
-    | Some f -> 
-	let _ = normalize_fields f in
-	  []
-
-and normalize_fields f =
-  match f with
-      (b, v, _)::tl ->
-	let x = normalize_decl (b, v) in
-	let x = 
-	  match x with
-	      Some x -> x
-	    | None -> "!anonymous_field"
-	in
-	let f = normalize_fields tl in
-	  x::f
-    | [] -> []
-
-and normalize_var_modifier b (_, v) =
+let rec normalize_var_modifier (_, v) =
   match v with
       Abstract -> None
     | Variable (x, _) -> Some x
-    | Function (x, _) -> normalize_var_modifier (B.Fun (None, b)) x
-	    (* TODO: this value is incorrect, because it is unused => remove alltogether *)
-    | Array (v, _) -> normalize_var_modifier b v
-	(*normalize_var_modifier (B.Array (b, n)) v*)
+    | Function (v, _) | Array (v, _) -> normalize_var_modifier v
 
-and normalize_decl (b, v) =
-  let t = normalize_base_typ b in
-    normalize_var_modifier t v
+and normalize_decl (_, v) = normalize_var_modifier v
+
+let declare_new_type x = 
+  let x = normalize_var_modifier x in
+    match x with
+	None -> ()
+      | Some x -> add_type x

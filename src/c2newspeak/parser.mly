@@ -45,33 +45,16 @@ let get_loc () =
   let pos = Parsing.symbol_start_pos () in
     (pos.pos_fname, pos.pos_lnum, pos.pos_cnum-pos.pos_bol)
 
-let apply_attrs attrs t =
-  match (attrs, t) with
-      ([], _) -> t
-    | (new_sz::[], Csyntax.Int (sign, _)) -> Csyntax.Int (sign, new_sz)
-    | (_::[], _) -> 
-	Npkcontext.report_error "Parser.apply_attr" 
-	  "wrong type, integer expected"
-    | _ -> 
-	Npkcontext.report_error "Parser.apply_attr" 
-	  "more than one attribute not handled yet"
-
 (* TODO: simplify by having just a function build_decl??? *)
 (* TODO: rename in declare type? *)
-let build_typedef (b, m) =
-  let b = Synthack.normalize_base_typ b in
-  let build_vdecl ((v, attrs), _) =
-    let b = apply_attrs attrs b in
-    let x = Synthack.normalize_var_modifier b v in
-      match x with
-	| None -> ()
-	| Some x -> Synthack.define_type x
-  in
+let declare_new_type (_, m) =
+  let build_vdecl ((v, _), _) = Synthack.declare_new_type v in
     List.iter build_vdecl m
      
 let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 
 (* TODO: simplify and put in synthack so as to optimize?? *)
+(* TODO: put in Bare2C??? think about it *)
 let build_funparams params types =
   let has_name x d =
     match Synthack.normalize_decl d with
@@ -352,9 +335,8 @@ else_branch_option:
 simple_statement:
   declaration_modifier declaration         { [LocalDecl ($1, $2), get_loc ()] }
 | TYPEDEF declaration                      { 
-    (* TODO: cleanup/simplify this function *)
-    let _ = build_typedef $2 in
-      [Typedef $2, get_loc ()]
+    declare_new_type $2;
+    [Typedef $2, get_loc ()]
   }
 | RETURN expression_sequence               { 
     let loc = get_loc () in
@@ -905,9 +887,9 @@ global_declaration:
 | declaration                              { (GlbDecl ((false, false), $1), get_loc ())::[] }
 | extension_option EXTERN declaration      { (GlbDecl ((false, true), $3), get_loc ())::[] }
 | extension_option TYPEDEF declaration     { 
-(* TODO: cleanup/simplify *)
-    let _ = build_typedef $3 in
-      (GlbTypedef $3, get_loc ())::[] }
+    declare_new_type $3;
+    (GlbTypedef $3, get_loc ())::[] 
+  }
 | asm                                      { [] }
 ;;
 
