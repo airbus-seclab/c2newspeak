@@ -1,4 +1,4 @@
-Warning: 769.c:45#0: asm directive 'pushf
+Warning: 769.c:45#0: assembly directive 'pushf
 popl %%eax
 xorl $0x200000, %%eax
 movl %%eax, %%ecx
