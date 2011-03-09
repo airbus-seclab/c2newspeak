@@ -150,11 +150,7 @@ function_prologue:
 
 
 function_declarator:
-  pointer direct_declarator                { 
-    let (ptr, decl) = $2 in
-      (ptr+$1, decl)
-  }
-| direct_declarator                        { $1 }
+  declarator                               { $1 }
 | pointer direct_declarator 
   LPAREN identifier_list RPAREN
   old_parameter_declaration_list           { 
@@ -171,7 +167,6 @@ function_declarator:
   }
 ;;
 
-
 function_definition:
   function_prologue compound_statement      { ($1, $2) }
 ;;
@@ -187,6 +182,7 @@ type_qualifier_list TYPEOF LPAREN
 type_specifier pointer RPAREN 
 type_qualifier_list ident_or_tname          { ($4, [( ($5, Variable ($8, get_loc ())), []) , None])}
 ;;
+
 init_declarator_list:
                                             { (((0, Abstract), []), None)::[] }
 | non_empty_init_declarator_list            { $1 }
@@ -211,11 +207,11 @@ attr_declarator:
 ;;
 
 declarator:
-  pointer direct_declarator                { 
+  pointer direct_declarator                 { 
     let (ptr, decl) = $2 in
       (ptr+$1, decl)
   }
-| direct_declarator                        { $1 }
+| direct_declarator                         { $1 }
 ;;
 
 direct_declarator:
