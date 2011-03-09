@@ -26,6 +26,7 @@
 %{
 open Csyntax
 open Lexing
+(* TODO: should return the bare tree without doing any normalization, simplifications error reporting other than parsing errors *)
 (* TODO: change this T to BareSyntax rather than Synthack *)
 module T = Synthack
 
@@ -64,56 +65,22 @@ let apply_attrs attrs t =
 	  "more than one attribute not handled yet"
 
 (* TODO: simplify by having just a function build_decl??? *)
-let process_decls (build_sdecl, build_vdecl) (b, m) =
-  let (sdecls, b) = Synthack.normalize_base_typ b in
-  let build_vdecl ((v, attrs), init) res =
+(* TODO: rename in declare type? *)
+let build_typedef (b, m) =
+  let b = Synthack.normalize_base_typ b in
+  let build_vdecl ((v, attrs), _) =
     let b = apply_attrs attrs b in
-    let (t, x, loc) = Synthack.normalize_var_modifier b v in
+    let x = Synthack.normalize_var_modifier b v in
       match x with
-	| None -> res
-	| Some x -> build_vdecl res (t, x, loc, init)
+	| None -> ()
+	| Some x -> Synthack.define_type x
   in
-  let sdecls = List.map build_sdecl sdecls in
-  let vdecls = List.fold_right build_vdecl m [] in
-    sdecls@vdecls
-      
-(* TODO: simplifiy this code!!! *)
-let build_glbtypedef d =
-  let build_vdecl l (t, x, _, _) = 
-    Synthack.define_type x t;
-    l
-  in
-  let loc = get_loc () in
-  let build_sdecl x = (GlbDecl x, loc) in
-    process_decls (build_sdecl, build_vdecl) d
-
-let build_stmtdecl (static, extern) d =
-(* TODO: think about cleaning this location thing up!!! *)
-(* for enum decls it seems the location is in double *)
-  let build_vdecl l (t, x, loc, init) = 
-(* TODO: factor the various VDecl creations!! *)
-    let d = 
-      { t = t; is_static = static; is_extern = extern; initialization = init }
-    in
-      (LocalDecl (x, VDecl d), loc)::l 
-  in
-  let loc = get_loc () in
-  let build_sdecl x = (LocalDecl x, loc) in
-    process_decls (build_sdecl, build_vdecl) d
-
-(* TODO: clean this code and find a way to factor with previous function *)
-let build_typedef d =
-  let build_vdecl l (t, x, _, _) = 
-    Synthack.define_type x t;
-    l
-  in
-  let loc = get_loc () in
-  let build_sdecl x = (LocalDecl x, loc) in
-    process_decls (build_sdecl, build_vdecl) d
-
+    List.iter build_vdecl m
+     
+(*
 (* TODO: remove code?? *)
 let normalize_fun_prologue b m =
-  let (_, (t, x, loc)) = Synthack.normalize_decl (b, m) in
+  let (t, x, loc) = Synthack.normalize_decl (b, m) in
   let x =
     match x with
       | Some x -> x
@@ -123,28 +90,26 @@ let normalize_fun_prologue b m =
 	    "unknown function name"
   in
     (t, x, loc)
+*)
 
+(*
 (* TODO: remove build_glbdecl and process_decl => now in bare2C *)
 let build_type_decl d =
-  let (sdecls, (t, _, _)) = Synthack.normalize_decl d in
-    if (sdecls <> []) then begin 
-      Npkcontext.report_error "Parser.build_type_decl" 
-	"unexpected enum or composite declaration"
-    end;
+  let (t, _, _) = Synthack.normalize_decl d in
     t
-
-let build_type_blk loc d =
-  let (sdecls, (t, _, _)) = Synthack.normalize_decl d in
-  let sdecls = List.map (fun x -> (LocalDecl x, loc)) sdecls in
-    (sdecls, t)
-
+    *)
+(*
+let build_type_blk _ d =
+  let (t, _, _) = Synthack.normalize_decl d in
+    t
+    *)
 let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 
 (* TODO: simplify and put in synthack so as to optimize?? *)
 let build_funparams params types =
   let has_name x d =
     match Synthack.normalize_decl d with
-	(_, (_, Some y, _)) when x = y -> true
+	Some y when x = y -> true
       | _ -> false
   in
   let add_param_type x = List.find (has_name x) types in
@@ -401,15 +366,15 @@ statement_list:
 
 // TODO: factor get_loc ()
 statement:
-  IDENTIFIER COLON statement               { (Label $1, get_loc ())::$3 }
+  IDENTIFIER COLON statement               { (BareSyntax.Label $1, get_loc ())::$3 }
 | IF LPAREN expression_sequence RPAREN statement
   else_branch_option                       { 
-    [If (normalize_bexp $3, $5, $6), get_loc ()] 
+    [BareSyntax.If ((*normalize_bexp *)$3, $5, $6), get_loc ()] 
   }
-| switch_stmt                              { [CSwitch $1, get_loc ()] }
+| switch_stmt                              { [BareSyntax.CSwitch $1, get_loc ()] }
 | iteration_statement                      { [$1, get_loc ()] }
-| NPK                                      { (UserSpec $1, get_loc ())::[] }
-| compound_statement                       { [Block $1, get_loc ()] }
+| NPK                                      { (BareSyntax.UserSpec $1, get_loc ())::[] }
+| compound_statement                       { [BareSyntax.Block $1, get_loc ()] }
 | simple_statement SEMICOLON               { $1 }
 ;;
 
@@ -420,20 +385,24 @@ else_branch_option:
   
 
 simple_statement:
-  declaration_modifier declaration         { build_stmtdecl $1 $2 }
-| TYPEDEF declaration                      { build_typedef $2 }
+  declaration_modifier declaration         { [BareSyntax.LocalDecl ($1, $2), get_loc ()] (*build_stmtdecl $1 $2*) }
+| TYPEDEF declaration                      { 
+    (* TODO: cleanup/simplify this function *)
+    let _ = build_typedef $2 in
+      [BareSyntax.Typedef $2, get_loc ()]
+  }
 | RETURN expression_sequence               { 
     let loc = get_loc () in
-      (Exp (Set (RetVar, None, $2)), loc)::(Return, loc)::[]
+      (BareSyntax.Exp (BareSyntax.Set (BareSyntax.RetVar, None, $2)), loc)::(BareSyntax.Return, loc)::[]
   }
-| RETURN                                   { [Return, get_loc ()] }
-| expression_sequence                      { [Exp $1, get_loc ()] }
-| BREAK                                    { [Break, get_loc ()] }
-| CONTINUE                                 { [Continue, get_loc ()] }
+| RETURN                                   { [BareSyntax.Return, get_loc ()] }
+| expression_sequence                      { [BareSyntax.Exp $1, get_loc ()] (* [Exp $1, get_loc ()] *) }
+| BREAK                                    { [BareSyntax.Break, get_loc ()] }
+| CONTINUE                                 { [BareSyntax.Continue, get_loc ()] }
 | GOTO IDENTIFIER                          { 
     Npkcontext.report_accept_warning "Parser.statement" "goto statement"
       Npkcontext.ForwardGoto;
-    [Goto $2, get_loc ()] 
+    [BareSyntax.Goto $2, get_loc ()] 
   }
 | asm                                      { [] }
 |                                          { [] }
@@ -465,45 +434,52 @@ asm_statement:
 
 // TODO: this could be simplified a lot by following the official grammar
 // but there should be another way to issue warnings
+// TODO: factor cases
 iteration_statement:
-| FOR LPAREN assignment_expression_list SEMICOLON 
+  FOR LPAREN assignment_expression_list SEMICOLON 
       expression_statement
       assignment_expression_list RPAREN
-      statement                            { For ($3, normalize_bexp $5, $8, $6) }
+      statement                            { 
+	BareSyntax.For ($3, (*normalize_bexp*) $5, $8, $6) 
+      }
 | FOR LPAREN SEMICOLON 
       expression_statement
       assignment_expression_list RPAREN
       statement                            { 
 	Npkcontext.report_warning "Parser.iteration_statement" 
 	  "init statement expected";
-	For ([], normalize_bexp $4, $7, $5) 
+	BareSyntax.For ([], (*normalize_bexp*) $4, $7, $5) 
       }
 | FOR LPAREN assignment_expression_list SEMICOLON 
       expression_statement RPAREN
       statement                            { 
 	Npkcontext.report_warning "Parser.iteration_statement" 
 	  "increment statement expected";
-	For ($3, normalize_bexp $5, $7, []) 
+	BareSyntax.For ($3, (*normalize_bexp*) $5, $7, []) 
       }
 | FOR LPAREN SEMICOLON expression_statement RPAREN
-      statement                            { 
-	Npkcontext.report_warning "Parser.iteration_statement" 
-	  "init statement expected";
-	For ([], normalize_bexp $4, $6, []) 
-      }
+    statement                            { 
+      Npkcontext.report_warning "Parser.iteration_statement" 
+	"init statement expected";
+      BareSyntax.For ([], (*normalize_bexp *)$4, $6, []) 
+    }
 | WHILE LPAREN expression_sequence RPAREN 
-  statement                                { For ([], normalize_bexp $3, $5, [])
-					   }
+  statement                                { 
+    BareSyntax.For ([], (*normalize_bexp*) $3, $5, [])
+  }
 | DO statement
   WHILE LPAREN expression_sequence 
-  RPAREN SEMICOLON                         { DoWhile ($2, normalize_bexp $5) }
+  RPAREN SEMICOLON                         { 
+    BareSyntax.DoWhile ($2, $5)
+    (* TODO: BareSyntax.DoWhile ($2, normalize_bexp $5) *)
+  }
 ;;
 
 expression_statement:
   SEMICOLON                                { 
     Npkcontext.report_warning "Parser.expression_statement" 
       "halting condition should be explicit";
-    exp_of_int 1
+    BareSyntax.exp_of_int 1
   }
 | expression SEMICOLON                     { $1 }
 ;;
@@ -541,8 +517,8 @@ case_list:
 
 assignment_expression_list:
   expression COMMA 
-  assignment_expression_list               { (Exp $1, get_loc ())::$3 }
-| expression                               { (Exp $1, get_loc ())::[] }
+  assignment_expression_list               { (BareSyntax.Exp $1, get_loc ())::$3 }
+| expression                               { (BareSyntax.Exp $1, get_loc ())::[] }
 ;;
 
 constant:
@@ -557,49 +533,53 @@ string_literal:
 ;;
 
 expression:
-  IDENTIFIER                               { Var $1 }
-| constant                                 { Cst $1 }
-| string_literal                           { Str $1 }
-| FUNNAME                                  { FunName }
+  IDENTIFIER                               { BareSyntax.Var $1 }
+| constant                                 { BareSyntax.Cst $1 }
+| string_literal                           { BareSyntax.Str $1 }
+| FUNNAME                                  { BareSyntax.FunName }
 | LPAREN expression_sequence RPAREN        { $2 }
 | LPAREN compound_statement RPAREN         { 
     Npkcontext.report_accept_warning "Parser.relational_expression"
       "block within expression" Npkcontext.DirtySyntax;
-    BlkExp $2
+    BareSyntax.BlkExp $2
   }
+// TODO: cleanup: remove all BareSyntax.
 | expression 
-  LBRACKET expression_sequence RBRACKET    { Index ($1, $3) }
+  LBRACKET expression_sequence RBRACKET    { BareSyntax.Index ($1, $3) }
 | expression 
-  LPAREN argument_expression_list RPAREN   { Call ($1, $3) }
-| expression DOT ident_or_tname            { Field ($1, $3) }
-| expression ARROW ident_or_tname          { Field (Index ($1, exp_of_int 0),
-						    $3) }
-| expression PLUSPLUS                      { OpExp (Plus, $1, true) }
-| expression MINUSMINUS                    { OpExp (Minus, $1, true) }
+  LPAREN argument_expression_list RPAREN   { BareSyntax.Call ($1, $3) }
+| expression DOT ident_or_tname            { BareSyntax.Field ($1, $3) }
+| expression ARROW ident_or_tname          { 
+    BareSyntax.Field (BareSyntax.Index ($1, BareSyntax.exp_of_int 0), $3) 
+  }
+| expression PLUSPLUS                      { BareSyntax.OpExp (Plus, $1, true) }
+| expression MINUSMINUS                    { BareSyntax.OpExp (Minus, $1, true) }
 // GNU C
 | BUILTIN_CONSTANT_P 
   LPAREN expression_sequence RPAREN        { 
      Npkcontext.report_warning "Parser.assignment_expression"
        "__builtin_constant_p ignored, assuming value 0";
-    exp_of_int 0
+    BareSyntax.exp_of_int 0
   }
 | OFFSETOF 
-  LPAREN type_name COMMA offsetof_member RPAREN { Offsetof (build_type_decl $3, $5) }
-| PLUSPLUS   expression    %prec prefix_OP { OpExp (Plus, $2, false) }
-| MINUSMINUS expression    %prec prefix_OP { OpExp (Minus, $2, false) }
-| AMPERSAND  expression    %prec prefix_OP { AddrOf $2 }
-| STAR       expression    %prec prefix_OP { Index ($2, exp_of_int 0) }
+  LPAREN type_name COMMA offsetof_member RPAREN { BareSyntax.Offsetof ($3, $5) }
+// TODO: factor all these cases => prefix_operator
+| PLUSPLUS   expression    %prec prefix_OP { BareSyntax.OpExp (Plus, $2, false) }
+| MINUSMINUS expression    %prec prefix_OP { BareSyntax.OpExp (Minus, $2, false) }
+| AMPERSAND  expression    %prec prefix_OP { BareSyntax.AddrOf $2 }
+| STAR       expression    %prec prefix_OP { BareSyntax.Index ($2, BareSyntax.exp_of_int 0) }
 // TODO: factor these with unop non-terminal
-| BNOT       expression    %prec prefix_OP { Unop (BNot, $2) }
-| NOT        expression    %prec prefix_OP { Unop (Not, $2) }
-| MINUS      expression    %prec prefix_OP { Csyntax.neg $2 }
+| BNOT       expression    %prec prefix_OP { BareSyntax.Unop (BNot, $2) }
+| NOT        expression    %prec prefix_OP { BareSyntax.Unop (Not, $2) }
+| MINUS      expression    %prec prefix_OP { BareSyntax.neg $2 }
 | PLUS       expression                    { $2 }
-| SIZEOF     expression    %prec prefix_OP { SizeofE $2 }
+| SIZEOF     expression    %prec prefix_OP { BareSyntax.SizeofE $2 }
 | SIZEOF LPAREN type_name RPAREN 
-                           %prec prefix_OP { Sizeof (build_type_decl $3) }
+                           %prec prefix_OP { BareSyntax.Sizeof $3 }
 | EXTENSION expression     %prec prefix_OP { $2 }
 | LPAREN type_name RPAREN expression
-                           %prec prefix_OP { Cast ($4, build_type_decl $2) }
+                           %prec prefix_OP { BareSyntax.Cast ($4, $2) }
+/* TODO!
 | LPAREN type_name RPAREN composite        { 
     let loc = get_loc () in
     let (blk, t) = build_type_blk loc $2 in
@@ -610,42 +590,46 @@ expression:
       } 
     in
     let id = gen_tmp_id () in
-    let decl = (LocalDecl (id, VDecl d), loc) in
-    let e = (Exp (Var id), loc) in
+    let decl = (BareSyntax.LocalDecl (id, BareSyntax.VDecl d), loc) in
+    let e = (BareSyntax.Exp (BareSyntax.Var id), loc) in
       Npkcontext.report_accept_warning "Parser.cast_expression" 
 	"local composite creation" Npkcontext.DirtySyntax;
-      BlkExp (blk@decl::e::[])
+      BareSyntax.BlkExp (blk@decl::e::[])
   }
+*/
 // TODO: factor these as binop non-terminal??
-| expression STAR      expression          { Binop (Mult, $1, $3) }
-| expression DIV       expression          { Binop (Div, $1, $3) }
-| expression MOD       expression          { Binop (Mod, $1, $3) }
-| expression PLUS      expression          { Binop (Plus, $1, $3) }
-| expression MINUS     expression          { Binop (Minus, $1, $3) }
-| expression SHIFTL    expression          { Binop (Shiftl, $1, $3) }
-| expression SHIFTR    expression          { Binop (Shiftr, $1, $3) }
-| expression GT        expression          { Binop (Gt, $1, $3) }
-| expression GTEQ      expression          { Unop (Not, Binop (Gt, $3, $1)) }
-| expression LT        expression          { Binop (Gt, $3, $1) }
-| expression LTEQ      expression          { Unop (Not, Binop (Gt, $1, $3)) }
-| expression EQEQ      expression          { Binop (Eq, $1, $3) }
-| expression NOTEQ     expression          { Unop (Not, Binop (Eq, $1, $3)) }
-| expression AMPERSAND expression          { Binop (BAnd, $1, $3) }
-| expression BXOR      expression          { Binop (BXor, $1, $3) }
-| expression BOR       expression          { Binop (BOr, $1, $3) }
+| expression STAR      expression          { BareSyntax.Binop (Mult, $1, $3) }
+| expression DIV       expression          { BareSyntax.Binop (Div, $1, $3) }
+| expression MOD       expression          { BareSyntax.Binop (Mod, $1, $3) }
+| expression PLUS      expression          { BareSyntax.Binop (Plus, $1, $3) }
+| expression MINUS     expression          { BareSyntax.Binop (Minus, $1, $3) }
+| expression SHIFTL    expression          { BareSyntax.Binop (Shiftl, $1, $3) }
+| expression SHIFTR    expression          { BareSyntax.Binop (Shiftr, $1, $3) }
+| expression GT        expression          { BareSyntax.Binop (Gt, $1, $3) }
+| expression GTEQ      expression          { BareSyntax.Unop (Not, BareSyntax.Binop (Gt, $3, $1)) }
+| expression LT        expression          { BareSyntax.Binop (Gt, $3, $1) }
+| expression LTEQ      expression          { BareSyntax.Unop (Not, BareSyntax.Binop (Gt, $1, $3)) }
+| expression EQEQ      expression          { BareSyntax.Binop (Eq, $1, $3) }
+// TODO: remove all reference to BareSyntax. => use an open
+| expression NOTEQ     expression          { 
+    BareSyntax.Unop (Not, BareSyntax.Binop (Eq, $1, $3)) 
+  }
+| expression AMPERSAND expression          { BareSyntax.Binop (BAnd, $1, $3) }
+| expression BXOR      expression          { BareSyntax.Binop (BXor, $1, $3) }
+| expression BOR       expression          { BareSyntax.Binop (BOr, $1, $3) }
 | expression AND       expression          { 
-    IfExp (normalize_bexp $1, normalize_bexp $3, exp_of_int 0) 
+    BareSyntax.IfExp ((*normalize_bexp *)$1, (*normalize_bexp *)$3, BareSyntax.exp_of_int 0) 
   }
 | expression OR expression                 { 
-    IfExp (normalize_bexp $1, exp_of_int 1, normalize_bexp $3) 
+    BareSyntax.IfExp ($1, BareSyntax.exp_of_int 1, $3) 
   }
 | expression QMARK expression_sequence
     COLON expression           %prec QMARK {
 	Npkcontext.report_strict_warning "Parser.expression"
 	  "conditional expression";
-	IfExp (normalize_bexp $1, $3, $5)
+	BareSyntax.IfExp ($1, $3, $5)
   }
-
+/* TODO!
 | expression QMARK COLON expression           %prec QMARK {
     let e = normalize_bexp $1 in
     let loc = get_loc () in
@@ -661,19 +645,20 @@ expression:
     let e' = Var id in
       BlkExp( [ decl; ( Exp (IfExp(e', e', $4)), loc ) ] )
   }
-
+*/
 | expression assignment_operator
-                   expression     %prec EQ { Set ($1, $2, $3) }
+                   expression     %prec EQ { BareSyntax.Set ($1, $2, $3) }
 ;;
 
 aux_offsetof_member:
-  IDENTIFIER { OffComp $1 }
-| aux_offsetof_member DOT IDENTIFIER { OffField ($1, $3) }
+  IDENTIFIER { BareSyntax.OffComp $1 }
+| aux_offsetof_member DOT IDENTIFIER { BareSyntax.OffField ($1, $3) }
 
 offsetof_member:
-  IDENTIFIER { OIdent $1 }
-| aux_offsetof_member DOT IDENTIFIER { OField ($1, $3) }
-| aux_offsetof_member DOT IDENTIFIER LBRACKET expression RBRACKET { OArray ($1, $3, $5) }
+  IDENTIFIER { BareSyntax.OIdent $1 }
+| aux_offsetof_member DOT IDENTIFIER { BareSyntax.OField ($1, $3) }
+| aux_offsetof_member DOT IDENTIFIER LBRACKET expression RBRACKET { BareSyntax.OArray ($1, $3, $5) }
+;;
 
 expression_sequence:
   expression                               { $1 }
@@ -681,7 +666,7 @@ expression_sequence:
     Npkcontext.report_accept_warning "Parser.expression"
       "comma in expression" Npkcontext.DirtySyntax;
     let loc = get_loc () in
-      BlkExp ((Exp $1, loc)::(Exp $3, loc)::[])
+      BareSyntax.BlkExp ((BareSyntax.Exp $1, loc)::(BareSyntax.Exp $3, loc)::[])
   }
 ;;
 
@@ -715,8 +700,8 @@ nonempty_argument_expression_list:
 ;;
 
 init:
-  expression                               { Data $1 }
-| composite                                { Sequence $1 }
+  expression                               { BareSyntax.Data $1 }
+| composite                                { BareSyntax.Sequence $1 }
 ;;
 
 composite:
@@ -731,8 +716,8 @@ named_init_list:
 ;;
 
 named_init:
-  DOT IDENTIFIER EQ expression             { (Some $2, Data $4) }
-| DOT IDENTIFIER EQ LBRACE init_list RBRACE { (Some $2, Sequence $5) }
+  DOT IDENTIFIER EQ expression             { (Some $2, BareSyntax.Data $4) }
+| DOT IDENTIFIER EQ LBRACE init_list RBRACE { (Some $2, BareSyntax.Sequence $5) }
 ;;
 
 init_list:
@@ -996,7 +981,7 @@ global_declaration:
 | extension_option EXTERN declaration      { (BareSyntax.GlbDecl ((false, true), $3), get_loc ())::[] }
 | extension_option TYPEDEF declaration     { 
 (* TODO: cleanup/simplify *)
-    let _ = build_glbtypedef $3 in
+    let _ = build_typedef $3 in
       (BareSyntax.GlbTypedef $3, get_loc ())::[] }
 | asm                                      { [] }
 ;;

@@ -105,30 +105,30 @@ and lbl = string
 and static = bool
 
 and exp = 
-    | Cst of cst
-    | Var of string
-    | RetVar
-    | Field of (exp * string)
-    | Index of (exp * exp)
-    | AddrOf of exp
-    | Unop of (unop * exp)
-    | IfExp of (exp * exp * exp)
-    | Binop of (binop * exp * exp)
-    | Call of (exp * exp list)
-    | Sizeof of typ
-    | SizeofE of exp
-    | Offsetof of (typ * offset_exp)
-    | Str of string
-    | FunName
-    | Cast of (exp * typ)
-(* None is a regular assignment *)
-    | Set of (exp * binop option * exp)
-(* boolean is true if the operation is applied after the evaluation of the 
-   expression *)
-    | OpExp of (binop * exp * bool)
-(* block ended by and expression *)
-    | BlkExp of blk
-
+  | Cst of cst
+  | Var of string
+  | RetVar
+  | Field of (exp * string)
+  | Index of (exp * exp)
+  | AddrOf of exp
+  | Unop of (unop * exp)
+  | IfExp of (exp * exp * exp)
+  | Binop of (binop * exp * exp)
+  | Call of (exp * exp list)
+  | Sizeof of typ
+  | SizeofE of exp
+  | Offsetof of (typ * offset_exp)
+  | Str of string
+  | FunName
+  | Cast of (exp * typ)
+      (* None is a regular assignment *)
+  | Set of (exp * binop option * exp)
+      (* boolean is true if the operation is applied after the evaluation of the 
+	 expression *)
+  | OpExp of (binop * exp * bool)
+      (* block ended by and expression *)
+  | BlkExp of blk
+      
 and cst = (Cir.cst * typ)
 
 and unop = Not | BNot
@@ -151,6 +151,7 @@ and aux_offset_exp =
     OffComp of string
   | OffField of aux_offset_exp * string
 
+(* TODO: this type could probably be simplified *)
 and offset_exp =
   | OIdent of string
   | OField of aux_offset_exp * string

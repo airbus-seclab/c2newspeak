@@ -29,13 +29,12 @@ open BareSyntax
 module B = Csyntax
 module C = Cir
 
-type vdecl = (B.typ * string option * location)
-type sdecls = (string * B.decl) list
-
 (** TODO: remove these globals, by putting them as argument of the lexer ??
     and then passing them through the tokens *)
+(* TODO: simplify, the actual value of the type should not be needed!! *)
 let typedefs = Hashtbl.create 100
 
+(* TODO: not nice, try to remove this init_tbl!!! and the global typedefs *)
 let init_tbls () =
   Hashtbl.clear typedefs;
 (* initialize table of predefined types *)
@@ -44,13 +43,16 @@ let init_tbls () =
   if !Npkcontext.accept_gnuc 
   then Hashtbl.add typedefs "_Bool" (B.Int (Newspeak.Unsigned, 1))
 
+(* TODO: think about this, is this call necessary?? *)
 let _ = 
   init_tbls ()
 
 (* TODO: try to remove this syntactic hack by rewriting the parser,
    but is it even possible? *)
-let define_type x t = Hashtbl.add typedefs x t
+(* TODO: this is a dummy type, because it should not be necessary => remove alltogether *)
+let define_type x = Hashtbl.add typedefs x (B.Int (Newspeak.Unsigned, 1))
 
+(* TODO: dead code? *)
 let is_type x = Hashtbl.mem typedefs x
 
 let define_enum e =
@@ -69,12 +71,12 @@ let define_enum e =
     define_enum e (B.exp_of_int 0)
 
 let rec normalize_base_typ t =
-  let sdecls =
+  let _ =
     match t with
 	Integer _ | Float _ | Void | Va_arg | Name _ | Enum None 
       | Typeof _ -> []
       | Composite v -> normalize_compdef v
-      | Enum Some f -> define_enum f
+      | Enum Some _f -> []
   in
   let t = 
     match t with
@@ -92,78 +94,37 @@ let rec normalize_base_typ t =
       | Typeof v -> B.Typeof (B.Var v)
       | Enum _ -> B.Int C.int_kind
   in
-    (sdecls, t)
+    t
 
-and normalize_compdef (is_struct, (n, f)) =
+and normalize_compdef (_, (_, f)) =
   match f with
       None -> []
     | Some f -> 
-	let (decls, f) = normalize_fields f in
-	  (decls@(n, B.CDecl (f, is_struct))::[])
+	let _ = normalize_fields f in
+	  []
 
 and normalize_fields f =
   match f with
-      (b, v, bits)::tl ->
-	let (decls, (t, x, loc)) = normalize_decl (b, v) in
-	let t =
-	  match (bits, t) with
-	      (None, _) -> t
-	    | (Some n, B.Int k) -> B.Bitfield (k, n)
-	    | _ -> 
-		Npkcontext.report_error "Synthack.normalize_field" 
-		  "bit-fields allowed only with integer types"
-	in
+      (b, v, _)::tl ->
+	let x = normalize_decl (b, v) in
 	let x = 
 	  match x with
 	      Some x -> x
 	    | None -> "!anonymous_field"
 	in
-	let (decls', f) = normalize_fields tl in
-	  (decls@decls', (t, x, loc)::f)
-    | [] -> ([], [])
+	let f = normalize_fields tl in
+	  x::f
+    | [] -> []
 
-and apply_derefs n b = if n = 0 then b else apply_derefs (n-1) (B.Ptr b)
-
-and normalize_var_modifier b (derefs, v) =
-  let b = apply_derefs derefs b in
-    match v with
-	Abstract -> (b, None, Newspeak.unknown_loc)
-      | Variable (x, loc) -> (b, Some x, loc)
-      | Function (x, args) ->
-	  let ft = normalize_ftyp (args, b) in
-	    normalize_var_modifier ft x
-      | Array (v, n) -> normalize_var_modifier (B.Array (b, n)) v
-	  
-and normalize_ftyp (args, ret) =
-  let args = List.map normalize_arg args in
-  let args =
-    match args with
-	[] -> None
-      | (B.Void, _)::[] -> Some []
-      | args -> Some args
-  in
-    B.Fun (args, ret)
-
-and normalize_arg a = 
-  let (symbdecls, (t, x, _)) = normalize_decl a in
-  let t =
-    match t with
-	B.Array (elt_t, _) -> B.Ptr elt_t
-      | B.Fun _ -> B.Ptr t
-      | _ -> t
-  in
-  let x = 
-    match x with
-	Some x -> x
-      | None -> "silent argument"
-  in
-    if (symbdecls <> []) then begin
-      Npkcontext.report_error "Synthack.normalize_arg" 
-	"symbol definition not allowed in argument"
-    end;
-    (t, x)
+and normalize_var_modifier b (_, v) =
+  match v with
+      Abstract -> None
+    | Variable (x, _) -> Some x
+    | Function (x, _) -> normalize_var_modifier (B.Fun (None, b)) x
+	    (* TODO: this value is incorrect, because it is unused => remove alltogether *)
+    | Array (v, _) -> normalize_var_modifier b v
+	(*normalize_var_modifier (B.Array (b, n)) v*)
 
 and normalize_decl (b, v) =
-  let (symbdecls, t) = normalize_base_typ b in
-  let d = normalize_var_modifier t v in
-    (symbdecls, d)
+  let t = normalize_base_typ b in
+    normalize_var_modifier t v
