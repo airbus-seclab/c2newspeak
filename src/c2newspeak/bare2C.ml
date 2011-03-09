@@ -268,6 +268,10 @@ and process_stmtkind loc x =
 	let body = process_blk body in
 	let continue = process_blk continue in
 	  (T.For (init, condition, body, continue), loc)::[]
+    | While (condition, body) -> 
+	let condition = Csyntax.normalize_bexp (process_exp condition) in
+	let body = process_blk body in
+	  (T.For ([], condition, body, []), loc)::[]
     | DoWhile (body, condition) -> 
 	let body = process_blk body in
 	let condition = Csyntax.normalize_bexp (process_exp condition) in

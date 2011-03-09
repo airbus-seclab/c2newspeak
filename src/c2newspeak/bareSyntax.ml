@@ -50,6 +50,7 @@ and stmtkind =
 	 init may cotain break or continue stmt!
       *)
   | For of (blk * exp * blk * blk)
+  | While of (exp * blk)
   | DoWhile of (blk * exp)
   | CSwitch of (exp * (exp * blk * Newspeak.location) list * blk)
   | Break

@@ -394,7 +394,7 @@ iteration_statement:
       For ([], $4, $6, []) 
     }
 | WHILE LPAREN expression_sequence RPAREN 
-  statement                                { For ([], $3, $5, []) }
+  statement                                { While ($3, $5) }
 | DO statement
   WHILE LPAREN expression_sequence 
   RPAREN SEMICOLON                         { DoWhile ($2, $5) }
