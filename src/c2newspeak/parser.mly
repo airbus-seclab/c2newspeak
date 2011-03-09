@@ -364,28 +364,22 @@ asm_statement:
   string_literal LPAREN expression RPAREN  { $2^" "^$4 }
 ;;
 
-// TODO: this could be simplified a lot by following the official grammar
-// but there should be another way to issue warnings
-// TODO: factor cases
 iteration_statement:
-  FOR LPAREN assignment_expression_list SEMICOLON 
-      expression_statement
-      assignment_expression_list RPAREN
-      statement                            { For ($3, $5, $8, $6) }
-| FOR LPAREN SEMICOLON 
-      expression_statement
-      assignment_expression_list RPAREN
-      statement                            { For ([], $4, $7, $5) }
-| FOR LPAREN assignment_expression_list SEMICOLON 
-      expression_statement RPAREN
-      statement                            { For ($3, $5, $7, []) }
-| FOR LPAREN SEMICOLON expression_statement RPAREN
-    statement                              { For ([], $4, $6, []) }
+  FOR 
+  LPAREN assignment_expression_list_option SEMICOLON 
+         expression_statement
+         assignment_expression_list_option RPAREN
+  statement                                { For ($3, $5, $8, $6) }
 | WHILE LPAREN expression_sequence RPAREN 
   statement                                { While ($3, $5) }
 | DO statement
   WHILE LPAREN expression_sequence 
   RPAREN SEMICOLON                         { DoWhile ($2, $5) }
+;;
+
+assignment_expression_list_option:
+  assignment_expression_list               { $1 }
+|                                          { [] }
 ;;
 
 expression_statement:
