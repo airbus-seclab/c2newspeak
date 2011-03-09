@@ -306,12 +306,14 @@ statement_list:
 // TODO: factor get_loc ()
 // TODO: simplify => do not give back a list of statements, but just one statement
 statement:
-  IDENTIFIER COLON statement               { (Label $1, get_loc ())::$3 }
+  IDENTIFIER COLON statement               { 
+    [LabeledStmt ($1, $3), get_loc ()] 
+  }
 | IF LPAREN expression_sequence RPAREN statement
   else_branch_option                       { [If ($3, $5, $6), get_loc ()] }
 | switch_stmt                              { [CSwitch $1, get_loc ()] }
 | iteration_statement                      { [$1, get_loc ()] }
-| NPK                                      { (UserSpec $1, get_loc ())::[] }
+| NPK                                      { [UserSpec $1, get_loc ()] }
 | compound_statement                       { [Block $1, get_loc ()] }
 | simple_statement SEMICOLON               { $1 }
 ;;

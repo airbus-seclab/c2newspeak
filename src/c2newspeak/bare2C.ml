@@ -277,7 +277,9 @@ and process_stmtkind loc x =
     | Break -> (T.Break, loc)::[]
     | Continue -> (T.Continue, loc)::[]
     | Typedef d -> build_typedef loc d
-    | Label lbl -> (T.Label lbl, loc)::[]
+    | LabeledStmt (lbl, body) -> 
+	let body = process_blk body in
+	  (T.Label lbl, loc)::body
     | Goto lbl -> (T.Goto lbl, loc)::[]
     | UserSpec a -> (T.UserSpec a, loc)::[]
 

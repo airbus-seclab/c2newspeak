@@ -55,9 +55,10 @@ and stmtkind =
   | Break
   | Continue
   | Typedef of (base_typ * ((var_modifier * Newspeak.size_t list) * init option) list)
-  | Label of Csyntax.lbl
+  | LabeledStmt of (Csyntax.lbl * blk)
   | Goto of Csyntax.lbl
   | UserSpec of Csyntax.assertion
+
 (* TODO: cleanup expressions => factor more with binop ? *)
 and exp =
     Cst of Csyntax.cst
