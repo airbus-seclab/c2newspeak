@@ -40,7 +40,7 @@ and stmt = (stmtkind * Newspeak.location)
 and stmtkind =
     LocalDecl of ((bool * bool) * (base_typ * ((var_modifier * Newspeak.size_t list) * init option) list))
   | Exp of exp
-  | Return
+  | Return of exp option
   | Block of blk
   | If of (exp * blk * blk)
       (* init, while exp is true do blk and then blk, 
@@ -60,7 +60,6 @@ and stmtkind =
 and exp =
     Cst of Csyntax.cst
   | Var of string
-  | RetVar
   | Field of (exp * string)
   | Index of (exp * exp)
   | AddrOf of exp

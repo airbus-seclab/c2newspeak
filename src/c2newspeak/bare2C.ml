@@ -249,7 +249,10 @@ and process_stmtkind loc x =
     | Exp e -> 
 	let e = process_exp e in
 	  (T.Exp e, loc)::[]
-    | Return -> (T.Return, loc)::[]
+    | Return None -> (T.Return, loc)::[]
+    | Return Some e -> 
+	let e = process_exp e in
+	  (T.Exp (T.Set (T.RetVar, None, e)), loc)::(T.Return, loc)::[]
     | Block body -> 
 	let body = process_blk body in
 	  (T.Block body, loc)::[]
@@ -293,7 +296,6 @@ and process_exp e =
   match e with
       Cst c -> T.Cst c
     | Var x -> T.Var x
-    | RetVar -> T.RetVar
     | Field (e, f) -> T.Field (process_exp e, f)
     | Index (a, i) -> T.Index (process_exp a, process_exp i)
     | AddrOf e -> T.AddrOf (process_exp e)

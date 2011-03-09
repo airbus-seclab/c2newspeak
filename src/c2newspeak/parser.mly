@@ -330,11 +330,8 @@ simple_statement:
     declare_new_type $2;
     [Typedef $2, get_loc ()]
   }
-| RETURN expression_sequence               { 
-    let loc = get_loc () in
-      (Exp (Set (RetVar, None, $2)), loc)::(Return, loc)::[]
-  }
-| RETURN                                   { [Return, get_loc ()] }
+| RETURN expression_sequence               { [Return (Some $2), get_loc ()] }
+| RETURN                                   { [Return None, get_loc ()] }
 | expression_sequence                      { [Exp $1, get_loc ()] }
 | BREAK                                    { [Break, get_loc ()] }
 | CONTINUE                                 { [Continue, get_loc ()] }
