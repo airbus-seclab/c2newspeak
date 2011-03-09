@@ -1,5 +1,5 @@
-Warning: 628.c:32#0: goto statement accepted
-Warning: 628.c:33#0: goto statement accepted
+Warning: 628.c:32#2: goto statement accepted
+Warning: 628.c:33#17: goto statement accepted
 Newspeak output
 ---------------
 void (628.c:26#5)^main(void) {

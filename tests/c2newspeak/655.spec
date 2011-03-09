@@ -1,7 +1,7 @@
-Warning: 655.c:30#0: goto statement accepted
-Warning: 655.c:33#0: goto statement accepted
-Warning: 655.c:35#0: goto statement accepted
-Warning: 655.c:36#0: goto statement accepted
+Warning: 655.c:30#6: goto statement accepted
+Warning: 655.c:33#4: goto statement accepted
+Warning: 655.c:35#2: goto statement accepted
+Warning: 655.c:36#2: goto statement accepted
 Newspeak output
 ---------------
 void (655.c:25#5)^main(void) {

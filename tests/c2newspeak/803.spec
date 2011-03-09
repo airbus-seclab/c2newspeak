@@ -1,5 +1,5 @@
-Warning: 803.c:3#0: goto statement accepted
-Warning: 803.c:4#0: goto statement accepted
+Warning: 803.c:3#9: goto statement accepted
+Warning: 803.c:4#2: goto statement accepted
 Newspeak output
 ---------------
 void (803.c:1#5)^main(void) {

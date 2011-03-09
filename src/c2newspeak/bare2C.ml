@@ -280,7 +280,10 @@ and process_stmtkind loc x =
     | LabeledStmt (lbl, body) -> 
 	let body = process_blk body in
 	  (T.Label lbl, loc)::body
-    | Goto lbl -> (T.Goto lbl, loc)::[]
+    | Goto lbl -> 
+	Npkcontext.report_accept_warning "Parser.statement" "goto statement"
+	  Npkcontext.ForwardGoto;
+	(T.Goto lbl, loc)::[]
     | UserSpec a -> (T.UserSpec a, loc)::[]
 
 and process_choice (value, body, loc) = 

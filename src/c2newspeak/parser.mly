@@ -338,11 +338,7 @@ simple_statement:
 | expression_sequence                      { [Exp $1, get_loc ()] }
 | BREAK                                    { [Break, get_loc ()] }
 | CONTINUE                                 { [Continue, get_loc ()] }
-| GOTO IDENTIFIER                          { 
-    Npkcontext.report_accept_warning "Parser.statement" "goto statement"
-      Npkcontext.ForwardGoto;
-    [Goto $2, get_loc ()] 
-  }
+| GOTO IDENTIFIER                          { [Goto $2, get_loc ()] }
 | asm                                      { [] }
 |                                          { [] }
 ;;

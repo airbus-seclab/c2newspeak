@@ -1,4 +1,4 @@
-Warning: 603.c:30#0: goto statement accepted
+Warning: 603.c:30#4: goto statement accepted
 Newspeak output
 ---------------
 void (603.c:26#5)^main(void) {

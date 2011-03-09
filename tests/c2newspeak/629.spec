@@ -1,7 +1,7 @@
 Warning: 629.c:29#0: halting condition should be explicit
-Warning: 629.c:41#0: goto statement accepted
 Warning: 629.c:45#0: init statement expected
-Warning: 629.c:48#0: goto statement accepted
+Warning: 629.c:41#9: goto statement accepted
+Warning: 629.c:48#1: goto statement accepted
 Newspeak output
 ---------------
 void (629.c:26#5)^main(void) {

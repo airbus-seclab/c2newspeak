@@ -1,5 +1,5 @@
-Warning: 789.c:7#0: goto statement accepted
-Warning: 789.c:9#0: goto statement accepted
+Warning: 789.c:7#6: goto statement accepted
+Warning: 789.c:9#4: goto statement accepted
 Newspeak output
 ---------------
 void (789.c:1#5)^main(void) {

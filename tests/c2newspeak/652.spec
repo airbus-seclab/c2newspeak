@@ -1,4 +1,4 @@
-Warning: 652.c:29#0: goto statement accepted
+Warning: 652.c:29#6: goto statement accepted
 Newspeak output
 ---------------
 void (652.c:25#5)^main(void) {
