@@ -288,6 +288,7 @@ and process_stmtkind loc x =
 	  Npkcontext.ForwardGoto;
 	(T.Goto lbl, loc)::[]
     | UserSpec a -> (T.UserSpec a, loc)::[]
+    | Asm | Skip -> []
 
 and process_choice (value, body, loc) = 
   (process_exp value, process_blk body, loc)

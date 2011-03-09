@@ -58,6 +58,8 @@ and stmtkind =
   | LabeledStmt of (Csyntax.lbl * blk)
   | Goto of Csyntax.lbl
   | UserSpec of Csyntax.assertion
+  | Asm
+  | Skip
 
 (* TODO: cleanup expressions => factor more with binop ? *)
 and exp =

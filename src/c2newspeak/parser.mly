@@ -303,41 +303,40 @@ statement_list:
 |                                          { [] }
 ;;
 
-// TODO: factor get_loc ()
-// TODO: simplify => do not give back a list of statements, but just one statement
 statement:
-  IDENTIFIER COLON statement               { 
-    [LabeledStmt ($1, $3), get_loc ()] 
-  }
-| IF LPAREN expression_sequence RPAREN statement
-  else_branch_option                       { [If ($3, $5, $6), get_loc ()] }
-| switch_stmt                              { [CSwitch $1, get_loc ()] }
-| iteration_statement                      { [$1, get_loc ()] }
-| NPK                                      { [UserSpec $1, get_loc ()] }
-| compound_statement                       { [Block $1, get_loc ()] }
-| simple_statement SEMICOLON               { $1 }
+  bare_statement                           { [$1, get_loc ()] }
 ;;
+
+bare_statement:
+  IDENTIFIER COLON statement               { LabeledStmt ($1, $3) }
+| IF LPAREN expression_sequence RPAREN statement
+  else_branch_option                       { If ($3, $5, $6) }
+| switch_stmt                              { CSwitch $1 }
+| iteration_statement                      { $1 }
+| NPK                                      { UserSpec $1 }
+| compound_statement                       { Block $1 }
+| simple_statement SEMICOLON               { $1 }
+;;  
 
 else_branch_option:
   ELSE statement                           { $2 }
 |                         %prec below_ELSE { [] }
 ;;
   
-
 simple_statement:
-  declaration_modifier declaration         { [LocalDecl ($1, $2), get_loc ()] }
+  declaration_modifier declaration         { LocalDecl ($1, $2) }
 | TYPEDEF declaration                      { 
     declare_new_type $2;
-    [Typedef $2, get_loc ()]
+    Typedef $2
   }
-| RETURN expression_sequence               { [Return (Some $2), get_loc ()] }
-| RETURN                                   { [Return None, get_loc ()] }
-| expression_sequence                      { [Exp $1, get_loc ()] }
-| BREAK                                    { [Break, get_loc ()] }
-| CONTINUE                                 { [Continue, get_loc ()] }
-| GOTO IDENTIFIER                          { [Goto $2, get_loc ()] }
-| asm                                      { [] }
-|                                          { [] }
+| RETURN expression_sequence               { Return (Some $2) }
+| RETURN                                   { Return None }
+| expression_sequence                      { Exp $1 }
+| BREAK                                    { Break }
+| CONTINUE                                 { Continue }
+| GOTO IDENTIFIER                          { Goto $2 }
+| asm                                      { Asm }
+|                                          { Skip }
 ;;
 
 declaration_modifier:
@@ -361,7 +360,8 @@ asm_statement_list:
 asm_statement:
   string_literal                           { $1 }
 | string_literal LPAREN expression RPAREN  { $1 } 
-| LBRACKET ident_or_tname RBRACKET string_literal LPAREN expression RPAREN { $2^" "^$4 }
+| LBRACKET ident_or_tname RBRACKET 
+  string_literal LPAREN expression RPAREN  { $2^" "^$4 }
 ;;
 
 // TODO: this could be simplified a lot by following the official grammar

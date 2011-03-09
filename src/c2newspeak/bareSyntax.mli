@@ -56,6 +56,8 @@ and stmtkind =
   | LabeledStmt of (Csyntax.lbl * blk)
   | Goto of Csyntax.lbl
   | UserSpec of Csyntax.assertion
+  | Asm
+  | Skip
 
 and exp =
     Cst of Csyntax.cst
