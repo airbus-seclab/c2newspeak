@@ -66,6 +66,8 @@ and exp =
   | Unop of (Csyntax.unop * exp)
   | IfExp of (exp * exp * exp)
   | Binop of (Csyntax.binop * exp * exp)
+  | And of (exp * exp)
+  | Or of (exp * exp)
   | Call of (exp * exp list)
   | Sizeof of (base_typ * var_modifier)
   | SizeofE of exp

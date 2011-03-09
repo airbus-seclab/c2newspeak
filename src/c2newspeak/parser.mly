@@ -617,11 +617,9 @@ expression:
 | expression AMPERSAND expression          { BareSyntax.Binop (BAnd, $1, $3) }
 | expression BXOR      expression          { BareSyntax.Binop (BXor, $1, $3) }
 | expression BOR       expression          { BareSyntax.Binop (BOr, $1, $3) }
-| expression AND       expression          { 
-    BareSyntax.IfExp ((*normalize_bexp *)$1, (*normalize_bexp *)$3, BareSyntax.exp_of_int 0) 
-  }
+| expression AND       expression          { BareSyntax.And ($1, $3) }
 | expression OR expression                 { 
-    BareSyntax.IfExp ($1, BareSyntax.exp_of_int 1, $3) 
+    BareSyntax.Or ($1, $3) 
   }
 | expression QMARK expression_sequence
     COLON expression           %prec QMARK {

@@ -287,10 +287,22 @@ and process_exp e =
     | IfExp (c, e1, e2) -> 
 (* TODO: factor these function calls = process_bexp *)
 	let c = Csyntax.normalize_bexp (process_exp c) in
+	let e1 = process_exp e1 in
+	let e2 = process_exp e2 in
+(*
 	let e1 = Csyntax.normalize_bexp (process_exp e1) in
 	let e2 = Csyntax.normalize_bexp (process_exp e2) in
+*)
 	  T.IfExp (c, e1, e2)
     | Binop (op, e1, e2) -> T.Binop (op, process_exp e1, process_exp e2)
+    | And (e1, e2) ->
+	let c = Csyntax.normalize_bexp (process_exp e1) in
+	let e1 = Csyntax.normalize_bexp (process_exp e2) in
+	  T.IfExp (c, e1, Csyntax.exp_of_int 0) 
+    | Or (e1, e2) ->
+	let c = Csyntax.normalize_bexp (process_exp e1) in
+	let e2 = Csyntax.normalize_bexp (process_exp e2) in
+	  T.IfExp (c, Csyntax.exp_of_int 1, e2) 
     | Call (f, args) -> T.Call (process_exp f, List.map process_exp args)
     | Sizeof t -> 
 	let t = build_type_decl t in
