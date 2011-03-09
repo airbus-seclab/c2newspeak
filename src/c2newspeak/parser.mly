@@ -30,15 +30,6 @@ open Lexing
 (* TODO: change this T to BareSyntax rather than Synthack *)
 module T = Synthack
 
-(* TODO: remove this function, should not be necessary *)
-let gen_tmp_id =
-  let tmp_cnt = ref 0 in
-  let gen_tmp_id () = 
-    incr tmp_cnt;
-    Temps.to_string !tmp_cnt (Temps.Misc "parser")
-  in
-    gen_tmp_id
-
 let gen_struct_id = 
   let struct_cnt = ref 0 in
   let gen_struct_id () =
@@ -78,32 +69,6 @@ let build_typedef (b, m) =
   in
     List.iter build_vdecl m
      
-(*
-(* TODO: remove code?? *)
-let normalize_fun_prologue b m =
-  let (t, x, loc) = Synthack.normalize_decl (b, m) in
-  let x =
-    match x with
-      | Some x -> x
-      | None -> 
-	  (* TODO: code cleanup remove these things !!! *)
-	  Npkcontext.report_error "Firstpass.translate_global" 
-	    "unknown function name"
-  in
-    (t, x, loc)
-*)
-
-(*
-(* TODO: remove build_glbdecl and process_decl => now in bare2C *)
-let build_type_decl d =
-  let (t, _, _) = Synthack.normalize_decl d in
-    t
-    *)
-(*
-let build_type_blk _ d =
-  let (t, _, _) = Synthack.normalize_decl d in
-    t
-    *)
 let flatten_field_decl (b, x) = List.map (fun (v, i) -> (b, v, i)) x
 
 (* TODO: simplify and put in synthack so as to optimize?? *)
@@ -370,7 +335,7 @@ statement:
   IDENTIFIER COLON statement               { (BareSyntax.Label $1, get_loc ())::$3 }
 | IF LPAREN expression_sequence RPAREN statement
   else_branch_option                       { 
-    [BareSyntax.If ((*normalize_bexp *)$3, $5, $6), get_loc ()] 
+    [BareSyntax.If ($3, $5, $6), get_loc ()] 
   }
 | switch_stmt                              { [BareSyntax.CSwitch $1, get_loc ()] }
 | iteration_statement                      { [$1, get_loc ()] }
@@ -386,7 +351,7 @@ else_branch_option:
   
 
 simple_statement:
-  declaration_modifier declaration         { [BareSyntax.LocalDecl ($1, $2), get_loc ()] (*build_stmtdecl $1 $2*) }
+  declaration_modifier declaration         { [BareSyntax.LocalDecl ($1, $2), get_loc ()] }
 | TYPEDEF declaration                      { 
     (* TODO: cleanup/simplify this function *)
     let _ = build_typedef $2 in
@@ -397,7 +362,7 @@ simple_statement:
       (BareSyntax.Exp (BareSyntax.Set (BareSyntax.RetVar, None, $2)), loc)::(BareSyntax.Return, loc)::[]
   }
 | RETURN                                   { [BareSyntax.Return, get_loc ()] }
-| expression_sequence                      { [BareSyntax.Exp $1, get_loc ()] (* [Exp $1, get_loc ()] *) }
+| expression_sequence                      { [BareSyntax.Exp $1, get_loc ()] }
 | BREAK                                    { [BareSyntax.Break, get_loc ()] }
 | CONTINUE                                 { [BareSyntax.Continue, get_loc ()] }
 | GOTO IDENTIFIER                          { 
@@ -441,7 +406,7 @@ iteration_statement:
       expression_statement
       assignment_expression_list RPAREN
       statement                            { 
-	BareSyntax.For ($3, (*normalize_bexp*) $5, $8, $6) 
+	BareSyntax.For ($3, $5, $8, $6) 
       }
 | FOR LPAREN SEMICOLON 
       expression_statement
@@ -449,30 +414,29 @@ iteration_statement:
       statement                            { 
 	Npkcontext.report_warning "Parser.iteration_statement" 
 	  "init statement expected";
-	BareSyntax.For ([], (*normalize_bexp*) $4, $7, $5) 
+	BareSyntax.For ([], $4, $7, $5) 
       }
 | FOR LPAREN assignment_expression_list SEMICOLON 
       expression_statement RPAREN
       statement                            { 
 	Npkcontext.report_warning "Parser.iteration_statement" 
 	  "increment statement expected";
-	BareSyntax.For ($3, (*normalize_bexp*) $5, $7, []) 
+	BareSyntax.For ($3, $5, $7, []) 
       }
 | FOR LPAREN SEMICOLON expression_statement RPAREN
     statement                            { 
       Npkcontext.report_warning "Parser.iteration_statement" 
 	"init statement expected";
-      BareSyntax.For ([], (*normalize_bexp *)$4, $6, []) 
+      BareSyntax.For ([], $4, $6, []) 
     }
 | WHILE LPAREN expression_sequence RPAREN 
   statement                                { 
-    BareSyntax.For ([], (*normalize_bexp*) $3, $5, [])
+    BareSyntax.For ([], $3, $5, [])
   }
 | DO statement
   WHILE LPAREN expression_sequence 
   RPAREN SEMICOLON                         { 
     BareSyntax.DoWhile ($2, $5)
-    (* TODO: BareSyntax.DoWhile ($2, normalize_bexp $5) *)
   }
 ;;
 
@@ -581,22 +545,6 @@ expression:
 | LPAREN type_name RPAREN expression
                            %prec prefix_OP { BareSyntax.Cast ($4, $2) }
 | LPAREN type_name RPAREN composite        { 
-(*
-    let loc = get_loc () in
-    let (blk, t) = build_type_blk loc $2 in
-    let d = 
-      { 
-	t = t; is_static = false; is_extern = false; 
-	initialization = Some (Sequence $4) 
-      } 
-    in
-    let id = gen_tmp_id () in
-    let decl = (BareSyntax.LocalDecl (id, BareSyntax.VDecl d), loc) in
-    let e = (BareSyntax.Exp (BareSyntax.Var id), loc) in
-      Npkcontext.report_accept_warning "Parser.cast_expression" 
-	"local composite creation" Npkcontext.DirtySyntax;
-      BareSyntax.BlkExp (blk@decl::e::[])
-      *)
     BareSyntax.LocalComposite ($2, $4, get_loc ())
   }
 // TODO: factor these as binop non-terminal??
