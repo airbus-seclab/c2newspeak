@@ -49,7 +49,7 @@ and stmtkind =
 	 continue jumps before the second blk 
 	 init may cotain break or continue stmt!
       *)
-  | For of (blk * exp * blk * blk)
+  | For of (blk * exp option * blk * blk)
   | While of (exp * blk)
   | DoWhile of (blk * exp)
   | CSwitch of (exp * (exp * blk * Newspeak.location) list * blk)

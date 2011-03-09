@@ -1,4 +1,4 @@
-Warning: 296.c:28#0: halting condition should be explicit
+Warning: 296.c:28#2: halting condition should be explicit
 Newspeak output
 ---------------
 void (296.c:26#5)^main(void) {

@@ -270,8 +270,16 @@ and process_stmtkind loc x =
 	  Npkcontext.report_warning "Parser.iteration_statement" 
 	    "increment statement expected"
 	end;
+	if (condition = None) then begin
+	  Npkcontext.report_warning "Parser.expression_statement" 
+	    "halting condition should be explicit"
+	end;
 	let init = process_blk init in
-	let condition = Csyntax.normalize_bexp (process_exp condition) in
+	let condition = 
+	  match condition with
+	      None -> Csyntax.exp_of_int 1
+	    | Some condition -> Csyntax.normalize_bexp (process_exp condition) 
+	in
 	let body = process_blk body in
 	let continue = process_blk continue in
 	  (T.For (init, condition, body, continue), loc)::[]

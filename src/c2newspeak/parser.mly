@@ -367,9 +367,9 @@ asm_statement:
 iteration_statement:
   FOR 
   LPAREN assignment_expression_list_option SEMICOLON 
-         expression_statement
+         expression_option SEMICOLON
          assignment_expression_list_option RPAREN
-  statement                                { For ($3, $5, $8, $6) }
+  statement                                { For ($3, $5, $9, $7) }
 | WHILE LPAREN expression_sequence RPAREN 
   statement                                { While ($3, $5) }
 | DO statement
@@ -380,15 +380,6 @@ iteration_statement:
 assignment_expression_list_option:
   assignment_expression_list               { $1 }
 |                                          { [] }
-;;
-
-expression_statement:
-  SEMICOLON                                { 
-    Npkcontext.report_warning "Parser.expression_statement" 
-      "halting condition should be explicit";
-    BareSyntax.exp_of_int 1
-  }
-| expression SEMICOLON                     { $1 }
 ;;
 
 switch_stmt:
@@ -1026,4 +1017,10 @@ volatile_option:
   VOLATILE                                 { }
 |                                          { }
 ;;
+
+expression_option:
+  expression                               { Some $1 }
+|                                          { None }
+;;
+
 
