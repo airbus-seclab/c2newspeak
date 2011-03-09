@@ -2,11 +2,11 @@ Warning: 335.c:27#0: identifier s is defined as a type, avoid using it for anoth
 Warning: 335.c:32#0: 'short' is not normalized: use 'short int' instead
 Warning: 335.c:33#0: 'long' is not normalized: use 'long int' instead
 Warning: 335.c:34#0: 'long long' is not standard: use 'long long int' instead
-Warning: 335.c:41#0: increment statement expected
 Warning: 335.c:44#0: halting condition should be explicit
-Warning: 335.c:38#16: init statement expected
-Warning: 335.c:42#17: init statement expected
-Warning: 335.c:44#11: init statement expected
+Warning: 335.c:38#2: init statement expected
+Warning: 335.c:40#2: increment statement expected
+Warning: 335.c:42#2: init statement expected
+Warning: 335.c:44#2: init statement expected
 Newspeak output
 ---------------
 void (335.c:36#5)^main(void) {

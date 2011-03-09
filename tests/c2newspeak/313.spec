@@ -1,4 +1,4 @@
-Warning: 313.c:30#0: increment statement expected
+Warning: 313.c:28#2: increment statement expected
 Newspeak output
 ---------------
 void (313.c:26#5)^main(void) {
