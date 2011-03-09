@@ -181,8 +181,6 @@ val print: t -> unit
     of instructions in program prog. *)
 val size_of: t -> int
 
-val neg: exp -> exp
-
 val and_bexp: exp -> exp -> exp
 
 val or_bexp: exp -> exp -> exp

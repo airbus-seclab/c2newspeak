@@ -475,12 +475,6 @@ and size_of_stmt (x, _) =
 
 and size_of_case (_, body, _) = size_of_blk body
 
-let neg x = 
-  match x with
-      Cst (Cir.CInt c, Int (_, sz)) -> 
-	Cst (Cir.CInt (Nat.neg c), Int (Signed, sz))
-    | _ -> Binop (Minus, exp_of_int 0, x)
-
 let and_bexp e1 e2 =
   IfExp (e1, IfExp (e2, exp_of_int 1, exp_of_int 0), exp_of_int 0)
 
