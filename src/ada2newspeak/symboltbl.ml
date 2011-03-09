@@ -193,7 +193,7 @@ struct
       match l with
 	|  []  -> raise Not_found
 	| h::t -> begin
-            match p' h with
+	   match p' h with
               | None -> extract_unique p' t
               | Some r -> 
 		  if List.exists (fun x -> p' x <> None) t
@@ -477,7 +477,7 @@ let add_with s x = s.s_with <- x::s.s_with
 let is_with  s x = List.mem x s.s_with
 *)
 let is_ada_pck p = List.exists (fun x -> compare x p = 0) 
-    ["system";"machine_code";"unchecked_conversion"]
+    ["system";(*"machine_code"*)"unchecked_conversion"]
 
 
 let add_use is_with s p =

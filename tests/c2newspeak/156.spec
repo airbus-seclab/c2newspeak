@@ -1,5 +1,5 @@
 Debug: Parsing 156.c...
-Debug: Current size: 3
+Debug: Current size: 8
 Debug: Parsing done.
 Debug: Running goto elimination...
 Debug: Goto elimination done.

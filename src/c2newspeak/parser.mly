@@ -26,19 +26,24 @@
 %{
 open Csyntax
 open Lexing
-open Synthack
+(* TODO: change this T to BareSyntax rather than Synthack *)
+module T = Synthack
 
-let struct_cnt = ref 0
+let gen_tmp_id =
+  let tmp_cnt = ref 0 in
+  let gen_tmp_id () = 
+    incr tmp_cnt;
+    Temps.to_string !tmp_cnt (Temps.Misc "parser")
+  in
+    gen_tmp_id
 
-let new_id =
-  let c = ref 0 in
-  fun _ ->
-    incr c;
-    !c
-
-let gen_struct_id () = 
-  incr struct_cnt;
-  "anon_struct"^(string_of_int !struct_cnt)
+let gen_struct_id = 
+  let struct_cnt = ref 0 in
+  let gen_struct_id () =
+    incr struct_cnt;
+    "anon_struct"^(string_of_int !struct_cnt)
+  in
+    gen_struct_id
   
 (* TODO: write checks for all the syntax that is thrown away in these functions
    !! *)
@@ -72,18 +77,7 @@ let process_decls (build_sdecl, build_vdecl) (b, m) =
   let vdecls = List.fold_right build_vdecl m [] in
     sdecls@vdecls
       
-let build_glbdecl (static, extern) d =
-  let build_vdecl l (t, x, loc, init) = 
-    let d = 
-      { t = t; is_static = static; is_extern = extern; initialization = init }
-    in
-    (GlbDecl (x, VDecl d), loc)::l
-  in
-  let loc = get_loc () in
-  let build_sdecl x = (GlbDecl x, loc) in
-    process_decls (build_sdecl, build_vdecl) d
-
-(* TODO: clean this code and find a way to factor with previous function *)
+(* TODO: simplifiy this code!!! *)
 let build_glbtypedef d =
   let build_vdecl l (t, x, _, _) = 
     Synthack.define_type x t;
@@ -93,7 +87,7 @@ let build_glbtypedef d =
   let build_sdecl x = (GlbDecl x, loc) in
     process_decls (build_sdecl, build_vdecl) d
 
-let build_stmtdecl static extern d =
+let build_stmtdecl (static, extern) d =
 (* TODO: think about cleaning this location thing up!!! *)
 (* for enum decls it seems the location is in double *)
   let build_vdecl l (t, x, loc, init) = 
@@ -130,19 +124,7 @@ let normalize_fun_prologue b m =
   in
     (t, x, loc)
 
-let build_fundef static ((b, m), body) =
-  let (_, (t, x, loc)) = Synthack.normalize_decl (b, m) in
-  let x =
-    match x with
-      | Some x -> x
-      | None -> 
-	  (* TODO: code cleanup remove these things !!! *)
-	  Npkcontext.report_error "Firstpass.translate_global" 
-	    "unknown function name"
-  in
-  let t = Csyntax.ftyp_of_typ t in
-    (FunctionDef (x, t, static, body), loc)::[]
-
+(* TODO: remove build_glbdecl and process_decl => now in bare2C *)
 let build_type_decl d =
   let (sdecls, (t, _, _)) = Synthack.normalize_decl d in
     if (sdecls <> []) then begin 
@@ -224,7 +206,7 @@ let report_asm tokens =
 %left     DOT ARROW
 %left     LPAREN LBRACKET
 
-%type <Csyntax.t> parse
+%type <BareSyntax.t> parse
 %start parse
 
 %type <Csyntax.assertion> assertion
@@ -243,7 +225,7 @@ parse:
 ;;
 
 translation_unit:
-  NPK translation_unit                      { (GlbUserSpec $1, get_loc ())::$2 }
+  NPK translation_unit                      { (BareSyntax.GlbUserSpec $1, get_loc ())::$2 }
 | external_declaration translation_unit     { $1@$2 }
 | SEMICOLON translation_unit                { 
     Npkcontext.report_accept_warning "Parser.translation_unit" 
@@ -270,14 +252,14 @@ function_declarator:
       old_parameter_declaration_list       { 
     Npkcontext.report_accept_warning "Parser.declarator"
       "deprecated style of function definition" Npkcontext.DirtySyntax;
-	($1, Function ($2, build_funparams $4 $6))
+	($1, BareSyntax.Function ($2, build_funparams $4 $6))
   }
 | direct_declarator 
       LPAREN identifier_list RPAREN
       old_parameter_declaration_list       { 
     Npkcontext.report_accept_warning "Parser.declarator"
       "deprecated style of function definition" Npkcontext.DirtySyntax;
-    (0, Function ($1, build_funparams $3 $5))
+    (0, BareSyntax.Function ($1, build_funparams $3 $5))
   }
 ;;
 
@@ -295,10 +277,10 @@ declaration:
 typeof_declaration:
 type_qualifier_list TYPEOF LPAREN 
 type_specifier pointer RPAREN 
-type_qualifier_list ident_or_tname { ($4, [( ($5, Variable ($8, get_loc ())), []) , None])}
+type_qualifier_list ident_or_tname          { ($4, [( ($5, BareSyntax.Variable ($8, get_loc ())), []) , None])}
 ;;
 init_declarator_list:
-                                            { (((0, Abstract), []), None)::[] }
+                                            { (((0, BareSyntax.Abstract), []), None)::[] }
 | non_empty_init_declarator_list            { $1 }
 ;;
 
@@ -329,15 +311,15 @@ declarator:
 ;;
 
 direct_declarator:
-  ident_or_tname                           { (0, Variable ($1, get_loc ())) }
+  ident_or_tname                           { (0, BareSyntax.Variable ($1, get_loc ())) }
 | LPAREN declarator RPAREN                 { $2 }
 | direct_declarator LBRACKET 
-      expression_sequence RBRACKET         { (0, Array ($1, Some $3)) }
+      expression_sequence RBRACKET         { (0, BareSyntax.Array ($1, Some $3)) }
 | direct_declarator LBRACKET 
-      type_qualifier_list RBRACKET         { (0, Array ($1, None)) }
+      type_qualifier_list RBRACKET         { (0, BareSyntax.Array ($1, None)) }
 | direct_declarator 
-  LPAREN parameter_list RPAREN             { (0, Function ($1, $3)) }
-| direct_declarator LPAREN RPAREN          { (0, Function ($1, [])) }
+  LPAREN parameter_list RPAREN             { (0, BareSyntax.Function ($1, $3)) }
+| direct_declarator LPAREN RPAREN          { (0, BareSyntax.Function ($1, [])) }
 ;;
 
 identifier_list:
@@ -357,7 +339,7 @@ struct_declarator:
 | COLON expression                         { 
     Npkcontext.report_accept_warning "Parser.struct_declarator"
       "anonymous field declaration in structure" Npkcontext.DirtySyntax;
-    ((0, Abstract), Some $2) 
+    ((0, BareSyntax.Abstract), Some $2) 
   }
 ;;
 
@@ -386,11 +368,11 @@ parameter_declaration:
   declaration_specifiers declarator        { ($1, $2) }
 | declaration_specifiers 
   abstract_declarator                      { ($1, $2) }
-| declaration_specifiers                   { ($1, (0, Abstract)) }
+| declaration_specifiers                   { ($1, (0, BareSyntax.Abstract)) }
 ;;
 
 type_name:
-  declaration_specifiers                   { ($1, (0, Abstract)) }
+  declaration_specifiers                   { ($1, (0, BareSyntax.Abstract)) }
 | declaration_specifiers
   abstract_declarator                      { ($1, $2) }
 ;;
@@ -417,44 +399,54 @@ statement_list:
 |                                          { [] }
 ;;
 
+// TODO: factor get_loc ()
 statement:
   IDENTIFIER COLON statement               { (Label $1, get_loc ())::$3 }
-| declaration SEMICOLON                    { build_stmtdecl false false $1 }
-| STATIC declaration SEMICOLON             { build_stmtdecl true false $2 }
-| EXTERN declaration SEMICOLON             { build_stmtdecl false true $2 }
-| TYPEDEF declaration SEMICOLON            { build_typedef $2 }
-| IF LPAREN expression_sequence RPAREN
-      statement           %prec below_ELSE {
-    [If (normalize_bexp $3, $5, []), get_loc ()] 
-  }
 | IF LPAREN expression_sequence RPAREN statement
-  ELSE statement                           { 
-    [If (normalize_bexp $3, $5, $7), get_loc ()] 
+  else_branch_option                       { 
+    [If (normalize_bexp $3, $5, $6), get_loc ()] 
   }
 | switch_stmt                              { [CSwitch $1, get_loc ()] }
 | iteration_statement                      { [$1, get_loc ()] }
-| RETURN expression_sequence SEMICOLON              { 
+| NPK                                      { (UserSpec $1, get_loc ())::[] }
+| compound_statement                       { [Block $1, get_loc ()] }
+| simple_statement SEMICOLON               { $1 }
+;;
+
+else_branch_option:
+  ELSE statement                           { $2 }
+|                         %prec below_ELSE { [] }
+;;
+  
+
+simple_statement:
+  declaration_modifier declaration         { build_stmtdecl $1 $2 }
+| TYPEDEF declaration                      { build_typedef $2 }
+| RETURN expression_sequence               { 
     let loc = get_loc () in
       (Exp (Set (RetVar, None, $2)), loc)::(Return, loc)::[]
   }
-| RETURN SEMICOLON                         { [Return, get_loc ()] }
-| expression_sequence SEMICOLON            { [Exp $1, get_loc ()] }
-| BREAK SEMICOLON                          { [Break, get_loc ()] }
-| CONTINUE SEMICOLON                       { [Continue, get_loc ()] }
-| GOTO IDENTIFIER SEMICOLON                { 
+| RETURN                                   { [Return, get_loc ()] }
+| expression_sequence                      { [Exp $1, get_loc ()] }
+| BREAK                                    { [Break, get_loc ()] }
+| CONTINUE                                 { [Continue, get_loc ()] }
+| GOTO IDENTIFIER                          { 
     Npkcontext.report_accept_warning "Parser.statement" "goto statement"
       Npkcontext.ForwardGoto;
     [Goto $2, get_loc ()] 
   }
-| compound_statement                       { [Block $1, get_loc ()] }
-| SEMICOLON                                { [] }
-| asm SEMICOLON                            { [] }
-| NPK                                      { (UserSpec $1, get_loc ())::[] }
+| asm                                      { [] }
+|                                          { [] }
+;;
+
+declaration_modifier:
+                                           { (false, false) }
+| STATIC                                   { (true, false) }
+| EXTERN                                   { (false, true) }
 ;;
 
 asm:
-  ASM LPAREN asm_statement_list RPAREN     { report_asm $3 }
-| ASM VOLATILE 
+  ASM volatile_option 
   LPAREN asm_statement_list RPAREN         { report_asm $4 }
 ;;
 
@@ -477,27 +469,27 @@ iteration_statement:
 | FOR LPAREN assignment_expression_list SEMICOLON 
       expression_statement
       assignment_expression_list RPAREN
-      statement                            { For($3, normalize_bexp $5, $8, $6) }
+      statement                            { For ($3, normalize_bexp $5, $8, $6) }
 | FOR LPAREN SEMICOLON 
       expression_statement
       assignment_expression_list RPAREN
       statement                            { 
 	Npkcontext.report_warning "Parser.iteration_statement" 
 	  "init statement expected";
-	For([], normalize_bexp $4, $7, $5) 
+	For ([], normalize_bexp $4, $7, $5) 
       }
 | FOR LPAREN assignment_expression_list SEMICOLON 
       expression_statement RPAREN
       statement                            { 
 	Npkcontext.report_warning "Parser.iteration_statement" 
 	  "increment statement expected";
-	For($3, normalize_bexp $5, $7, []) 
+	For ($3, normalize_bexp $5, $7, []) 
       }
 | FOR LPAREN SEMICOLON expression_statement RPAREN
       statement                            { 
 	Npkcontext.report_warning "Parser.iteration_statement" 
 	  "init statement expected";
-	For([], normalize_bexp $4, $6, []) 
+	For ([], normalize_bexp $4, $6, []) 
       }
 | WHILE LPAREN expression_sequence RPAREN 
   statement                                { For ([], normalize_bexp $3, $5, [])
@@ -617,7 +609,7 @@ expression:
 	initialization = Some (Sequence $4) 
       } 
     in
-    let id = Temps.to_string (new_id ()) (Temps.Misc "parser") in
+    let id = gen_tmp_id () in
     let decl = (LocalDecl (id, VDecl d), loc) in
     let e = (Exp (Var id), loc) in
       Npkcontext.report_accept_warning "Parser.cast_expression" 
@@ -664,7 +656,7 @@ expression:
 	initialization = Some (Data e)
       }
     in
-    let id = Temps.to_string (new_id ()) (Temps.Misc "parser") in
+    let id = gen_tmp_id () in
     let decl = (LocalDecl (id, VDecl d), loc) in
     let e' = Var id in
       BlkExp( [ decl; ( Exp (IfExp(e', e', $4)), loc ) ] )
@@ -754,7 +746,7 @@ init_list:
 ;;
 
 abstract_declarator:
-  pointer                                  { ($1, Abstract) }
+  pointer                                  { ($1, BareSyntax.Abstract) }
 | direct_abstract_declarator               { $1 }
 | pointer direct_abstract_declarator       { 
     let (ptr, decl) = $2 in
@@ -762,17 +754,20 @@ abstract_declarator:
   }
 ;;
 
+// TODO: try to factor cases more
 direct_abstract_declarator:
   LPAREN abstract_declarator RPAREN        { $2 }
-| LBRACKET type_qualifier_list RBRACKET    { (0, Array ((0, Abstract), None)) }
+| LBRACKET type_qualifier_list RBRACKET    { 
+    (0, BareSyntax.Array ((0, BareSyntax.Abstract), None)) 
+  }
 | LBRACKET expression_sequence RBRACKET    { 
-    (0, Array ((0, Abstract), Some $2)) 
+    (0, BareSyntax.Array ((0, BareSyntax.Abstract), Some $2)) 
   }
 | direct_abstract_declarator 
-  LBRACKET expression_sequence RBRACKET    { (0, Array ($1, Some $3)) }
+  LBRACKET expression_sequence RBRACKET    { (0, BareSyntax.Array ($1, Some $3)) }
 | direct_abstract_declarator 
-  LPAREN parameter_list RPAREN             { (0, Function ($1, $3)) }
-| direct_abstract_declarator LPAREN RPAREN { (0, Function ($1, [])) }
+  LPAREN parameter_list RPAREN             { (0, BareSyntax.Function ($1, $3)) }
+| direct_abstract_declarator LPAREN RPAREN { (0, BareSyntax.Function ($1, [])) }
 ;;
 
 pointer:
@@ -792,7 +787,7 @@ parameter_list:
 | parameter_declaration                    { $1::[] }
 | ELLIPSIS                                 {
     let loc = get_loc () in
-      (Va_arg, (0, Variable ("__builtin_newspeak_va_arg", loc)))::[] 
+      (BareSyntax.Va_arg, (0, BareSyntax.Variable ("__builtin_newspeak_va_arg", loc)))::[] 
   }
 ;;
 
@@ -864,135 +859,146 @@ field_blk:
 ;;
 
 ftyp:
-  FLOAT                                  { Config.size_of_float }
-| DOUBLE                                 { Config.size_of_double }
-| LONG DOUBLE                            { Config.size_of_longdouble }
+  FLOAT                                   { Config.size_of_float }
+| DOUBLE                                  { Config.size_of_double }
+| LONG DOUBLE                             { Config.size_of_longdouble }
 ;;
 
 type_specifier:
-  VOID                                   { Void }
-| ityp                                   { Integer (Newspeak.Signed, $1) }
-| SIGNED ityp                            {
+  VOID                                    { BareSyntax.Void }
+| ityp                                    { BareSyntax.Integer (Newspeak.Signed, $1) }
+| SIGNED ityp                             {
     Npkcontext.report_strict_warning "Parser.type_specifier" 
       "signed specifier not necessary";
-    Integer (Newspeak.Signed, $2)
+    BareSyntax.Integer (Newspeak.Signed, $2)
   }
-| LONG LONG UNSIGNED INT                 {
+| LONG LONG UNSIGNED INT                  {
     Npkcontext.report_strict_warning "Parser.type_specifier"
       ("'long long unsigned int' is not normalized : "
       ^"use 'unsigned long long int' instead");
-    Integer (Newspeak.Unsigned, Config.size_of_longlong)
+    BareSyntax.Integer (Newspeak.Unsigned, Config.size_of_longlong)
   }
-| UNSIGNED ityp                          { Integer (Newspeak.Unsigned, $2) }
-| UNSIGNED                               { 
+| UNSIGNED ityp                           { BareSyntax.Integer (Newspeak.Unsigned, $2) }
+| UNSIGNED                                { 
     Npkcontext.report_strict_warning "Parser.type_specifier"
       "unspecified integer kind";
-    Integer (Newspeak.Unsigned, Config.size_of_int) 
+    BareSyntax.Integer (Newspeak.Unsigned, Config.size_of_int) 
   }
 
-| LONG SIGNED INT                        {
+| LONG SIGNED INT                         {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long signed int' is not normalized: "
        ^"use 'signed long int' instead");
-    Integer (Newspeak.Signed, Config.size_of_long)
-      }
+    BareSyntax.Integer (Newspeak.Signed, Config.size_of_long)
+  }
 
-| LONG SIGNED                            {
+| LONG SIGNED                             {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long signed' is not normalized: "
        ^"use 'signed long int' instead");
-    Integer (Newspeak.Signed, Config.size_of_long)
-      }
+    BareSyntax.Integer (Newspeak.Signed, Config.size_of_long)
+  }
 
 | LONG UNSIGNED INT                        {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long unsigned int' is not normalized: "
        ^"use 'unsigned long int' instead");
-    Integer (Newspeak.Unsigned, Config.size_of_long)
+    BareSyntax.Integer (Newspeak.Unsigned, Config.size_of_long)
   }
 
 | LONG UNSIGNED                            {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long unsigned' is not normalized: "
        ^"use 'unsigned long int' instead");
-    Integer (Newspeak.Unsigned, Config.size_of_long)
+    BareSyntax.Integer (Newspeak.Unsigned, Config.size_of_long)
   }
 
-| SHORT SIGNED INT                        {
+| SHORT SIGNED INT                         {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short signed int' is not normalized: "
        ^"use 'signed short int' instead");
-    Integer (Newspeak.Signed, Config.size_of_short)
-      }
+    BareSyntax.Integer (Newspeak.Signed, Config.size_of_short)
+  }
 
-| SHORT SIGNED                            {
+| SHORT SIGNED                             {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short signed' is not normalized: "
        ^"use 'signed short int' instead");
-    Integer (Newspeak.Signed, Config.size_of_short)
-      }
+    BareSyntax.Integer (Newspeak.Signed, Config.size_of_short)
+  }
 
-| SHORT UNSIGNED INT                        {
+| SHORT UNSIGNED INT                       {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short unsigned int' is not normalized: "
        ^"use 'unsigned short int' instead");
-    Integer (Newspeak.Unsigned, Config.size_of_short)
+    BareSyntax.Integer (Newspeak.Unsigned, Config.size_of_short)
   }
 
-| SHORT UNSIGNED                            {
+| SHORT UNSIGNED                           {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short unsigned' is not normalized: "
        ^"use 'unsigned short int' instead");
-    Integer (Newspeak.Unsigned, Config.size_of_short)
+    BareSyntax.Integer (Newspeak.Unsigned, Config.size_of_short)
   }
 
-| ftyp                                   { Float $1 }
-| STRUCT field_blk                       { Struct (gen_struct_id (), Some $2) }
-| STRUCT ident_or_tname                  { Struct ($2, None) }
-| STRUCT ident_or_tname field_blk        { Struct ($2, Some $3) }
-| UNION field_blk                        { Union (gen_struct_id (), Some $2) }
-| UNION ident_or_tname                   { Union ($2, None) }
-| UNION ident_or_tname field_blk         { Union ($2, Some $3) }
-| TYPEDEF_NAME                           { Name $1 }
-| ENUM LBRACE enum_list RBRACE           { Enum (Some $3) }
-| ENUM IDENTIFIER                        { Enum None }
-| ENUM IDENTIFIER 
-  LBRACE enum_list RBRACE                { Enum (Some $4) }
-| TYPEOF LPAREN type_specifier RPAREN    { $3 }
-| TYPEOF LPAREN IDENTIFIER RPAREN        { Typeof $3 }
-| VA_LIST                                { Va_arg }
+| ftyp                                     { BareSyntax.Float $1 }
+| struct_or_union composite_arguments      { BareSyntax.Composite ($1, $2) }
+| TYPEDEF_NAME                             { BareSyntax.Name $1 }
+| ENUM enum_arguments                      { BareSyntax.Enum $2 }
+| VA_LIST                                  { BareSyntax.Va_arg }
+| TYPEOF LPAREN type_specifier RPAREN      { $3 }
+| TYPEOF LPAREN IDENTIFIER RPAREN          { BareSyntax.Typeof $3 }
 ;;
 
+struct_or_union:
+  STRUCT                                   { true }
+| UNION                                    { false }
+;;
+
+composite_arguments:
+  field_blk                                { (gen_struct_id (), Some $1) }
+| ident_or_tname                           { ($1, None) }
+| ident_or_tname field_blk                 { ($1, Some $2) }
+;;
+
+enum_arguments:
+  enum_values                              { $1 }
+| IDENTIFIER                               { None }
+| IDENTIFIER enum_values                   { $2 }
+;;
+
+enum_values:
+  LBRACE enum_list RBRACE                  { Some $2 }
+;;
 
 //Section that is dependent on version of the compiler (standard ANSI or GNU)
 //TODO: find a way to factor some of these, possible!!!
 external_declaration:
-  STATIC declaration SEMICOLON             { build_glbdecl (true, false) $2 }
-| function_definition                      { build_fundef false $1 }
-| STATIC function_definition               { build_fundef true $2 }
-| INLINE STATIC function_definition        { build_fundef true $3 }
+  function_definition                      { (BareSyntax.FunctionDef (false, $1), get_loc ())::[] }
+| STATIC function_definition               { (BareSyntax.FunctionDef (true, $2), get_loc ())::[] }
+| INLINE STATIC function_definition        { (BareSyntax.FunctionDef (true, $3), get_loc ())::[] }
 | ATTRIBUTE LPAREN LPAREN attribute_name_list 
-  RPAREN RPAREN STATIC function_definition { build_fundef true $8 }
-// GNU C extension
-| optional_extension 
+  RPAREN RPAREN STATIC function_definition { (BareSyntax.FunctionDef (true, $8), get_loc ())::[] }
+| extension_option
   EXTERN function_definition               {
     Npkcontext.report_ignore_warning "Parser.external_declaration" 
       "extern function definition" Npkcontext.ExternFunDef;
     let ((b, m), _) = $3 in
-      build_glbdecl (false, false) (b, ((m, []), None)::[])
-}
-| optional_extension TYPEDEF 
-  declaration SEMICOLON                    { build_glbtypedef $3 }
-| EXTENSION declaration SEMICOLON          { build_glbdecl (false, false) $2 }
-| declaration SEMICOLON                    { build_glbdecl (false, false) $1 }
-| optional_extension
-  EXTERN declaration SEMICOLON             { build_glbdecl (false, true) $3 }
-| asm SEMICOLON                            { [] }
+      (BareSyntax.GlbDecl ((false, false), (b, ((m, []), None)::[])), get_loc ())::[]
+  }
+| global_declaration SEMICOLON             { $1 }
 ;;
 
-optional_extension:
-  EXTENSION                                { }
-|                                          { }
+global_declaration:
+  STATIC declaration                       { (BareSyntax.GlbDecl ((true, false), $2), get_loc ())::[] }
+| EXTENSION declaration                    { (BareSyntax.GlbDecl ((false, false), $2), get_loc ())::[] }
+| declaration                              { (BareSyntax.GlbDecl ((false, false), $1), get_loc ())::[] }
+| extension_option EXTERN declaration      { (BareSyntax.GlbDecl ((false, true), $3), get_loc ())::[] }
+| extension_option TYPEDEF declaration     { 
+(* TODO: cleanup/simplify *)
+    let _ = build_glbtypedef $3 in
+      (BareSyntax.GlbTypedef $3, get_loc ())::[] }
+| asm                                      { [] }
 ;;
 
 attribute_list:
@@ -1019,7 +1025,7 @@ type_qualifier:
 
 gnuc_field_declaration:
 // GNU C extension
-  optional_extension field_declaration     { $2 }
+  extension_option field_declaration       { $2 }
 ;;
 
 field_declaration:
@@ -1028,7 +1034,7 @@ field_declaration:
 | declaration_specifiers                   { 
     Npkcontext.report_accept_warning "Parser.field_declaration"
       "anonymous field declaration in structure" Npkcontext.DirtySyntax;
-    flatten_field_decl ($1, ((0, Abstract), None)::[]) 
+    flatten_field_decl ($1, ((0, BareSyntax.Abstract), None)::[]) 
   }
 ;;
 
@@ -1054,6 +1060,7 @@ attribute_name:
       | "__deprecated__" | "deprecated" | "__malloc__" 
       | "__warn_unused_result__" | "warn_unused_result"
       | "__unused__" | "unused" 
+      | "no_instrument_function"
       | "__artificial__" | "__cold__" | "cold" -> ()
       | "dllimport" -> 
 	  Npkcontext.report_warning "Parser.attribute" 
@@ -1088,6 +1095,12 @@ attribute_name:
 	    "packed attribute" Npkcontext.Pack;
 	  []
       | (("__nonnull__" | "__nonnull"), _) -> []
+      | _ -> raise Parsing.Parse_error
+  }
+| IDENTIFIER LPAREN LPAREN INTEGER SHIFTL
+  LPAREN INTEGER RPAREN RPAREN RPAREN    {
+    match $1 with
+	"__aligned__" -> []
       | _ -> raise Parsing.Parse_error
   }
 | IDENTIFIER LPAREN LPAREN 
@@ -1144,3 +1157,14 @@ assertion:
 | constant assertion                       { (CstToken $1)::$2 }
 | EOF                                      { [] }
 ;;
+
+extension_option:
+  EXTENSION                                { }
+|                                          { }
+;;
+
+volatile_option:
+  VOLATILE                                 { }
+|                                          { }
+;;
+

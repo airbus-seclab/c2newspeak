@@ -24,32 +24,10 @@
 *)
 
 open Newspeak
+open BareSyntax
 
 module B = Csyntax
 module C = Cir
-
-type base_typ =
-    | Void 
-    | Integer of ikind
-    | Float of int
-    | Struct of (string * field list option)
-    | Union of (string * field list option)
-    | Name of string
-    | Enum of ((string * B.exp option) list) option
-    | Va_arg
-    | Typeof of string
-
-and var_modifier = (int * modifier)
-
-and modifier = 
-    | Abstract
-    | Variable of (string * location)
-    | Function of (var_modifier * decl list)
-    | Array of (var_modifier * B.exp option)
-
-and decl = (base_typ * var_modifier)
-
-and field = (base_typ * var_modifier * B.exp option)
 
 type vdecl = (B.typ * string option * location)
 type sdecls = (string * B.decl) list
@@ -69,6 +47,8 @@ let init_tbls () =
 let _ = 
   init_tbls ()
 
+(* TODO: try to remove this syntactic hack by rewriting the parser,
+   but is it even possible? *)
 let define_type x t = Hashtbl.add typedefs x t
 
 let is_type x = Hashtbl.mem typedefs x
@@ -93,8 +73,7 @@ let rec normalize_base_typ t =
     match t with
 	Integer _ | Float _ | Void | Va_arg | Name _ | Enum None 
       | Typeof _ -> []
-      | Struct (n, f) -> normalize_compdef (n, true, f)
-      | Union (n, f) -> normalize_compdef (n, false, f)
+      | Composite v -> normalize_compdef v
       | Enum Some f -> define_enum f
   in
   let t = 
@@ -109,13 +88,13 @@ let rec normalize_base_typ t =
 	    Npkcontext.report_error "Synthack.normalize_base_typ" 
 	      ("unknown type "^x)
 	end
-      | Struct (n, _) | Union (n, _) -> B.Comp n
+      | Composite (_, (n, _)) -> B.Comp n
       | Typeof v -> B.Typeof (B.Var v)
       | Enum _ -> B.Int C.int_kind
   in
     (sdecls, t)
 
-and normalize_compdef (n, is_struct, f) =
+and normalize_compdef (is_struct, (n, f)) =
   match f with
       None -> []
     | Some f -> 
