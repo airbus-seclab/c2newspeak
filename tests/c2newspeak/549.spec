@@ -1,4 +1,4 @@
-Warning: 549.c:32#0: local composite creation accepted
+Warning: 549.c:31#2: local composite creation accepted
 Newspeak output
 ---------------
 void (549.c:27#5)^main(void) {

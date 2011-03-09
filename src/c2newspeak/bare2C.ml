@@ -26,6 +26,14 @@
 open BareSyntax
 module T = Csyntax
 
+let gen_tmp_id =
+  let tmp_cnt = ref 0 in
+  let gen_tmp_id () = 
+    incr tmp_cnt;
+    Temps.to_string !tmp_cnt (Temps.Misc "parser")
+  in
+    gen_tmp_id
+
 (* TODO: try to remove this global table *)
 let typedefs = Hashtbl.create 100
 
@@ -228,6 +236,7 @@ and process_init_sequence x =
 and process_blk x = 
   let result = ref [] in
   let process_stmt (x, loc) =
+    Npkcontext.set_loc loc;
 (* TODO: optimization: think about this concatenation, maybe not efficient *)
     result := (!result)@(process_stmtkind loc x)
   in
@@ -318,6 +327,20 @@ and process_exp e =
     | Set (lv, op, e) -> T.Set (process_exp lv, op, process_exp e)
     | OpExp (op, e, is_before) -> T.OpExp (op, process_exp e, is_before)
     | BlkExp body -> T.BlkExp (process_blk body)
+    | LocalComposite (t, init, loc) -> 
+	let (blk, t) = build_type_blk loc t in
+	let d =
+	  {
+	    T.t = t; is_static = false; is_extern = false; 
+	    initialization = Some (T.Sequence (process_init_sequence init))
+	  }
+	in
+	let id = gen_tmp_id () in
+	let decl = (T.LocalDecl (id, T.VDecl d), loc) in
+	let e = (T.Exp (T.Var id), loc) in
+	  Npkcontext.report_accept_warning "Parser.cast_expression" 
+	    "local composite creation" Npkcontext.DirtySyntax;
+	  T.BlkExp (blk@decl::e::[])
 
 and process_aux_offset_exp o =
   match o with
@@ -337,6 +360,11 @@ and build_type_decl d =
        "unexpected enum or composite declaration"
     end;
     t
+
+and build_type_blk loc d =
+  let (sdecls, (t, _, _)) = normalize_decl d in
+  let sdecls = List.map (fun x -> (T.LocalDecl x, loc)) sdecls in
+    (sdecls, t)
 
 let build_fundef static ((b, m), body) =
   let (_, (t, x, loc)) = normalize_decl (b, m) in

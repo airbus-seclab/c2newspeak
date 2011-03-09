@@ -84,6 +84,7 @@ and exp =
   | OpExp of (Csyntax.binop * exp * bool)
       (* block ended by and expression *)
   | BlkExp of blk
+  | LocalComposite of ((base_typ * var_modifier) * (string option * init) list * Newspeak.location)
 
 and aux_offset_exp =
     OffComp of string

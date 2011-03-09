@@ -30,6 +30,7 @@ open Lexing
 (* TODO: change this T to BareSyntax rather than Synthack *)
 module T = Synthack
 
+(* TODO: remove this function, should not be necessary *)
 let gen_tmp_id =
   let tmp_cnt = ref 0 in
   let gen_tmp_id () = 
@@ -579,8 +580,8 @@ expression:
 | EXTENSION expression     %prec prefix_OP { $2 }
 | LPAREN type_name RPAREN expression
                            %prec prefix_OP { BareSyntax.Cast ($4, $2) }
-/* TODO!
 | LPAREN type_name RPAREN composite        { 
+(*
     let loc = get_loc () in
     let (blk, t) = build_type_blk loc $2 in
     let d = 
@@ -595,8 +596,9 @@ expression:
       Npkcontext.report_accept_warning "Parser.cast_expression" 
 	"local composite creation" Npkcontext.DirtySyntax;
       BareSyntax.BlkExp (blk@decl::e::[])
+      *)
+    BareSyntax.LocalComposite ($2, $4, get_loc ())
   }
-*/
 // TODO: factor these as binop non-terminal??
 | expression STAR      expression          { BareSyntax.Binop (Mult, $1, $3) }
 | expression DIV       expression          { BareSyntax.Binop (Div, $1, $3) }

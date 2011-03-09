@@ -69,6 +69,7 @@ let parse fname =
 
 let bare2C (fname, prog) = 
   let prog = Bare2C.process prog in
+    Npkcontext.forget_loc ();
     Npkcontext.print_size (Csyntax.size_of prog);
     Npkcontext.forget_loc ();
     Npkcontext.print_debug "Parsing done.";
