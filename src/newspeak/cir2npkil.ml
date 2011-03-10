@@ -230,7 +230,7 @@ let translate src_lang prog =
 	Fname f -> K.FunId f
       | FunDeref e -> K.FunDeref (translate_exp e)
       
-  and translate_args args =
+  and translate_args args = 
     let in_vars = ref [] in
     let out_vars = ref [] in
     let args_t = ref [] in
@@ -240,14 +240,14 @@ let translate src_lang prog =
 	| In e -> 
 	    args_t := (translate_typ t)::!args_t;
 	    in_vars := (translate_exp e)::!in_vars
-	| InOut typ_lv -> 
+	| InOut typ_lv ->
 	    args_t := (translate_typ t)::!args_t;
 	    in_vars := (translate_exp (Lval typ_lv))::!in_vars
-	| Out _ -> ()
+	| Out _ ->  ()
     in
     let collect_out_var (x, t) =
       match x with
-	  Out (lv, _) | InOut (lv, _) -> 
+	  Out (lv, _) | InOut (lv, _) ->  
 	    rets_t := (translate_typ t)::!rets_t;
 	    out_vars := (translate_lv lv)::!out_vars
 	| In _ -> ()

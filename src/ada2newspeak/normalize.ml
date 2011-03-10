@@ -383,7 +383,8 @@ let rec normalize_exp ?expected_type exp =
 		  let expr = Ast.Lval (Ast.RecordAccess (lvalue, off, tf)) in
 		    Ast.BlkExp ( [instr, loc], (expr, tf)), tf
 	  
-	      | _ -> Npkcontext.report_error "normalize_exp" "unexpected call in case with fld3 "
+	      | _ -> Npkcontext.report_error "normalize_exp" 
+		      "unexpected call in case with fld3 "
 	end
 
 
@@ -535,6 +536,11 @@ and make_arg_list args spec =
     | In    , _          -> Ast.In   exp
     | Out   , Ast.Lval l -> Ast.Out   l
     | InOut , Ast.Lval l -> Ast.InOut l
+   (* | Out   ,  Ast.Cast(_,_, Ast.Lval l)  -> begin
+	Npkcontext.report_warning "make_arg_copy" "cast is unhandled";
+	Ast.Out   l
+      end
+   *)
     | _ -> Npkcontext.report_error "make_arg_copy"
                   ( "Actual parameter with \"out\" or \"in out\" mode "
                   ^ "must be a left-value")
@@ -556,22 +562,26 @@ and make_arg_list args spec =
       :Ast.argument list =
           match pos_list, spec with
             |  [],_  -> (* end of positional parameters *)
-	         List.map (function x ->
-                   let value =
-                     ( try Hashtbl.find argtbl x.formal_name
-                       with Not_found ->
-                         match x.default_value with
-                           | Some value -> normalize_exp value
-                           | None -> Npkcontext.report_error
-                               "normalize.fcall"
-                                 ( "No value provided for "
-                                   ^ "parameter " ^ x.formal_name
-                                   ^ ", which has no default one.")
-                     ) in
-                     make_arg x value) spec
+	         List.map (
+		   function x ->
+                     let value =
+                       ( try Hashtbl.find argtbl x.formal_name
+			 with Not_found ->
+                           match x.default_value with
+                             | Some value -> normalize_exp value
+                             | None -> Npkcontext.report_error
+				 "normalize.fcall"
+                                   ( "No value provided for "
+                                     ^ "parameter " ^ x.formal_name
+                                     ^ ", which has no default one.")
+                       ) in
+                       make_arg x value
+		 ) spec
+
             | (ev,_)::pt,s::st ->
 		let t = subtyp_to_adatyp s.param_type in
                   (make_arg s (ev,t))::(merge_with_specification pt st)
+
             | _::_,[]     -> Npkcontext.report_error "normalize.function_call"
                             "Too many actual arguments in function call"
   in

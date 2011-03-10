@@ -214,8 +214,8 @@ let translate compil_unit =
 	    C.Out (lv, T.translate t)
       | InOut lv -> 
 	  let (lv, t) = translate_lv lv in
-(* TODO: shouldn't it be InOut here? Do a test*)
-	    C.Out (lv, T.translate t)
+	    (* TODO: shouldn't it be InOut here? Do a test*)
+	    C.InOut (lv, T.translate t)
       in
       (x_t, x_arg)
     in
@@ -409,8 +409,8 @@ let translate compil_unit =
                  let (ftyp0, tr_args) =
                    translate_subprogram_parameters args in
                  let ftyp = ftyp0, C.Void in
-                 (C.Exp(C.Call(ftyp, fname, tr_args)), loc)
-                 ::(translate_block r)
+		   (C.Exp(C.Call(ftyp, fname, tr_args)), loc)
+                   ::(translate_block r)
              end
 
            | Case (e, choices, default) ->

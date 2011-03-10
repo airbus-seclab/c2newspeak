@@ -198,7 +198,7 @@ let translate prog =
         | ([], []) -> L.Call (translate_fn f ft)
         | _ -> 
 	    Npkcontext.report_error "hpk2npk.prefix_args"
-              "Mismatching number of parameters"
+              "Mismatching  number of parameters"
     in
       add (args, args_ids)
   in
@@ -244,8 +244,9 @@ let translate prog =
                       let fundec = Hashtbl.find prog.fundecs fid in
                         List.map fst fundec.args
                     with Not_found -> default_args_ids fid (List.length args)
-                  in
-                    (fid, args_ids)
+                  in 
+		    (fid, args_ids)
+		    
               | FunDeref _ -> 
                   let fid = "fptr_call" in
                     (fid, default_args_ids fid (List.length args))
