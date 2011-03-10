@@ -75,12 +75,7 @@ let rec normalize_base_typ t =
       | Float n -> T.Float n
       | Void -> T.Void
       | Va_arg -> T.Va_arg
-      | Name x -> begin
-	  try Hashtbl.find typedefs x
-	  with Not_found -> 
-	    Npkcontext.report_error "Bare2C.normalize_base_typ" 
-	      ("unknown type "^x)
-	end
+      | Name x -> Hashtbl.find typedefs x
       | Composite (_, (n, _)) -> T.Comp n
       | Typeof v -> T.Typeof (T.Var v)
       | Enum _ -> T.Int Cir.int_kind
