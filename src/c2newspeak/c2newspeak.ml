@@ -42,16 +42,19 @@ let compile fname =
     prog
 
 
-let create_no name = (Filename.chop_extension name) ^ Params.npko_suffix
+let create_no_filename name = 
+  if !Npkcontext.compile_only && (!Npkcontext.output_file <> "") 
+  then !Npkcontext.output_file
+  else (Filename.chop_extension name) ^ Params.npko_suffix
 
 let extract_no fname =
   if Filename.check_suffix fname Params.npko_suffix then fname
   else begin
-    let no = create_no fname in
+    let no = create_no_filename fname in
     let prog = compile fname in
       Npkil.write no prog;
       Npkcontext.dump_xml_warns ();
-      no
+      no            
   end
 
 let execute () =

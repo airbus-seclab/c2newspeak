@@ -24,7 +24,7 @@
 C2NEWSPEAK=../../bin/c2newspeak
 
 COMMAND=$(MAKE) -s $*.CMD
-TESTS=000 001
+TESTS=000 001 002
 .SILENT: $(TESTS)
 
 check: $(TESTS)
@@ -37,5 +37,13 @@ check: $(TESTS)
 	$(C2NEWSPEAK) -c 000.c && $(C2NEWSPEAK) 000.no
 	touch 001
 
+002: tmp
+	$(C2NEWSPEAK) -c -o tmp/000.no 000.c
+	if [ -f tmp/000.no ]; then true; else echo "Failure: c2newspeak should have created output file in subdirectory tmp"; false; fi
+	touch 002
+
+tmp:
+	mkdir tmp
+
 clean:
-	rm -rf *.bak *.no *.npk $(TESTS)
+	rm -rf *.bak *.no *.npk $(TESTS) tmp
