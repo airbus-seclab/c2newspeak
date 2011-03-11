@@ -212,10 +212,14 @@ let translate compil_unit =
       | Out lv   -> 
 	  let (lv, t) = translate_lv lv in
 	    C.Out (lv, T.translate t)
-      | InOut lv -> 
-	  let (lv, t) = translate_lv lv in
-	    (* TODO: shouldn't it be InOut here? Do a test*)
-	    C.InOut (lv, T.translate t)
+      | InOut (Ast.Cast (a,aa,aaa) , b)-> 
+	  print_endline "TO DO: take this info in order to cast back"; 
+	  C.InOut (T.check_exp t (translate_exp  (Ast.Cast (a,aa,aaa), b)))
+
+      | InOut e (*lv*) -> 
+	  C.InOut (T.check_exp t (translate_exp e))
+	(*  let (lv, t) = translate_lv lv in
+	    C.InOut (lv, T.translate t)*)
       in
       (x_t, x_arg)
     in
@@ -307,7 +311,7 @@ let translate compil_unit =
 	let sc_o = C.scalar_of_typ  (T.translate o) in
 	let sc_n = C.scalar_of_typ  (T.translate  n) in
 	 (* translate -> cir.typ *)
-	 (*  Unop (Npkil.Coerce (Newspeak.domain_of_typ k), e) *)
+	 (* Unop (Npkil.Coerce (Newspeak.domain_of_typ k), e) *)
 	  match sc_o, sc_n with 
 	       (Newspeak.Int _, Newspeak.Int _) -> 
 		 (*	C.Unop (Npkil.Coerce (Newspeak.domain_of_typ k),  *)

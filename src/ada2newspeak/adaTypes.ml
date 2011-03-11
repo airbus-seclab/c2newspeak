@@ -494,8 +494,7 @@ let compute_constr t =
 		    Some (A.IntegerRangeConstraint (mini, maxi))
 		| _ -> invalid_arg "compute_constr represing clause not expected"
 	  with Not_found ->	 
-	    
-            Some (A.IntegerRangeConstraint (min, max))
+	    Some (A.IntegerRangeConstraint (min, max))
 	end
     | _ -> None
 
@@ -730,10 +729,12 @@ let check_exp t_ctx exp =
   in
   let extract_constr e = 
     match e with
-    | Cir.Unop ( Npkil.Belongs_tmp (a, Npkil.Known b_plus_1)
-		   , _
-               )
-      -> Some (A.IntegerRangeConstraint(a, Newspeak.Nat.add_int (-1) b_plus_1))
+    | Cir.Unop ( Npkil.Belongs_tmp (a, Npkil.Known b_plus_1) , _) ->  
+	Some (A.IntegerRangeConstraint(a, Newspeak.Nat.add_int (-1) b_plus_1))
+(*    | Cir.Unop ( Npkil.Cast _ , _) ->
+ 	Npkcontext.report_warning "AdaTypes" "... Cast disappear..."; 
+	None
+*)                    
     | _ -> None
   in
   let constr =

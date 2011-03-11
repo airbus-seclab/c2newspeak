@@ -8,7 +8,7 @@ void t433(void) {
 }
 
 int32 t433a.orig(int32 y) {
-  (t433a.adb:5#12)^!return =(int32) 6;
+  (t433a.adb:5#12)^!return =(int32) y_int32;
 }
 
 

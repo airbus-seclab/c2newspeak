@@ -240,16 +240,36 @@ let translate src_lang prog =
 	| In e -> 
 	    args_t := (translate_typ t)::!args_t;
 	    in_vars := (translate_exp e)::!in_vars
-	| InOut typ_lv ->
+	| InOut e (*typ_lv*) ->
 	    args_t := (translate_typ t)::!args_t;
-	    in_vars := (translate_exp (Lval typ_lv))::!in_vars
+	    in_vars := (translate_exp e (*Lval typ_lv*))::!in_vars
 	| Out _ ->  ()
     in
     let collect_out_var (x, t) =
       match x with
-	  Out (lv, _) | InOut (lv, _) ->  
+	  Out (lv, _) ->  
 	    rets_t := (translate_typ t)::!rets_t;
 	    out_vars := (translate_lv lv)::!out_vars
+
+	| InOut (Lval (lv,_)) (*lv, _*) -> 
+	    rets_t := (translate_typ t)::!rets_t;
+	    out_vars := (translate_lv lv)::!out_vars
+	      
+	| InOut (Unop ( K.Belongs_tmp _, Lval (lv, _)))  -> 
+	    (*Cast is gone, (turned to belongs...)  T.check_exp from Firstpass 
+	      translate_subprogram_parameter; which is problem because 
+	      parameter Inout with cast
+	    *) 
+	    Npkcontext.report_warning "TO DO cir2npkil translate_arg"
+              "Must be cast back be a left-value or a cast, remove warning in t369";
+	    rets_t := (translate_typ t)::!rets_t;
+	    out_vars := (translate_lv lv)::!out_vars
+
+	      
+	| InOut _ -> Npkcontext.report_error "cir2npkil trnaslate_arg"
+                  ( "Actual parameter with \"out\" or \"in out\" mode "
+                  ^ "must be a left-value or a cast")
+	   
 	| In _ -> ()
     in
       List.iter collect_in_var args;

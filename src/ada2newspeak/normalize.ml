@@ -535,12 +535,14 @@ and make_arg_list args spec =
     let mode = match (arg.mode, fst exp) with
     | In    , _          -> Ast.In   exp
     | Out   , Ast.Lval l -> Ast.Out   l
-    | InOut , Ast.Lval l -> Ast.InOut l
-   (* | Out   ,  Ast.Cast(_,_, Ast.Lval l)  -> begin
-	Npkcontext.report_warning "make_arg_copy" "cast is unhandled";
-	Ast.Out   l
+   
+    | InOut , Ast.Lval _ -> Ast.InOut exp	
+    | InOut , Ast.Cast _ -> begin
+	Npkcontext.report_warning "make_arg_copy"
+	  "cast in out result might have to be cast back";
+	Ast.InOut exp
       end
-   *)
+	  
     | _ -> Npkcontext.report_error "make_arg_copy"
                   ( "Actual parameter with \"out\" or \"in out\" mode "
                   ^ "must be a left-value")

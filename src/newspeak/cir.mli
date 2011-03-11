@@ -109,7 +109,7 @@ and exp =
 and arg =
   | In    of exp    (* Copy-in only (C style) *)
   | Out   of typ_lv (* Copy-out only (no initializer) *)
-  | InOut of typ_lv (* Copy-in + Copy-out *)
+  | InOut of exp (*typ_lv*) (* Copy-in + Copy-out *)
 
 and funexp =
     | Fname of string

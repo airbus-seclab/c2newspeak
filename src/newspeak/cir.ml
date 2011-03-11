@@ -122,7 +122,7 @@ and exp =
 and arg =
   | In    of exp    (* Copy-in only (C style) *)
   | Out   of typ_lv (* Copy-out only (no initializer) *)
-  | InOut of typ_lv (* Copy-in + Copy-out *)
+  | InOut of exp (*typ_lv*) (* Copy-in + Copy-out *)
 
 and funexp =
     | Fname of string
@@ -449,15 +449,17 @@ and normalize_args loc args args_t =
 	let pref = concat_effects pref1 pref2 in
 	  (pref, (In e)::args)
 
-    | ((InOut (lv, ot))::args, t::args_t) -> 
+    | ((InOut e(*lv, ot*))::args, t::args_t) -> 
 	let (pref1, args) = normalize_args loc args args_t in
-	let (pref2, e) = normalize_exp_post loc (Lval (lv, t)) t in
-        let lv' = begin match e with
-        | Lval (l,_) -> l
-        | _ -> Npkcontext.report_error "Cir.normalize_args" "unreachable"
-        end in
+	let (pref2, e) = normalize_exp_post loc e (*Lval (lv, t)*) t in
+	  (*        let lv' = begin match e with
+		    | Lval (l,_) -> l
+		    | _ -> Npkcontext.report_error 
+		    "Cir.normalize_args" "unreachable"
+		    end in
+	  *)
 	let pref = concat_effects pref1 pref2 in
-	  (pref, (InOut (lv', ot))::args)
+	  (pref, (InOut e (*lv', ot*))::args)
    
     | ([], []) -> ([], [])
 

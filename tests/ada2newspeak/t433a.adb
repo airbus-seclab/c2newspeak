@@ -2,7 +2,7 @@ package body  t433a is
 
    function ORIG (  Y : Integer) return integer is
    begin
-      return 6;
+      return Y;
    end ORIG;
 
 
