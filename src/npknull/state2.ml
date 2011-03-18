@@ -81,7 +81,9 @@ let lval_to_value store lv =
     | GlobalVar x -> VariableStart x
     | Shift e -> Variables (lval_to_list store e)
     | Access e -> Variables (deref store e)
-    | Join _ -> invalid_arg "State2.Join: not implemented yet"
+    | Join (e1, e2) -> 
+	let variables = (lval_to_list store e1)@(lval_to_list store e2) in
+	  Variables variables
 
 (* TODO: maybe dead code! *)
 let rec exp_to_lvalue e =
