@@ -47,19 +47,33 @@ sig
   val is_not_null: t -> valueLval -> bool
 end
 
+let rec translate_exp e =
+  match e with
+      Empty -> GraphExp.Empty
+    | LocalVar x -> GraphExp.Var x
+    | GlobalVar x -> GraphExp.Var x
+    | Access e -> GraphExp.Deref (translate_exp e)
+    | Shift e -> translate_exp e
+    | Join (e1, e2) ->
+	let p1 = translate_exp e1 in
+	let p2 = translate_exp e2 in
+	  GraphExp.Join (p1, p2)
+
 let rec lval_to_list e =
   match e with
       LocalVar x | GlobalVar x -> x::[]
     | _ -> invalid_arg "State2.lval_to_list: not implemented yet"
 
-let lval_to_value lv =
+let lval_to_value store lv =
   match lv with
       (* TODO: this case should not be possible *)
       Empty -> invalid_arg "should be unreachable"
     | LocalVar x -> VariableStart x
     | GlobalVar x -> VariableStart x
-    | Shift _ -> invalid_arg "State2.Shift: not implemented yet"
-    | Access e -> Variables (lval_to_list e)
+    | Shift e -> Variables (lval_to_list e)
+    | Access e -> 
+	let variables = Store2.eval_exp store (translate_exp e) in
+	  Variables (VarSet.elements variables)
     | Join _ -> invalid_arg "State2.Join: not implemented yet"
 
 (* TODO: maybe dead code! *)
@@ -74,18 +88,6 @@ let exp_to_value e =
   match e with
       LocalVar _ | GlobalVar _ -> true
     | Empty | Access _ | Join _ | Shift _ -> false
-
-let rec translate_exp e =
-  match e with
-      Empty -> GraphExp.Empty
-    | LocalVar x -> GraphExp.Var x
-    | GlobalVar x -> GraphExp.Var x
-    | Access e -> GraphExp.Deref (translate_exp e)
-    | Shift e -> translate_exp e
-    | Join (e1, e2) ->
-	let p1 = translate_exp e1 in
-	let p2 = translate_exp e2 in
-	  GraphExp.Join (p1, p2)
 
 module Make(ValueStore: ValueStore) =
 struct
@@ -112,7 +114,7 @@ struct
     let lv_p = translate_exp lv in
     let e_p = translate_exp e in
     let store = Store2.assign lv_p e_p state.store in
-    let lv_value = lval_to_value lv in
+    let lv_value = lval_to_value state.store lv in
     let e_value = exp_to_value e in
     let value = ValueStore.assign (lv_value, e_value) state.value in
       (* TODO: have VarAccess3 implement an assign too on a different syntax! *)
@@ -196,5 +198,7 @@ struct
 	    GraphExp.AreNotEqual (translate_exp e1, translate_exp e2) 
 	  in
 	    Store2.satisfies state.store formula
-      | IsNotNull e -> ValueStore.is_not_null state.value (lval_to_value e)
+      | IsNotNull e -> 
+	  let e = lval_to_value state.store e in
+	    ValueStore.is_not_null state.value e
 end
