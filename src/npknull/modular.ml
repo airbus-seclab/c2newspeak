@@ -170,16 +170,17 @@ struct
     let check_lval state e = 
       match e with
 	  Access e -> 
+	    (* TODO: should check the expression recursively: make tests *)
 	    (* TODO: do more in preprocessor *)
 	    if not (State.satisfies state (PtrSpeak.IsNotNull e))
 	    then Context.print_err "potential null pointer deref"
-	| _ -> ()
+	| _ -> () (* TODO: should check the expression recursively: make tests *)
     in
 
     let check_exp state e = 
       match e with
 	  Access lv -> check_lval state lv
-	| _ -> ()
+	| _ -> () (* TODO: should check the expression recursively: make tests *)
     in
       
     let rec process_fun f input = 
