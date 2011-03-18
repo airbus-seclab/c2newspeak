@@ -64,10 +64,14 @@ let deref store e =
     VarSet.elements variables
 
 let lval_to_list store e =
-  match e with
-      LocalVar x | GlobalVar x -> x::[]
-    | Access e -> deref store e
-    | _ -> invalid_arg ("State2.lval_to_list: not implemented yet: "^PtrSpeak.to_string e)
+  let rec lval_to_list e =
+    match e with
+	LocalVar x | GlobalVar x -> x::[]
+      | Access e -> deref store e
+      | Shift e -> lval_to_list e
+      | _ -> invalid_arg ("State2.lval_to_list: not implemented yet: "^PtrSpeak.to_string e)
+  in
+    lval_to_list e
 
 let lval_to_value store lv =
   match lv with
