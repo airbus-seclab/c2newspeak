@@ -103,7 +103,7 @@ let hoist_variable_declarations fundec =
 	    let blk = process_blk blk in
 	      env := backup;
 	      blk @ process_blk tl
-      | (x, _)::tl -> (process_stmt x)::process_blk tl
+      | (x, loc)::tl -> (process_stmt x, loc)::process_blk tl
       | [] -> []
 
   in

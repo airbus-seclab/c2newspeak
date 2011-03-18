@@ -43,7 +43,7 @@ type stmt =
   | Goto of int
   | Call of (exp list * string * exp list)
 
-and blk = stmt list
+and blk = (stmt * Newspeak.location) list
 
 type formula = AreNotEqual of (exp * exp)
 

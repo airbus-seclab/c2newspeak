@@ -52,9 +52,10 @@ let process input =
       let results = Solver.process glb_tbl prog in
 	if !stats then Stats.print prog results
     end else begin
-      let _global_tbl = UsedGlobals.compute ["main"] prog in
-      let _prog = Preprocessor.prepare prog in
-	()
+      let entry_point = "main" in
+      let global_tbl = UsedGlobals.compute [entry_point] prog in
+      let prog = Preprocessor.prepare prog in
+	Modular.process (global_tbl, prog) entry_point
     end
 
 let _ =

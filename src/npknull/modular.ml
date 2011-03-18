@@ -122,6 +122,13 @@ let remove_formals formals state = State.remove_variables formals state
 let process_thread global_tbl fundecs init state =
   let fun_tbl = Hashtbl.create 100 in
 
+  let check_exp e = 
+    match e with
+	Access _ -> 
+	  Context.print_err "potential null pointer deref"
+      | _ -> ()
+  in
+
   let rec process_fun f input = 
     let labels = LblStack.create () in
     let push_label lbl = LblStack.push labels lbl in
@@ -130,13 +137,17 @@ let process_thread global_tbl fundecs init state =
     let rec  process_blk x state =
       match x with
 	  [] -> state
-	| stmt::blk -> 
+	| (stmt, loc)::blk -> 
+	    Context.set_current_loc loc;
 	    let state = process_stmt stmt state in
 	      process_blk blk state
 
     and process_stmt x state =
       match x with
-	  Set (lv, e) -> State.assign lv e state
+	  Set (lv, e) -> 
+	    check_exp lv;
+	    check_exp e;
+	    State.assign lv e state
 	| Call ([], "__display", []) -> 
 (* TODO: do this in preprocessor *)
 	    State.print state;
@@ -205,7 +216,9 @@ let process_thread global_tbl fundecs init state =
 	      state
 
 	| InfLoop blk -> fixpoint (fun x -> process_blk blk x) state
-	| Guard e -> State.guard e state
+	| Guard e -> 
+	    check_exp e;
+	    State.guard e state
 	| Select (blk1, blk2) ->
 	    let state1 = process_blk blk1 state in
 	    let state2 = process_blk blk2 state in
