@@ -27,6 +27,8 @@
 
 let stats = ref false
 
+let experimental = ref false
+
 let speclist = 
   [
     ("--stats", Arg.Set stats, "prints analysis stats");
@@ -38,14 +40,22 @@ let speclist =
      "prints infos to display call graph during analysis");
     (Context.string_of_option Context.Verbose, 
      Arg.Unit (Context.set_option Context.Verbose), 
-     "prints more details")
+     "prints more details");
+    ("--experimental", Arg.Set experimental, "experimental version")
   ]
 
 let process input = 
-  let prog = Npk2lpk.translate (Newspeak.read input) in
-  let glb_tbl = GlbCollect.process true prog in
-  let results = Solver.process glb_tbl prog in
-    if !stats then Stats.print prog results
+  let prog = Newspeak.read input in
+    if !experimental then begin
+      let prog = Npk2lpk.translate prog in
+      let glb_tbl = GlbCollect.process true prog in
+      let results = Solver.process glb_tbl prog in
+	if !stats then Stats.print prog results
+    end else begin
+      let _global_tbl = UsedGlobals.compute ["main"] prog in
+      let _prog = Preprocessor.prepare prog in
+	()
+    end
 
 let _ =
   StandardApplication.launch_process_with_npk_argument "npknull" speclist 

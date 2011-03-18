@@ -35,7 +35,11 @@ FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
       npknull/dom npknull/subst \
       npknull/fieldInsensitivePtrOffs npknull/nonNullPtr \
       npknull/fPtrStore npknull/store npknull/state npknull/stubs \
-      npknull/solver npknull/stats npknull/npknull
+      npknull/solver npknull/stats npknull/ptrSpeak npknull/preprocessor \
+      npknull/graphExp npknull/varSet npknull/subst2 npknull/store2 \
+      npknull/state2 npknull/state2Bottom \
+      npknull/lblStack npknull/pretty \
+      npknull/modular npknull/usedGlobals npknull/npknull
 LIBX=nums.cmxa str.cmxa
 
 include common.Makefile
