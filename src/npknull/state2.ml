@@ -59,10 +59,15 @@ let rec translate_exp e =
 	let p2 = translate_exp e2 in
 	  GraphExp.Join (p1, p2)
 
-let rec lval_to_list e =
+let deref store e = 
+  let variables = Store2.eval_exp store (translate_exp e) in
+    VarSet.elements variables
+
+let lval_to_list store e =
   match e with
       LocalVar x | GlobalVar x -> x::[]
-    | _ -> invalid_arg "State2.lval_to_list: not implemented yet"
+    | Access e -> deref store e
+    | _ -> invalid_arg ("State2.lval_to_list: not implemented yet: "^PtrSpeak.to_string e)
 
 let lval_to_value store lv =
   match lv with
@@ -70,10 +75,8 @@ let lval_to_value store lv =
       Empty -> invalid_arg "should be unreachable"
     | LocalVar x -> VariableStart x
     | GlobalVar x -> VariableStart x
-    | Shift e -> Variables (lval_to_list e)
-    | Access e -> 
-	let variables = Store2.eval_exp store (translate_exp e) in
-	  Variables (VarSet.elements variables)
+    | Shift e -> Variables (lval_to_list store e)
+    | Access e -> Variables (deref store e)
     | Join _ -> invalid_arg "State2.Join: not implemented yet"
 
 (* TODO: maybe dead code! *)
