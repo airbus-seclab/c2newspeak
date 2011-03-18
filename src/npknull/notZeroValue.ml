@@ -23,4 +23,28 @@
   email: charles.hymans@penjili.org
 *)
 
-include State2.ValueStore
+(* set of all variables x such that (x, 0) points to a non-zero pointer *)
+type t = VarSet.t
+
+let universe () = VarSet.empty
+
+let assign _ = universe ()
+
+let join _ _ = invalid_arg "join: Not implemented yet"
+
+let is_subset = VarSet.subset
+
+let remove_variables variables x = VarSet.diff x (VarSet.of_list variables)
+
+let split variables x = 
+  let variables = VarSet.of_list variables in
+    (VarSet.inter x variables, VarSet.diff x variables)
+
+(* TODO: not intuitive that apply_set is in Subst2 rather than
+   being VarSet.substitute
+*)
+let substitute = Subst2.apply_set
+
+let restrict = VarSet.inter
+
+let glue = VarSet.union

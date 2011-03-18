@@ -43,5 +43,3 @@ val print_verbose: string -> unit
 val print_err: string -> unit
 
 val print_err_with_advice: option -> string -> unit
-
-val set_precision_level: int -> unit

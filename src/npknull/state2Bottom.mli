@@ -47,46 +47,4 @@ sig
   val satisfies: t -> PtrSpeak.formula -> bool
 end
 
-module Make(State: State):
-sig
-  type t
-    
-  val emptyset: unit -> t
-    
-  (* TODO: try to remove universe *)
-  val universe: unit -> t
-    
-  val init: string list -> t
-    
-  val join: t -> t -> t
-    
-  val assign: PtrSpeak.exp -> PtrSpeak.exp -> t -> t
-    
-  val guard: PtrSpeak.exp -> t -> t
-    
-  val compose: t -> t -> t
-
-  val substitute: Subst2.t -> t -> t
-
-  val remove_variables: string list -> t -> t
-    
-   
-  val print: t -> unit
-    
-  val size_of: t -> int
-    
-  val is_subset: t -> t -> bool
-
-  val split: string list -> t -> (t * t)
-
-  val transport: string list -> t -> t -> Subst2.t
-
-  val glue: t -> t -> t
-
-  val normalize: string list -> t -> (t * Subst2.t)
-
-  val list_nodes: t -> VarSet.t
-  val restrict: VarSet.t -> t -> t
-
-  val satisfies: t -> PtrSpeak.formula -> bool
-end
+module Make(State: State): Modular.State

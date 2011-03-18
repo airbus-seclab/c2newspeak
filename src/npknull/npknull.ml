@@ -29,6 +29,8 @@ let stats = ref false
 
 let experimental = ref false
 
+let precision_level = ref 1
+
 let speclist = 
   [
     ("--stats", Arg.Set stats, "prints analysis stats");
@@ -42,8 +44,18 @@ let speclist =
      Arg.Unit (Context.set_option Context.Verbose), 
      "prints more details");
     ("--experimental", Arg.Set experimental, "experimental version");
-    ("--precision", Arg.Int Context.set_precision_level, "precision level")
+    ("--precision", Arg.Int (fun x -> precision_level := x), "precision level")
   ]
+
+let run0 = 
+  let module State = State2Bottom.Make(State2.Make(TopValue)) in
+  let module Analysis = Modular.Make(State) in
+    Analysis.process 
+
+let run1 = 
+  let module State = State2Bottom.Make(State2.Make(NotZeroValue)) in
+  let module Analysis = Modular.Make(State) in
+    Analysis.process 
 
 let process input = 
   let prog = Newspeak.read input in
@@ -56,7 +68,8 @@ let process input =
       let entry_point = "main" in
       let global_tbl = UsedGlobals.compute [entry_point] prog in
       let prog = Preprocessor.prepare prog in
-	Modular.process (global_tbl, prog) entry_point
+      let analysis = if !precision_level = 0 then run0 else run1 in
+	analysis (global_tbl, prog) entry_point
     end
 
 let _ =

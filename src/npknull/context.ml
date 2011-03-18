@@ -38,10 +38,6 @@ let current_loc = ref (Newspeak.dummy_loc "initialization")
 
 let errors = ref StrSet.empty
 
-let precision_level = ref 1
-
-let set_precision_level x = precision_level := x
-
 let string_of_option option =
   match option with
       Verbose -> "--verbose"

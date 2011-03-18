@@ -32,6 +32,7 @@ sig
   val assign: t -> t
   val join: t -> t -> t
   val is_subset: t -> t -> bool
+(* TODO: prefer only VarSets rather than string lists *)
   val remove_variables: string list -> t -> t
   val split: string list -> t -> (t * t)
   val substitute: Subst2.t -> t -> t
