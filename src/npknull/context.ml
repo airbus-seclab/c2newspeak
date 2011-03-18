@@ -30,11 +30,17 @@ type option =
 
 module OptionSet = Set.Make(struct type t = option let compare = compare end)
 
+(* TODO: do a type with all options, instead of global variables *)
+
 let options = ref OptionSet.empty
 
 let current_loc = ref (Newspeak.dummy_loc "initialization")
 
 let errors = ref StrSet.empty
+
+let precision_level = ref 1
+
+let set_precision_level x = precision_level := x
 
 let string_of_option option =
   match option with

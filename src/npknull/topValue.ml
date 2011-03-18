@@ -23,43 +23,22 @@
   email: charles.hymans@penjili.org
 *)
 
-type t
+type t = unit
 
-val universe: unit -> t
+let universe () = ()
 
-val assign: GraphExp.t -> GraphExp.t -> t -> t
+let assign _ = ()
 
-val eval_exp: t -> GraphExp.t -> VarSet.t
+let join _ _ = ()
 
-(* TODO: why is this needed? *)
-val eval_pathSet: t -> VarSet.t -> VarSet.t
+let is_subset _ _ = true
 
-val init: string list -> t
+let remove_variables _ _ = ()
 
-val join: t -> t -> t
+let split _ _ = ((), ())
 
-val is_subset: t -> t -> bool
+let substitute _ _ = ()
 
-val remove_variables: string list -> t -> t
+let restrict _ _ = ()
 
-val print: t -> unit
-
-val size_of: t -> int
-
-val split: string list -> t -> (string list * t * t)
-
-val test: unit -> unit
-
-val substitute: Subst2.t -> t -> t
-
-val transport: string list -> t -> t -> Subst2.t
-
-val glue: t -> t -> t
-
-val normalize: string list -> t -> (t * Subst2.t)
-
-val list_nodes: t -> VarSet.t
-
-val restrict: VarSet.t -> t -> t
-
-val satisfies: t -> GraphExp.formula -> bool
+let glue _ _ = ()

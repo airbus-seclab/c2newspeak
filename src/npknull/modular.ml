@@ -26,7 +26,7 @@
 
 open PtrSpeak
 
-module State = State2Bottom.Make(State2)
+module State = State2Bottom.Make(State2.Make(TopValue))
 module LblStack = LblStack.Make(State)
 
 (* TODO: try to factor code with state.ml *)
@@ -154,7 +154,7 @@ let process_thread global_tbl fundecs init state =
 	    state
 	| Call (e1::e2::[], "__assert_are_not_equal", []) -> 
 (* TODO: do this in preprocessor *)
-	    if not (State.implies state (PtrSpeak.AreNotEqual (e1, e2))) 
+	    if not (State.satisfies state (PtrSpeak.AreNotEqual (e1, e2))) 
 	    then print_endline "Assert failed";
 	    state
 	| Call (args, f, rets) -> 

@@ -47,7 +47,7 @@ sig
   val normalize: string list -> t -> (t * Subst.t)
   val list_nodes: t -> VarSet.t
   val restrict: VarSet.t -> t -> t
-  val implies: t -> PtrSpeak.formula -> bool
+  val satisfies: t -> PtrSpeak.formula -> bool
 end
 
 module Make(State: State) =
@@ -146,8 +146,8 @@ struct
 	None -> None
       | Some state -> Some (State.restrict nodes state)
 
-  let implies state e =
+  let satisfies state e =
     match state with
 	None -> true
-      | Some state -> State.implies state e
+      | Some state -> State.satisfies state e
 end

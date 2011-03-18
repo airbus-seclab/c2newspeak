@@ -24,19 +24,20 @@
 *)
 open PtrSpeak
 
-type t = {
-  store: Store2.t;
-}
-      
-let universe () = 
-  {
-    store = Store2.universe ();
-  }
-
-let init globals =
-  {
-    store = Store2.init globals;
-  }
+module type ValueStore =
+sig
+  type t
+    
+  val universe: unit -> t
+  val assign: t -> t
+  val join: t -> t -> t
+  val is_subset: t -> t -> bool
+  val remove_variables: string list -> t -> t
+  val split: string list -> t -> (t * t)
+  val substitute: Subst2.t -> t -> t
+  val restrict: VarSet.t -> t -> t
+  val glue: t -> t -> t
+end
 
 let rec translate_exp e =
   match e with
@@ -53,56 +54,91 @@ let translate_formula f =
   match f with
       AreNotEqual (e1, e2) -> 
 	GraphExp.AreNotEqual (translate_exp e1, translate_exp e2)
+	  
+module Make(ValueStore: ValueStore) =
+struct
+  type t = {
+    store: Store2.t;
+    value: ValueStore.t;
+  }
+	
+  let universe () = 
+    {
+      store = Store2.universe ();
+      value = ValueStore.universe ()
+    }
+      
+    (* TODO: remove? *)
+  let init _globals = invalid_arg "Not necessary, remove code"
+    (*
+      {
+      store = Store2.init globals;
+      }
+    *)
+    
+  let assign lv e state =
+    let lv_p = translate_exp lv in
+    let e_p = translate_exp e in
+    let store = Store2.assign lv_p e_p state.store in
+    let value = ValueStore.assign state.value in
+      (* TODO: have VarAccess3 implement an assign too on a different syntax! *)
+      { 
+	store = store;
+	value = value;
+      }
 
-let assign lv e state =
-  let lv_p = translate_exp lv in
-  let e_p = translate_exp e in
-  let store = Store2.assign lv_p e_p state.store in
-(* TODO: have VarAccess3 implement an assign too on a different syntax! *)
-    { 
-      store = store;
+  let join state1 state2 =
+    {
+      store = Store2.join state1.store state2.store;
+      value = ValueStore.join state1.value state2.value
     }
 
-let join state1 state2 =
-  {
-    store = Store2.join state1.store state2.store;
-  }
+  let is_subset state1 state2 = 
+    (Store2.is_subset state1.store state2.store)
+    && (ValueStore.is_subset state1.value state2.value)
 
-let is_subset state1 state2 = Store2.is_subset state1.store state2.store
+  let guard _ state = state
 
-let guard _ state = state
+  let remove_variables x state = 
+    { 
+      store = Store2.remove_variables x state.store;
+      value = ValueStore.remove_variables x state.value
+    }
 
-let remove_variables x state = 
-  { 
-    store = Store2.remove_variables x state.store;
-  }
+  let split root_variables state =
+    let (reachable_variables, store, unreachable_store) = 
+      Store2.split root_variables state.store 
+    in
+    let (value, unreachable_value) =
+      ValueStore.split reachable_variables state.value
+    in
+      ({ store = store; value = value }, 
+       { store = unreachable_store; value = unreachable_value })
 
-let split root_variables state =
-  let (_reachable_variables, store, unreachable_store) = 
-    Store2.split root_variables state.store 
-  in
-    ({ store = store; }, 
-     { store = unreachable_store; })
+  let size_of state = Store2.size_of state.store
 
-let size_of state = Store2.size_of state.store
+  let print state = Store2.print state.store
 
-let print state = Store2.print state.store
+    (* TODO: remove? *)
+  let compose _ _ = invalid_arg "State2.compose: Not implement because probably not needed, think about it"
 
-let compose _ _ = invalid_arg "State2.compose: Not implement because probably not needed, think about it"
+  let substitute subst state = 
+    { store = Store2.substitute subst state.store;
+      value = ValueStore.substitute subst state.value }
 
-let substitute subst state = 
-  { store = Store2.substitute subst state.store }
+      (* TODO: why is this method needed? *)
+  let list_nodes state = Store2.list_nodes state.store
 
-let list_nodes state = Store2.list_nodes state.store
+  let restrict nodes state =
+    { store = Store2.restrict nodes state.store;
+      value = ValueStore.restrict nodes state.value
+    }
 
-let restrict nodes state =
-  { store = Store2.restrict nodes state.store
-  }
-
-let normalize roots state =
-  let (store, subst) = Store2.normalize roots state.store in
-  (* TODO: maybe should remove variables from access too? *)
-    ({ store = store }, subst)
+  let normalize roots state =
+    let (store, subst) = Store2.normalize roots state.store in
+      (* TODO: maybe should remove variables from access too? *)
+    let value = ValueStore.substitute subst state.value in
+      ({ store = store; value = value }, subst)
 
 (* TODO: try to simplify this primitive, there are too many things going 
    on here:
@@ -110,10 +146,12 @@ let normalize roots state =
    - substitution
    - union
 *)
-let transport roots state input = Store2.transport roots state.store input.store
-
-let glue state1 state2 =
-  { store = Store2.glue state1.store state2.store
-  }
-
-let implies state e = Store2.implies state.store (translate_formula e)
+  let transport roots state input = Store2.transport roots state.store input.store
+    
+  let glue state1 state2 =
+    { store = Store2.glue state1.store state2.store;
+      value = ValueStore.glue state1.value state2.value
+    }
+      
+  let satisfies state e = Store2.satisfies state.store (translate_formula e)
+end

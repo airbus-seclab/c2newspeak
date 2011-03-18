@@ -38,7 +38,7 @@ FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
       npknull/solver npknull/stats npknull/ptrSpeak npknull/preprocessor \
       npknull/graphExp npknull/varSet npknull/subst2 npknull/store2 \
       npknull/state2 npknull/state2Bottom \
-      npknull/lblStack npknull/pretty \
+      npknull/lblStack npknull/pretty npknull/topValue \
       npknull/modular npknull/usedGlobals npknull/npknull
 LIBX=nums.cmxa str.cmxa
 

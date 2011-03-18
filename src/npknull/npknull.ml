@@ -41,7 +41,8 @@ let speclist =
     (Context.string_of_option Context.Verbose, 
      Arg.Unit (Context.set_option Context.Verbose), 
      "prints more details");
-    ("--experimental", Arg.Set experimental, "experimental version")
+    ("--experimental", Arg.Set experimental, "experimental version");
+    ("--precision", Arg.Int Context.set_precision_level, "precision level")
   ]
 
 let process input = 

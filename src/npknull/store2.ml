@@ -327,7 +327,7 @@ let transport roots state input =
 
 let glue = join
 
-let implies store f =
+let satisfies store f =
   match f with
       AreNotEqual (e1, e2) -> 
 	let s1 = eval_exp store e1 in

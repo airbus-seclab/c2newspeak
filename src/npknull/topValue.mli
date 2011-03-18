@@ -27,14 +27,7 @@ type t
 
 val universe: unit -> t
 
-val assign: GraphExp.t -> GraphExp.t -> t -> t
-
-val eval_exp: t -> GraphExp.t -> VarSet.t
-
-(* TODO: why is this needed? *)
-val eval_pathSet: t -> VarSet.t -> VarSet.t
-
-val init: string list -> t
+val assign: t -> t
 
 val join: t -> t -> t
 
@@ -42,24 +35,10 @@ val is_subset: t -> t -> bool
 
 val remove_variables: string list -> t -> t
 
-val print: t -> unit
-
-val size_of: t -> int
-
-val split: string list -> t -> (string list * t * t)
-
-val test: unit -> unit
+val split: string list -> t -> (t * t)
 
 val substitute: Subst2.t -> t -> t
 
-val transport: string list -> t -> t -> Subst2.t
-
-val glue: t -> t -> t
-
-val normalize: string list -> t -> (t * Subst2.t)
-
-val list_nodes: t -> VarSet.t
-
 val restrict: VarSet.t -> t -> t
 
-val satisfies: t -> GraphExp.formula -> bool
+val glue: t -> t -> t
