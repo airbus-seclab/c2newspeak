@@ -28,7 +28,10 @@ type t = VarSet.t
 
 let universe () = VarSet.empty
 
-let assign _ = universe ()
+let assign (lv, is_not_null) s = 
+  match lv with
+      State2.VariableStart x when is_not_null -> VarSet.add x s
+    | _ -> universe ()
 
 let join _ _ = invalid_arg "join: Not implemented yet"
 
@@ -48,3 +51,11 @@ let substitute = Subst2.apply_set
 let restrict = VarSet.inter
 
 let glue = VarSet.union
+
+let print x = 
+  print_endline ("variables not null: "^(VarSet.to_string x))
+
+let is_not_null s lv =
+  match lv with
+      State2.VariableStart x -> VarSet.mem x s
+    | _ -> false

@@ -32,6 +32,7 @@ type exp =
   | LocalVar of string
   | GlobalVar of string
   | Access of exp
+  | Shift of exp
   | Join of (exp * exp)
 
 type stmt = 
@@ -45,7 +46,9 @@ type stmt =
 
 and blk = (stmt * Newspeak.location) list
 
-type formula = AreNotEqual of (exp * exp)
+type formula = 
+    AreNotEqual of (exp * exp)
+  | IsNotNull of exp
 
 let join v1 v2 =
   if (v1 = Empty) then v2
@@ -57,7 +60,9 @@ let rec translate_lval lv =
       Local x -> LocalVar x
     | Global x -> GlobalVar x
     | Deref (e, _) -> Access (translate_exp_under_deref e)
-    | Shift (lv, e) -> Join (translate_lval lv, translate_exp e)
+(* TODO: not nice, translation should be in a different file than language 
+   definition *)
+    | Newspeak.Shift (lv, _) -> Shift (translate_lval lv)
 
 and translate_exp e = 
   match e with
@@ -82,6 +87,7 @@ let rec to_string e =
     | LocalVar x -> "local("^x^")"
     | GlobalVar x -> "global("^x^")"
     | Access e -> "*("^to_string e^")"
+    | Shift e -> "("^to_string e^" + ?)"
     | Join (e1, e2) -> "("^to_string e1^" | "^to_string e2^")"
 
 let test1 () =

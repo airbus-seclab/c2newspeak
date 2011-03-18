@@ -23,13 +23,16 @@
   email: charles.hymans@penjili.org
 *)
 
+type valueLval = 
+    VariableStart of string
+  | Variables of string list
 
 module type ValueStore =
 sig
   type t
     
   val universe: unit -> t
-  val assign: t -> t
+  val assign: (valueLval * bool) -> t -> t
   val join: t -> t -> t
   val is_subset: t -> t -> bool
   val remove_variables: string list -> t -> t
@@ -37,6 +40,8 @@ sig
   val substitute: Subst2.t -> t -> t
   val restrict:  VarSet.t -> t -> t
   val glue: t -> t -> t
+  val print: t -> unit
+  val is_not_null: t -> valueLval -> bool
 end
 
 module Make(ValueStore: ValueStore):

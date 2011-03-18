@@ -167,10 +167,12 @@ struct
   let process_thread global_tbl fundecs init state =
     let fun_tbl = Hashtbl.create 100 in
       
-    let check_exp e = 
+    let check_exp state e = 
       match e with
-	  Access _ -> 
-	    Context.print_err "potential null pointer deref"
+	  Access e -> 
+	    (* TODO: do more in preprocessor *)
+	    if not (State.satisfies state (PtrSpeak.IsNotNull e))
+	    then Context.print_err "potential null pointer deref"
 	| _ -> ()
     in
       
@@ -190,8 +192,8 @@ struct
       and process_stmt x state =
 	match x with
 	    Set (lv, e) -> 
-	      check_exp lv;
-	      check_exp e;
+	      check_exp state lv;
+	      check_exp state e;
 	      State.assign lv e state
 	  | Call ([], "__display", []) -> 
 	      (* TODO: do this in preprocessor *)
@@ -262,7 +264,7 @@ struct
 		  
 	  | InfLoop blk -> fixpoint (fun x -> process_blk blk x) state
 	  | Guard e -> 
-	      check_exp e;
+	      check_exp state e;
 	      State.guard e state
 	  | Select (blk1, blk2) ->
 	      let state1 = process_blk blk1 state in

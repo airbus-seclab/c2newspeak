@@ -30,6 +30,7 @@ type exp =
   | LocalVar of string
   | GlobalVar of string
   | Access of exp
+  | Shift of exp
   | Join of (exp * exp)
 
 type stmt = 
@@ -43,7 +44,9 @@ type stmt =
 
 and blk = (stmt * Newspeak.location) list
 
-type formula = AreNotEqual of (exp * exp)
+type formula = 
+  | AreNotEqual of (exp * exp)
+  | IsNotNull of exp
 
 val translate_lval: Newspeak.lval -> exp
 

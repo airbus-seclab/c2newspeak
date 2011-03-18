@@ -27,7 +27,7 @@ type t = unit
 
 let universe () = ()
 
-let assign _ = ()
+let assign _ _ = ()
 
 let join _ _ = ()
 
@@ -42,3 +42,7 @@ let substitute _ _ = ()
 let restrict _ _ = ()
 
 let glue _ _ = ()
+
+let print _ = ()
+
+let is_not_null _ _ = false

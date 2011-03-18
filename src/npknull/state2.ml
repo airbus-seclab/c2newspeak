@@ -24,12 +24,17 @@
 *)
 open PtrSpeak
 
+type valueLval = 
+    VariableStart of string
+  | Variables of string list (* TODO: should be easier with a VarSet *)
+
 module type ValueStore =
 sig
   type t
     
   val universe: unit -> t
-  val assign: t -> t
+(* true means is not null *)
+  val assign: (valueLval * bool) -> t -> t
   val join: t -> t -> t
   val is_subset: t -> t -> bool
 (* TODO: prefer only VarSets rather than string lists *)
@@ -38,7 +43,37 @@ sig
   val substitute: Subst2.t -> t -> t
   val restrict: VarSet.t -> t -> t
   val glue: t -> t -> t
+  val print: t -> unit
+  val is_not_null: t -> valueLval -> bool
 end
+
+let rec lval_to_list e =
+  match e with
+      LocalVar x | GlobalVar x -> x::[]
+    | _ -> invalid_arg "State2.lval_to_list: not implemented yet"
+
+let lval_to_value lv =
+  match lv with
+      (* TODO: this case should not be possible *)
+      Empty -> invalid_arg "should be unreachable"
+    | LocalVar x -> VariableStart x
+    | GlobalVar x -> VariableStart x
+    | Shift _ -> invalid_arg "State2.Shift: not implemented yet"
+    | Access e -> Variables (lval_to_list e)
+    | Join _ -> invalid_arg "State2.Join: not implemented yet"
+
+(* TODO: maybe dead code! *)
+let rec exp_to_lvalue e =
+  match e with
+      LocalVar x -> VariableStart x
+    | _ -> 
+	invalid_arg ("State2.exp_to_lvalue: not implemented yet: "
+		     ^PtrSpeak.to_string e)
+
+let exp_to_value e = 
+  match e with
+      LocalVar _ | GlobalVar _ -> true
+    | Empty | Access _ | Join _ | Shift _ -> false
 
 let rec translate_exp e =
   match e with
@@ -46,16 +81,12 @@ let rec translate_exp e =
     | LocalVar x -> GraphExp.Var x
     | GlobalVar x -> GraphExp.Var x
     | Access e -> GraphExp.Deref (translate_exp e)
+    | Shift e -> translate_exp e
     | Join (e1, e2) ->
 	let p1 = translate_exp e1 in
 	let p2 = translate_exp e2 in
 	  GraphExp.Join (p1, p2)
 
-let translate_formula f =
-  match f with
-      AreNotEqual (e1, e2) -> 
-	GraphExp.AreNotEqual (translate_exp e1, translate_exp e2)
-	  
 module Make(ValueStore: ValueStore) =
 struct
   type t = {
@@ -81,7 +112,9 @@ struct
     let lv_p = translate_exp lv in
     let e_p = translate_exp e in
     let store = Store2.assign lv_p e_p state.store in
-    let value = ValueStore.assign state.value in
+    let lv_value = lval_to_value lv in
+    let e_value = exp_to_value e in
+    let value = ValueStore.assign (lv_value, e_value) state.value in
       (* TODO: have VarAccess3 implement an assign too on a different syntax! *)
       { 
 	store = store;
@@ -118,7 +151,9 @@ struct
 
   let size_of state = Store2.size_of state.store
 
-  let print state = Store2.print state.store
+  let print state = 
+    Store2.print state.store;
+    ValueStore.print state.value
 
     (* TODO: remove? *)
   let compose _ _ = invalid_arg "State2.compose: Not implement because probably not needed, think about it"
@@ -154,5 +189,12 @@ struct
       value = ValueStore.glue state1.value state2.value
     }
       
-  let satisfies state e = Store2.satisfies state.store (translate_formula e)
+  let satisfies state e = 
+    match e with
+	AreNotEqual (e1, e2) -> 
+	  let formula = 
+	    GraphExp.AreNotEqual (translate_exp e1, translate_exp e2) 
+	  in
+	    Store2.satisfies state.store formula
+      | IsNotNull e -> ValueStore.is_not_null state.value (lval_to_value e)
 end
