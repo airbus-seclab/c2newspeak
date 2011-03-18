@@ -33,7 +33,7 @@ let assign (lv, is_not_null) s =
       State2.VariableStart x when is_not_null -> VarSet.add x s
     | _ -> universe ()
 
-let join _ _ = invalid_arg "join: Not implemented yet"
+let join = VarSet.inter
 
 let is_subset = VarSet.subset
 

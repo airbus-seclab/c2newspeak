@@ -167,12 +167,18 @@ struct
   let process_thread global_tbl fundecs init state =
     let fun_tbl = Hashtbl.create 100 in
       
-    let check_exp state e = 
+    let check_lval state e = 
       match e with
 	  Access e -> 
 	    (* TODO: do more in preprocessor *)
 	    if not (State.satisfies state (PtrSpeak.IsNotNull e))
 	    then Context.print_err "potential null pointer deref"
+	| _ -> ()
+    in
+
+    let check_exp state e = 
+      match e with
+	  Access lv -> check_lval state lv
 	| _ -> ()
     in
       
@@ -192,7 +198,7 @@ struct
       and process_stmt x state =
 	match x with
 	    Set (lv, e) -> 
-	      check_exp state lv;
+	      check_lval state lv;
 	      check_exp state e;
 	      State.assign lv e state
 	  | Call ([], "__display", []) -> 
