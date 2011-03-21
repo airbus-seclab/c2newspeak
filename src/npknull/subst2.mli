@@ -23,18 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
-type t
-
-val identity: unit -> t
-
-(* list of variables for which subst(x, 0) != (x, 0) *)
-val domain: t -> VarSet.t
-
-val apply: t -> string -> VarSet.t
-
-val apply_set: t -> VarSet.t -> VarSet.t
-
-val associate: string -> string -> t -> t
+include Transport.T
 
 val is_identity: t -> bool
 

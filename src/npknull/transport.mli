@@ -31,5 +31,5 @@ sig
   val associate: string -> string -> t -> t
   val apply: t -> string -> VarSet.t
   val apply_set: t -> VarSet.t -> VarSet.t
-  val domain: t -> VarSet.t
+  val apply_variable_start: t -> string -> (VarSet.t * bool)
 end

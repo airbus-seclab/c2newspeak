@@ -50,7 +50,16 @@ struct
     let variables = VarSet.of_list variables in
       (VarSet.inter x variables, VarSet.diff x variables)
 	
-  let substitute subst s = VarSet.diff s (Subst.domain subst)
+  let substitute subst s = 
+    let result = ref VarSet.empty in
+    let changed = ref VarSet.empty in
+    let substitute_variable x =
+      let (y, is_start) = Subst.apply_variable_start subst x in
+	if is_start then result := VarSet.union !result y
+	else changed := VarSet.union !changed y
+    in
+      VarSet.iter substitute_variable s;
+      VarSet.diff !result !changed
     
   let restrict = VarSet.inter
     
@@ -65,4 +74,3 @@ struct
       | _ -> false
 end
 
-include Make(Subst2)

@@ -39,6 +39,10 @@ let apply subst x =
   try Map.find x subst
   with Not_found -> VarSet.singleton x
 
+let apply_variable_start subst x =
+  try (Map.find x subst, false)
+  with Not_found -> (VarSet.singleton x, true)
+
 let apply_set subst s =
   let result = ref VarSet.empty in
   let add_variable x = 
