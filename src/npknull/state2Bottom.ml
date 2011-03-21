@@ -23,10 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
-(* TODO: merge both Subst!!! *)
-module Subst = Subst2
-
-module type State =
+module type State = functor (Subst: Transport.T) ->
 sig
   type t
     
@@ -49,17 +46,19 @@ sig
   val restrict: VarSet.t -> t -> t
   val satisfies: t -> PtrSpeak.formula -> bool
 end
-
-module Make(State: State) =
-struct
-  type t = State.t option
-
-  let universe () = Some (State.universe ())
-
-  let init v = Some (State.init v)
   
-  let emptyset () = None
+module Make(State: State)(Subst: Transport.T) =
+struct
+  module State = State(Subst)
 
+  type t = State.t option
+      
+  let universe () = Some (State.universe ())
+    
+  let init v = Some (State.init v)
+    
+  let emptyset () = None
+    
   let join s1 s2 = 
     match (s1, s2) with
 	(None, s) | (s, None) -> s

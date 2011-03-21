@@ -26,7 +26,7 @@
 
 open PtrSpeak
 
-module type State =
+module type State = functor (Subst: Transport.T) ->
 sig
   type t
     
@@ -45,7 +45,7 @@ sig
     
   val compose: t -> t -> t
 
-  val substitute: Subst2.t -> t -> t
+  val substitute: Subst.t -> t -> t
 
   val remove_variables: string list -> t -> t
     
@@ -58,11 +58,11 @@ sig
 
   val split: string list -> t -> (t * t)
 
-  val transport: string list -> t -> t -> Subst2.t
+  val transport: string list -> t -> t -> Subst.t
 
   val glue: t -> t -> t
 
-  val normalize: string list -> t -> (t * Subst2.t)
+  val normalize: string list -> t -> (t * Subst.t)
 
   val list_nodes: t -> VarSet.t
   val restrict: VarSet.t -> t -> t
@@ -70,8 +70,9 @@ sig
   val satisfies: t -> PtrSpeak.formula -> bool
 end
 
-module Make(State: State) =
+module Make(Subst: Transport.T)(State: State) =
 struct
+  module State = State(Subst)
   module LblStack = LblStack.Make(State)
     
   (* TODO: try to factor code with state.ml *)
@@ -214,7 +215,7 @@ struct
 	  | Call (args, f, rets) -> 
 	      let (state, subst) = add_formals (args, rets) state in
 	      let (actuals, formals) = List.split subst in
-	      let rename_subst = Subst2.of_list subst in
+	      let rename_subst = Subst.of_list subst in
 		(* TODO: cleanup: could try to avoid this VarSet.elements *)
 	      let globals = VarSet.elements (Hashtbl.find global_tbl f) in
 		(* TODO: put this comment down into State.mli
@@ -251,18 +252,18 @@ struct
 		    (* has side-effect of updating table 
 		       if necessary *)
 		  let state = process_fun f state in
-		    State.substitute (Subst2.inverse subst) state
+		    State.substitute (Subst.inverse subst) state
 		end
 	      in
 	      let state = 
-	      State.substitute (Subst2.inverse transport_subst) state 
+	      State.substitute (Subst.inverse transport_subst) state 
 	      in
 		(* TODO: is this a hack, shouldn't it rather be done in the transport 
 		   structure? yes *)
 	      let state = State.restrict nodes state in
-	      let state = State.substitute (Subst2.inverse rename_subst) state in
+	      let state = State.substitute (Subst.inverse rename_subst) state in
 	      let state = 
-		State.substitute (Subst2.inverse normalize_subst) state 
+		State.substitute (Subst.inverse normalize_subst) state 
 	      in
 	      let state = State.glue unreachable state in
 	      let state = assign_return_value rets state in

@@ -53,15 +53,18 @@ struct
 end
 
 let run0 = 
-  let module State = State2Bottom.Make(State2.Make(Subst2)(TopValue)) in
-  let module Analysis = Modular.Make(State) in
+  let module State = State2Bottom.Make(State2.Make(TopValue)) in
+  let module Analysis = Modular.Make(Subst2)(State) in
     Analysis.process 
 
 let run1 = 
-  let module State = 
-    State2Bottom.Make(State2.Make(Subst2)(NotZeroValue.Make)) 
-  in
-  let module Analysis = Modular.Make(State) in
+  let module State = State2Bottom.Make(State2.Make(NotZeroValue.Make)) in
+  let module Analysis = Modular.Make(Subst2)(State) in
+    Analysis.process 
+
+let run2 = 
+  let module State = State2Bottom.Make(State2.Make(NotZeroValue.Make)) in
+  let module Analysis = Modular.Make(Subst3)(State) in
     Analysis.process 
 
 let process input = 
@@ -75,7 +78,11 @@ let process input =
       let entry_point = "main" in
       let global_tbl = UsedGlobals.compute [entry_point] prog in
       let prog = Preprocessor.prepare prog in
-      let analysis = if !precision_level = 0 then run0 else run1 in
+      let analysis = 
+	if !precision_level = 0 then run0 
+	else if !precision_level = 1 then run1
+	else run2
+      in
 	analysis (global_tbl, prog) entry_point
     end
 

@@ -23,7 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
-module type State =
+module type State = functor (Subst : Transport.T) -> 
 sig
   type t
     
@@ -42,11 +42,10 @@ sig
     
   val compose: t -> t -> t
 
-  val substitute: Subst2.t -> t -> t
+  val substitute: Subst.t -> t -> t
 
   val remove_variables: string list -> t -> t
     
-   
   val print: t -> unit
     
   val size_of: t -> int
@@ -55,11 +54,11 @@ sig
 
   val split: string list -> t -> (t * t)
 
-  val transport: string list -> t -> t -> Subst2.t
+  val transport: string list -> t -> t -> Subst.t
 
   val glue: t -> t -> t
 
-  val normalize: string list -> t -> (t * Subst2.t)
+  val normalize: string list -> t -> (t * Subst.t)
 
   val list_nodes: t -> VarSet.t
   val restrict: VarSet.t -> t -> t
@@ -67,7 +66,7 @@ sig
   val satisfies: t -> PtrSpeak.formula -> bool
 end
 
-module Make(State: State) :
+module Make(Subst: Transport.T)(State: State):
 sig
   val process:  
     (string, VarSet.t) Hashtbl.t * 

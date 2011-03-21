@@ -56,7 +56,7 @@ sig
   val is_not_null: t -> ValueSyntax.lval -> bool
 end
 
-module Make(Subst: Transport.T)(ValueStoreMake: ValueStore) =
+module Make(ValueStoreMake: ValueStore)(Subst: Transport.T) =
 struct
   module ValueStore = ValueStoreMake(Subst)
   module Store2 = Store2.Make(Subst)

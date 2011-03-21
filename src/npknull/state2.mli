@@ -53,43 +53,4 @@ sig
   val is_not_null: t -> ValueSyntax.lval -> bool
 end
 
-module Make(Subst: Transport.T)(ValueStore: ValueStore):
-sig
-  type t
-    
-  val universe: unit -> t
-    
-  val init: string list -> t
-    
-  val join: t -> t -> t
-    
-  val assign: PtrSpeak.exp -> PtrSpeak.exp -> t -> t
-  
-  val guard: PtrSpeak.exp -> t -> t
-    
-  val compose: t -> t -> t
-    
-  val is_subset: t -> t -> bool
-    
-  val substitute: Subst.t -> t -> t
-    
-  val remove_variables: string list -> t -> t
-    
-  val print: t -> unit
-    
-  val size_of: t -> int
-    
-  val split: string list -> t -> (t * t)
-    
-  val transport: string list -> t -> t -> Subst.t
-    
-  val glue: t -> t -> t
-    
-  val normalize: string list -> t -> (t * Subst.t)
-    
-  val list_nodes: t -> VarSet.t
-    
-  val restrict: VarSet.t -> t -> t
-    
-  val satisfies: t -> PtrSpeak.formula -> bool
-end
+module Make(ValueStore: ValueStore): State2Bottom.State

@@ -27,6 +27,8 @@ module type T =
 sig
   type t
 
+  val inverse: t -> t
+  val of_list: (string * string) list -> t
   val identity: unit -> t
   val associate: string -> string -> t -> t
   val apply: t -> string -> VarSet.t
