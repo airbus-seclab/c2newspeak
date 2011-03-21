@@ -23,257 +23,268 @@
   email: charles.hymans@penjili.org
 *)
 
+module type Transport =
+sig
+  type t
 
-(* TODO: try to factor this code with pointsTo ? *)
+  val identity: unit -> t
+  val associate: string -> string -> t -> t
+  val apply: t -> string -> VarSet.t
+  val apply_set: t -> VarSet.t -> VarSet.t
+end
 
 open GraphExp
 
-let cnt = ref (-1)
+(* TODO: try to factor this code with pointsTo ? *)
 
-let fresh_node () = 
-  if (!cnt = max_int) then invalid_arg "No more fresh nodes available";
-  incr cnt;
-  "heap"^string_of_int !cnt
+module Make(Subst: Transport) =
+struct
+   
+  let cnt = ref (-1)
     
-  
-module VarMap = Map.Make(String)
+  let fresh_node () = 
+    if (!cnt = max_int) then invalid_arg "No more fresh nodes available";
+    incr cnt;
+    "heap"^string_of_int !cnt
+      
+  module VarMap = Map.Make(String)
+    
+  type succ = VarSet.t
+      
+  let join_nodes = VarSet.union
+    
+  let node_is_subset = VarSet.subset
+    
+  type t = succ VarMap.t
+      
+  let print s =
+    let print_pointsto x y =
+      let succ = VarSet.to_string y in
+	print_endline (x^" -> "^succ);
+    in
+      VarMap.iter print_pointsto s
+	
+  let universe () = VarMap.empty
+    
+  let init _ = invalid_arg "Store3.init: not implemented, should not exist"
+    
+  let deref s pointers =
+    let result = ref VarSet.empty in
+    let deref_one node =
+      try
+	let v = VarMap.find node s in
+	  result := VarSet.union !result v
+      with Not_found -> ()
+    in
+      VarSet.iter deref_one pointers;
+      !result
 
-type succ = VarSet.t
-
-let join_nodes = VarSet.union
-
-let node_is_subset = VarSet.subset
-
-type t = succ VarMap.t
-
-let print s =
-  let print_pointsto x y =
-    let succ = VarSet.to_string y in
-      print_endline (x^" -> "^succ);
-  in
-    VarMap.iter print_pointsto s
-
-let universe () = VarMap.empty
-
-let init _ = invalid_arg "Store3.init: not implemented, should not exist"
-
-let deref s pointers =
-  let result = ref VarSet.empty in
-  let deref_one node =
-    try
-      let v = VarMap.find node s in
-	result := VarSet.union !result v
-    with Not_found -> ()
-  in
-    VarSet.iter deref_one pointers;
-    !result
-
-let eval_exp s e =
-  let rec fixpoint_deref v =
-    let v' = deref s v in
+  let eval_exp s e =
+    let rec fixpoint_deref v =
+      let v' = deref s v in
       if VarSet.subset v' v then v else fixpoint_deref (VarSet.union v v')
-  in
-  let rec eval_exp e =
-    match e with
-	Empty -> VarSet.empty
-      | Var x -> VarSet.singleton x
-      | Deref e -> 
-	  let p = eval_exp e in
-	    deref s p
-      | Join (e1, e2) ->
-	  let v1 = eval_exp e1 in
-	  let v2 = eval_exp e2 in
-	    VarSet.union v1 v2
-      | InfDeref e -> fixpoint_deref (eval_exp e)
-  in
-    eval_exp e
-
-let add_pointsto x nodes store =
-  if VarSet.is_empty nodes then store
-  else begin
-    try 
-      let prev = VarMap.find x store in
-	VarMap.add x (join_nodes prev nodes) store
-    with Not_found -> VarMap.add x nodes store
-  end
-
-let add_several_pointsto src dst graph =
-  let result = ref graph in
-    VarSet.iter (fun x -> result := add_pointsto x dst !result) src;
-    !result
-
-let assign dst src s =
-  let dst = eval_exp s dst in
-  let src = eval_exp s src in
-    add_several_pointsto dst src s
-
-let eval_pathSet store p =
-  let result = ref VarSet.empty in
-  let eval_one path =
-    let path = GraphExp.Var path in
-    let v = eval_exp store path in
-      result := VarSet.union !result v
-  in
-    VarSet.iter eval_one p;
-    !result
-
-let join store1 store2 =
-  let result = ref store1 in
-    VarMap.iter (fun x v -> result := add_pointsto x v !result) store2;
-    !result
-
-let is_subset store1 store2 =
-  let pointsto_is_in_store2 x v1 =
-    try
-      let v2 = VarMap.find x store2 in
-	if not (node_is_subset v1 v2) then raise Exit
-    with Not_found -> raise Exit
-  in
-    try 
-      VarMap.iter pointsto_is_in_store2 store1;
-      true
-    with Exit -> false
-
-(* TODO: this efficiently should have both predecessor and successor list *)
-let remove_variables variables store = 
-  let result = ref VarMap.empty in
-  let remove_variables x v =
-    if not (List.mem x variables) then begin
-      let nodes = VarSet.remove_variables variables v in
-	result := VarMap.add x nodes !result
+    in
+    let rec eval_exp e =
+      match e with
+	  Empty -> VarSet.empty
+	| Var x -> VarSet.singleton x
+	| Deref e -> 
+	    let p = eval_exp e in
+	      deref s p
+	| Join (e1, e2) ->
+	    let v1 = eval_exp e1 in
+	    let v2 = eval_exp e2 in
+	      VarSet.union v1 v2
+	| InfDeref e -> fixpoint_deref (eval_exp e)
+    in
+      eval_exp e
+	
+  let add_pointsto x nodes store =
+    if VarSet.is_empty nodes then store
+    else begin
+      try 
+	let prev = VarMap.find x store in
+	  VarMap.add x (join_nodes prev nodes) store
+      with Not_found -> VarMap.add x nodes store
     end
-  in
-    VarMap.iter remove_variables store;
-    !result
-
-let size_of store =
-  let result = ref 0 in
-  let count _ v = result := !result + (VarSet.cardinal v) in
-    VarMap.iter count store;
-    !result
-
-(* shoud return: 
-   the list of all variables that are reachable from root_variables, 
-   the part of the store that is reachable,
-   the part of the store that is unreachable
-*)
-let split root_variables store = 
-  let visited_variables = ref root_variables in
-  let unreachable = ref store in
-  let result = ref VarMap.empty in
-  let todo = ref root_variables in
-  let add_todo y = 
-    if not (List.mem y !visited_variables) && not (List.mem y !todo)
-    then todo := y::!todo
-  in
-    begin try
-      while true do
-	match !todo with
-	    x::tl -> 
-	      visited_variables := x::!visited_variables;
-	      todo := tl;
-	      begin try
-		let v = VarMap.find x !unreachable in
-		  unreachable := VarMap.remove x !unreachable;
-		  result := VarMap.add x v !result;
-		  VarSet.iter add_todo v
-	      with Not_found -> ()
-	      end
-	  | [] -> raise Exit
-      done
-    with Exit -> ()
-    end;
-    (!visited_variables, !result, !unreachable)
-
-let substitute subst state =
-  let result = ref VarMap.empty in
-  let substitute_pointsto x v =
-    let x = Subst2.apply subst x in
-    let v = Subst2.apply_set subst v in
-      VarSet.iter (fun x -> result := add_pointsto x v !result) x;
-  in
-    VarMap.iter substitute_pointsto state;
-    !result
-
-let list_nodes state =
-  let result = ref (VarSet.empty) in
-  let add_nodes x y =
-    result := VarSet.add x !result;
-    result := VarSet.union y !result
-  in
-    VarMap.iter add_nodes state;
-    !result
-
-let restrict nodes state =
-  let result = ref VarMap.empty in
-  let add_edge x y =
-    if (VarSet.mem x nodes) then begin
-      let y = VarSet.inter y nodes in
-	result := VarMap.add x y !result
-    end
-  in
-    VarMap.iter add_edge state;
-    !result
-
-let merge_successors roots state = 
-  let is_root x = List.mem x roots in
-  let result = ref state in
-  let subst = ref (Subst2.identity ()) in
-  let todo = ref roots in
-(* TODO: optimization, use a set instead of a list, not efficient *)
-  let processed = ref VarSet.empty in
-    begin try
-      while true do
-	match !todo with
-	    x::tl -> 
-	      todo := tl;
-	      processed := VarSet.add x !processed;
-	      begin
-		try
-		  let succ = VarMap.find x !result in
-		    result := VarMap.remove x !result;
-		    let (root_succ, succ) = VarSet.partition is_root succ in
-		    let succ = 
-		      match VarSet.elements succ with
-			  [] -> VarSet.empty
-			| y0::tl -> 
-		    (* merge all states (that are not in roots!) together 
-		       and add to the substitution *)
-			    let merge_node y = 
-			      subst := Subst2.associate y y0 !subst;
-			    in
-			      List.iter merge_node tl;
-		      (* TODO: this may be costly => could be done better? *)
-			      result := substitute !subst !result;
-			      if (List.length tl > 0) 
-			      then processed := VarSet.remove y0 !processed;
-			      if not (VarSet.mem y0 !processed)
-			      then todo := y0::!todo;
-			      VarSet.singleton y0
-		    in
-		    let succ = VarSet.union root_succ succ in
-		      result := add_pointsto x succ !result
+      
+  let add_several_pointsto src dst graph =
+    let result = ref graph in
+      VarSet.iter (fun x -> result := add_pointsto x dst !result) src;
+      !result
+	
+  let assign dst src s =
+    let dst = eval_exp s dst in
+    let src = eval_exp s src in
+      add_several_pointsto dst src s
+	
+  let eval_pathSet store p =
+    let result = ref VarSet.empty in
+    let eval_one path =
+      let path = GraphExp.Var path in
+      let v = eval_exp store path in
+	result := VarSet.union !result v
+    in
+      VarSet.iter eval_one p;
+      !result
+	
+  let join store1 store2 =
+    let result = ref store1 in
+      VarMap.iter (fun x v -> result := add_pointsto x v !result) store2;
+      !result
+	
+  let is_subset store1 store2 =
+    let pointsto_is_in_store2 x v1 =
+      try
+	let v2 = VarMap.find x store2 in
+	  if not (node_is_subset v1 v2) then raise Exit
+      with Not_found -> raise Exit
+    in
+      try 
+	VarMap.iter pointsto_is_in_store2 store1;
+	true
+      with Exit -> false
+	
+  (* TODO: this efficiently should have both predecessor and successor list *)
+  let remove_variables variables store = 
+    let result = ref VarMap.empty in
+    let remove_variables x v =
+      if not (List.mem x variables) then begin
+	let nodes = VarSet.remove_variables variables v in
+	  result := VarMap.add x nodes !result
+      end
+    in
+      VarMap.iter remove_variables store;
+      !result
+	
+  let size_of store =
+    let result = ref 0 in
+    let count _ v = result := !result + (VarSet.cardinal v) in
+      VarMap.iter count store;
+      !result
+	
+  (* shoud return: 
+     the list of all variables that are reachable from root_variables, 
+     the part of the store that is reachable,
+     the part of the store that is unreachable
+  *)
+  let split root_variables store = 
+    let visited_variables = ref root_variables in
+    let unreachable = ref store in
+    let result = ref VarMap.empty in
+    let todo = ref root_variables in
+    let add_todo y = 
+      if not (List.mem y !visited_variables) && not (List.mem y !todo)
+      then todo := y::!todo
+    in
+      begin try
+	while true do
+	  match !todo with
+	      x::tl -> 
+		visited_variables := x::!visited_variables;
+		todo := tl;
+		begin try
+		  let v = VarMap.find x !unreachable in
+		    unreachable := VarMap.remove x !unreachable;
+		    result := VarMap.add x v !result;
+		    VarSet.iter add_todo v
 		with Not_found -> ()
-	      end
+		end
+	    | [] -> raise Exit
+	done
+      with Exit -> ()
+      end;
+      (!visited_variables, !result, !unreachable)
+	
+  let substitute subst state =
+    let result = ref VarMap.empty in
+    let substitute_pointsto x v =
+      let x = Subst.apply subst x in
+      let v = Subst.apply_set subst v in
+	VarSet.iter (fun x -> result := add_pointsto x v !result) x;
+    in
+      VarMap.iter substitute_pointsto state;
+      !result
+	
+  let list_nodes state =
+    let result = ref (VarSet.empty) in
+    let add_nodes x y =
+      result := VarSet.add x !result;
+      result := VarSet.union y !result
+    in
+      VarMap.iter add_nodes state;
+      !result
+	
+  let restrict nodes state =
+    let result = ref VarMap.empty in
+    let add_edge x y =
+      if (VarSet.mem x nodes) then begin
+	let y = VarSet.inter y nodes in
+	  result := VarMap.add x y !result
+      end
+    in
+      VarMap.iter add_edge state;
+      !result
+	
+  let merge_successors roots state = 
+    let is_root x = List.mem x roots in
+    let result = ref state in
+    let subst = ref (Subst.identity ()) in
+    let todo = ref roots in
+      (* TODO: optimization, use a set instead of a list, not efficient *)
+    let processed = ref VarSet.empty in
+      begin try
+	while true do
+	  match !todo with
+	      x::tl -> 
+		todo := tl;
+		processed := VarSet.add x !processed;
+		begin
+		  try
+		    let succ = VarMap.find x !result in
+		      result := VarMap.remove x !result;
+		      let (root_succ, succ) = VarSet.partition is_root succ in
+		      let succ = 
+			match VarSet.elements succ with
+			    [] -> VarSet.empty
+			  | y0::tl -> 
+			      (* merge all states (that are not in roots!) together 
+				 and add to the substitution *)
+			      let merge_node y = 
+				subst := Subst.associate y y0 !subst;
+			      in
+				List.iter merge_node tl;
+				(* TODO: this may be costly => could be done better? *)
+				result := substitute !subst !result;
+				if (List.length tl > 0) 
+				then processed := VarSet.remove y0 !processed;
+				if not (VarSet.mem y0 !processed)
+				then todo := y0::!todo;
+				VarSet.singleton y0
+		      in
+		      let succ = VarSet.union root_succ succ in
+			result := add_pointsto x succ !result
+		  with Not_found -> ()
+		end
 	  | [] -> raise Exit
-      done
-    with Exit -> ()
-    end;
-    (!result, !subst)
-
-let get_heap_succ state roots x =
-  let y = VarMap.find x state in
-  let y = VarSet.diff y (VarSet.of_list roots) in
-    if (VarSet.cardinal y > 1) 
-    then invalid_arg "Store3.extract_heap: should be unreachable";
-    VarSet.choose y
-
-let normalize roots state =
+	done
+      with Exit -> ()
+      end;
+      (!result, !subst)
+	
+  let get_heap_succ state roots x =
+    let y = VarMap.find x state in
+    let y = VarSet.diff y (VarSet.of_list roots) in
+      if (VarSet.cardinal y > 1) 
+      then invalid_arg "Store3.extract_heap: should be unreachable";
+      VarSet.choose y
+	
+  let normalize roots state =
     let (state, subst) = merge_successors roots state in
-(* step 2: rename all nodes that are not in roots to anonymous variable *)
+      (* step 2: rename all nodes that are not in roots to anonymous variable *)
     let subst = ref subst in
     let todo = ref roots in
-(* TODO: optimization: use a set rather than a list, not efficient *)
+      (* TODO: optimization: use a set rather than a list, not efficient *)
     let visited = ref [] in
       begin try
 	while true do
@@ -284,9 +295,9 @@ let normalize roots state =
 		  let y = get_heap_succ state roots x in
 		    if not (List.mem y !visited) then begin
 		      let y' = fresh_node () in
-		      subst := Subst2.associate y y' !subst;
-		      visited := y::!visited;
-		      todo := y::!todo
+			subst := Subst.associate y y' !subst;
+			visited := y::!visited;
+			todo := y::!todo
 		    end
 		with Not_found -> ()
 		end
@@ -294,48 +305,48 @@ let normalize roots state =
 	done
       with Exit -> () 
       end;
-    (substitute !subst state, !subst)
-
-let transport roots state input = 
-  let result = ref (Subst2.identity ()) in
-  (* 2: build the substitution so that they recursively match *)
-(* TODO: think about loops *)
-  let todo = ref (List.combine roots roots) in
-(* TODO: optimization: use a set instead of a list here *)
-  let visited = ref [] in
-    begin try
-    while true do
-      match !todo with
-	  (x1, x2)::tl -> 
-	    todo := tl;
-	    begin try
-	      (* TODO: could try to always add y1 instead? *)
-	      let y1 = get_heap_succ state roots x1 in
-	      let y2 = get_heap_succ input roots x2 in
-		result := Subst2.associate y1 y2 !result;
-		if not (List.mem y1 !visited) then begin
-		  visited := y1::!visited;
-		  todo := (y1, y2)::!todo
+      (substitute !subst state, !subst)
+	
+  let transport roots state input = 
+    let result = ref (Subst.identity ()) in
+      (* 2: build the substitution so that they recursively match *)
+      (* TODO: think about loops *)
+    let todo = ref (List.combine roots roots) in
+      (* TODO: optimization: use a set instead of a list here *)
+    let visited = ref [] in
+      begin try
+	while true do
+	  match !todo with
+	      (x1, x2)::tl -> 
+		todo := tl;
+		begin try
+		  (* TODO: could try to always add y1 instead? *)
+		  let y1 = get_heap_succ state roots x1 in
+		  let y2 = get_heap_succ input roots x2 in
+		    result := Subst.associate y1 y2 !result;
+		    if not (List.mem y1 !visited) then begin
+		      visited := y1::!visited;
+		      todo := (y1, y2)::!todo
+		    end
+		with Not_found -> ()
 		end
-	    with Not_found -> ()
-	    end
-	| [] -> raise Exit
-    done
-    with Exit -> ()
-    end;
-    !result
-
-let glue = join
-
-let satisfies store f =
-  match f with
-      AreNotEqual (e1, e2) -> 
-	let s1 = eval_exp store e1 in
-	let s2 = eval_exp store e2 in
-	  (VarSet.is_empty (VarSet.inter s1 s2))
-
+	    | [] -> raise Exit
+	done
+      with Exit -> ()
+      end;
+      !result
+	
+  let glue = join
+    
+  let satisfies store f =
+    match f with
+	AreNotEqual (e1, e2) -> 
+	  let s1 = eval_exp store e1 in
+	  let s2 = eval_exp store e2 in
+	    (VarSet.is_empty (VarSet.inter s1 s2))
+	      
 (*
-let normalize roots store =
+  let normalize roots store =
   print_endline "Normalize";
   print_endline (ListUtils.to_string ", " (fun x -> x) roots);
   print store;
@@ -357,6 +368,10 @@ let transport roots state input =
     print_endline ("subst: "^Subst2.to_string subst);
     subst
 *)
+end
+
+include Make(Subst2)
+
 let test0 () =
   print_string "Store3.test0...";
   let store = universe () in

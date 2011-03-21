@@ -24,6 +24,8 @@
 *)
 open PtrSpeak
 
+module Store2 = Store2.Make(Subst2)
+
 let rec translate_exp e =
   match e with
       Empty -> GraphExp.Empty
