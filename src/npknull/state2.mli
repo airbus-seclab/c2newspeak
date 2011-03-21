@@ -36,7 +36,7 @@ sig
     | Unknown
 end
 
-module type ValueStore =
+module type ValueStore = functor (Subst: Transport.T) -> 
 sig
   type t
     
@@ -46,7 +46,7 @@ sig
   val is_subset: t -> t -> bool
   val remove_variables: string list -> t -> t
   val split: string list -> t -> (t * t)
-  val substitute: Subst2.t -> t -> t
+  val substitute: Subst.t -> t -> t
   val restrict:  VarSet.t -> t -> t
   val glue: t -> t -> t
   val print: t -> unit

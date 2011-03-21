@@ -86,7 +86,7 @@ struct
 end
 
 
-module type ValueStore =
+module type ValueStore = functor (Subst: Transport.T) -> 
 sig
   type t
     
@@ -98,15 +98,16 @@ sig
 (* TODO: prefer only VarSets rather than string lists *)
   val remove_variables: string list -> t -> t
   val split: string list -> t -> (t * t)
-  val substitute: Subst2.t -> t -> t
+  val substitute: Subst.t -> t -> t
   val restrict: VarSet.t -> t -> t
   val glue: t -> t -> t
   val print: t -> unit
   val is_not_null: t -> ValueSyntax.lval -> bool
 end
 
-module Make(ValueStore: ValueStore) =
+module Make(ValueStoreMake: ValueStore) =
 struct
+  module ValueStore = ValueStoreMake(Subst2)
   type t = {
     store: Store2.t;
     value: ValueStore.t;

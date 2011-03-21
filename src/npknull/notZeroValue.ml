@@ -23,41 +23,46 @@
   email: charles.hymans@penjili.org
 *)
 
-open State2.ValueSyntax
+module Make(Subst: Transport.T) = 
+struct
+  open State2.ValueSyntax
+    
+  (* set of all variables x such that (x, 0) points to a non-zero pointer *)
+  type t = VarSet.t
+      
+  let universe () = VarSet.empty
+    
+  let assign (lv, e) s = 
+    match (lv, e) with
+	(VariableStart x, NotNull) -> VarSet.add x s
+      | (VariableStart x, Lval VariableStart y) when VarSet.mem y s -> 
+	  VarSet.add x s
+      | (VariableStart _, Lval VariableStart _) -> s
+      | _ -> universe ()
+	  
+  let join = VarSet.inter
+    
+  let is_subset = VarSet.subset
+    
+  let remove_variables variables x = VarSet.diff x (VarSet.of_list variables)
+    
+  let split variables x = 
+    let variables = VarSet.of_list variables in
+      (VarSet.inter x variables, VarSet.diff x variables)
+	
+  let substitute subst s = VarSet.diff s (Subst.domain subst)
+    
+  let restrict = VarSet.inter
+    
+  let glue = VarSet.union
+    
+  let print x = 
+    print_endline ("variables not null: "^(VarSet.to_string x))
+      
+  let is_not_null s lv =
+    match lv with
+	VariableStart x -> VarSet.mem x s
+      | _ -> false
+end
 
-(* set of all variables x such that (x, 0) points to a non-zero pointer *)
-type t = VarSet.t
-
-let universe () = VarSet.empty
-
-let assign (lv, e) s = 
-  match (lv, e) with
-      (VariableStart x, NotNull) -> VarSet.add x s
-    | (VariableStart x, Lval VariableStart y) when VarSet.mem y s -> 
-	VarSet.add x s
-    | (VariableStart _, Lval VariableStart _) -> s
-    | _ -> universe ()
-
-let join = VarSet.inter
-
-let is_subset = VarSet.subset
-
-let remove_variables variables x = VarSet.diff x (VarSet.of_list variables)
-
-let split variables x = 
-  let variables = VarSet.of_list variables in
-    (VarSet.inter x variables, VarSet.diff x variables)
-
-let substitute subst s = VarSet.diff s (Subst2.domain subst)
-
-let restrict = VarSet.inter
-
-let glue = VarSet.union
-
-let print x = 
-  print_endline ("variables not null: "^(VarSet.to_string x))
-
-let is_not_null s lv =
-  match lv with
-      VariableStart x -> VarSet.mem x s
-    | _ -> false
+include Make(Subst2)

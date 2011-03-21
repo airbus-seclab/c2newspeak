@@ -23,21 +23,11 @@
   email: charles.hymans@penjili.org
 *)
 
-module type Transport =
-sig
-  type t
-
-  val identity: unit -> t
-  val associate: string -> string -> t -> t
-  val apply: t -> string -> VarSet.t
-  val apply_set: t -> VarSet.t -> VarSet.t
-end
-
 open GraphExp
 
 (* TODO: try to factor this code with pointsTo ? *)
 
-module Make(Subst: Transport) =
+module Make(Subst: Transport.T) =
 struct
    
   let cnt = ref (-1)
