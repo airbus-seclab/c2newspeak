@@ -24,24 +24,6 @@
 *)
 open PtrSpeak
 
-module Store2 = Store2.Make(Subst2)
-
-let rec translate_exp e =
-  match e with
-      Empty -> GraphExp.Empty
-    | LocalVar x -> GraphExp.Var x
-    | GlobalVar x -> GraphExp.Var x
-    | Access e -> GraphExp.Deref (translate_exp e)
-    | Shift e -> translate_exp e
-    | Join (e1, e2) ->
-	let p1 = translate_exp e1 in
-	let p2 = translate_exp e2 in
-	  GraphExp.Join (p1, p2)
-
-let deref store e = 
-  let variables = Store2.eval_exp store (translate_exp e) in
-    VarSet.elements variables
-
 module ValueSyntax =
 struct
   type lval = 
@@ -53,38 +35,7 @@ struct
       NotNull
     | Lval of lval
     | Unknown
-
-  let lval_to_list store e =
-    let rec lval_to_list e =
-      match e with
-	  LocalVar x | GlobalVar x -> x::[]
-	| Access e -> deref store e
-	| Shift e -> lval_to_list e
-	| _ -> 
-	    invalid_arg ("State2.lval_to_list: not implemented yet: "
-			 ^PtrSpeak.to_string e)
-    in
-      lval_to_list e
-
-  let translate_lval store lv =
-    match lv with
-	(* TODO: this case should not be possible *)
-	Empty -> invalid_arg "should be unreachable"
-      | LocalVar x -> VariableStart x
-      | GlobalVar x -> VariableStart x
-      | Shift e -> Variables (lval_to_list store e)
-      | Access e -> Variables (deref store e)
-      | Join (e1, e2) -> 
-	  let variables = (lval_to_list store e1)@(lval_to_list store e2) in
-	    Variables variables
-
-  let translate_exp store e = 
-    match e with
-	LocalVar _ | GlobalVar _ -> NotNull
-      | Access lv -> Lval (translate_lval store lv)
-      | Empty | Join _ | Shift _ -> Unknown
 end
-
 
 module type ValueStore = functor (Subst: Transport.T) -> 
 sig
@@ -105,9 +56,57 @@ sig
   val is_not_null: t -> ValueSyntax.lval -> bool
 end
 
-module Make(ValueStoreMake: ValueStore) =
+module Make(Subst: Transport.T)(ValueStoreMake: ValueStore) =
 struct
-  module ValueStore = ValueStoreMake(Subst2)
+  module ValueStore = ValueStoreMake(Subst)
+  module Store2 = Store2.Make(Subst)
+
+  let rec translate_exp e =
+    match e with
+	Empty -> GraphExp.Empty
+      | LocalVar x -> GraphExp.Var x
+      | GlobalVar x -> GraphExp.Var x
+      | Access e -> GraphExp.Deref (translate_exp e)
+      | Shift e -> translate_exp e
+      | Join (e1, e2) ->
+	  let p1 = translate_exp e1 in
+	  let p2 = translate_exp e2 in
+	    GraphExp.Join (p1, p2)
+	      
+  let deref store e = 
+    let variables = Store2.eval_exp store (translate_exp e) in
+      VarSet.elements variables
+
+  let lval_to_list store e =
+    let rec lval_to_list e =
+      match e with
+	  LocalVar x | GlobalVar x -> x::[]
+	| Access e -> deref store e
+	| Shift e -> lval_to_list e
+	| _ -> 
+	    invalid_arg ("State2.lval_to_list: not implemented yet: "
+			 ^PtrSpeak.to_string e)
+    in
+      lval_to_list e
+      
+  let lval_to_value store lv =
+    match lv with
+	(* TODO: this case should not be possible *)
+	Empty -> invalid_arg "should be unreachable"
+      | LocalVar x -> ValueSyntax.VariableStart x
+      | GlobalVar x -> ValueSyntax.VariableStart x
+      | Shift e -> ValueSyntax.Variables (lval_to_list store e)
+      | Access e -> ValueSyntax.Variables (deref store e)
+      | Join (e1, e2) -> 
+	  let variables = (lval_to_list store e1)@(lval_to_list store e2) in
+	    ValueSyntax.Variables variables
+	    
+  let exp_to_value store e = 
+    match e with
+	LocalVar _ | GlobalVar _ -> ValueSyntax.NotNull
+      | Access lv -> ValueSyntax.Lval (lval_to_value store lv)
+      | Empty | Join _ | Shift _ -> ValueSyntax.Unknown
+
   type t = {
     store: Store2.t;
     value: ValueStore.t;
@@ -131,8 +130,8 @@ struct
     let lv_p = translate_exp lv in
     let e_p = translate_exp e in
     let store = Store2.assign lv_p e_p state.store in
-    let lv_value = ValueSyntax.translate_lval state.store lv in
-    let e_value = ValueSyntax.translate_exp state.store e in
+    let lv_value = lval_to_value state.store lv in
+    let e_value = exp_to_value state.store e in
     let value = ValueStore.assign (lv_value, e_value) state.value in
       (* TODO: have VarAccess3 implement an assign too on a different syntax! *)
       { 
@@ -216,6 +215,6 @@ struct
 	  in
 	    Store2.satisfies state.store formula
       | IsNotNull e -> 
-	  let e = ValueSyntax.translate_lval state.store e in
+	  let e = lval_to_value state.store e in
 	    ValueStore.is_not_null state.value e
 end

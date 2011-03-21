@@ -53,13 +53,13 @@ struct
 end
 
 let run0 = 
-  let module State = State2Bottom.Make(State2.Make(TopValue)) in
+  let module State = State2Bottom.Make(State2.Make(Subst2)(TopValue)) in
   let module Analysis = Modular.Make(State) in
     Analysis.process 
 
 let run1 = 
   let module State = 
-    State2Bottom.Make(State2.Make(NotZeroValue.Make)) 
+    State2Bottom.Make(State2.Make(Subst2)(NotZeroValue.Make)) 
   in
   let module Analysis = Modular.Make(State) in
     Analysis.process 

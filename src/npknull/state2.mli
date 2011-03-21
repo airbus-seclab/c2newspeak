@@ -53,7 +53,7 @@ sig
   val is_not_null: t -> ValueSyntax.lval -> bool
 end
 
-module Make(ValueStore: ValueStore):
+module Make(Subst: Transport.T)(ValueStore: ValueStore):
 sig
   type t
     
@@ -71,7 +71,7 @@ sig
     
   val is_subset: t -> t -> bool
     
-  val substitute: Subst2.t -> t -> t
+  val substitute: Subst.t -> t -> t
     
   val remove_variables: string list -> t -> t
     
@@ -81,11 +81,11 @@ sig
     
   val split: string list -> t -> (t * t)
     
-  val transport: string list -> t -> t -> Subst2.t
+  val transport: string list -> t -> t -> Subst.t
     
   val glue: t -> t -> t
     
-  val normalize: string list -> t -> (t * Subst2.t)
+  val normalize: string list -> t -> (t * Subst.t)
     
   val list_nodes: t -> VarSet.t
     
