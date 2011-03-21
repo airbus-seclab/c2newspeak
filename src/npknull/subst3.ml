@@ -75,7 +75,9 @@ let apply_set subst s =
 (* TODO: remove this function ?? *)
 let of_list subst = 
   let result = ref (identity ()) in
-  let add_assoc (x, y) = result := associate x y !result in
+  let add_assoc (x, y) = 
+    result := Map.add x (VarSet.singleton y, true) !result 
+  in
     List.iter add_assoc subst;
     !result
 
@@ -86,4 +88,13 @@ let inverse subst =
     VarSet.iter (fun y -> result := associate y x !result) y
   in
     Map.iter invert_assoc subst;
+    !result
+
+let to_string subst =
+  let result = ref "" in
+  let string_of_assoc x (y, has_no_delta) =
+    result := !result^x^"\\"^(VarSet.to_string y);
+    if has_no_delta then result := !result^", 0"
+  in
+    Map.iter string_of_assoc subst;
     !result

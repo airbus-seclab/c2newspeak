@@ -29,7 +29,7 @@ let stats = ref false
 
 let experimental = ref false
 
-let precision_level = ref 1
+let precision_level = ref 2
 
 let speclist = 
   [
