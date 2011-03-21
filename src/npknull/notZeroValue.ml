@@ -48,10 +48,7 @@ let split variables x =
   let variables = VarSet.of_list variables in
     (VarSet.inter x variables, VarSet.diff x variables)
 
-(* TODO: not intuitive that apply_set is in Subst2 rather than
-   being VarSet.substitute
-*)
-let substitute = Subst2.apply_set
+let substitute subst s = VarSet.diff s (Subst2.domain subst)
 
 let restrict = VarSet.inter
 

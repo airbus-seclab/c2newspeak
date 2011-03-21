@@ -29,6 +29,12 @@ type t = VarSet.t Map.t
 
 let identity () = Map.empty
 
+let domain subst = 
+  let result = ref VarSet.empty in
+  let add_variable x _ = result := VarSet.add x !result in
+    Map.iter add_variable subst;
+    !result
+
 let apply subst x = 
   try Map.find x subst
   with Not_found -> VarSet.singleton x
