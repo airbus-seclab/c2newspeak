@@ -24,9 +24,18 @@
 *)
 open PtrSpeak
 
-type valueLval = 
-    VariableStart of string
-  | Variables of string list (* TODO: should be easier with a VarSet *)
+module ValueSyntax =
+struct
+  type lval = 
+      VariableStart of string
+    | Variables of string list (* TODO: should be easier with a VarSet *)
+	
+  (* true if not null *)
+  type exp = 
+      NotNull
+    | Lval of lval
+    | Unknown
+end
 
 module type ValueStore =
 sig
@@ -34,7 +43,7 @@ sig
     
   val universe: unit -> t
 (* true means is not null *)
-  val assign: (valueLval * bool) -> t -> t
+  val assign: (ValueSyntax.lval * ValueSyntax.exp) -> t -> t
   val join: t -> t -> t
   val is_subset: t -> t -> bool
 (* TODO: prefer only VarSets rather than string lists *)
@@ -44,7 +53,7 @@ sig
   val restrict: VarSet.t -> t -> t
   val glue: t -> t -> t
   val print: t -> unit
-  val is_not_null: t -> valueLval -> bool
+  val is_not_null: t -> ValueSyntax.lval -> bool
 end
 
 let rec translate_exp e =
@@ -77,26 +86,27 @@ let lval_to_value store lv =
   match lv with
       (* TODO: this case should not be possible *)
       Empty -> invalid_arg "should be unreachable"
-    | LocalVar x -> VariableStart x
-    | GlobalVar x -> VariableStart x
-    | Shift e -> Variables (lval_to_list store e)
-    | Access e -> Variables (deref store e)
+    | LocalVar x -> ValueSyntax.VariableStart x
+    | GlobalVar x -> ValueSyntax.VariableStart x
+    | Shift e -> ValueSyntax.Variables (lval_to_list store e)
+    | Access e -> ValueSyntax.Variables (deref store e)
     | Join (e1, e2) -> 
 	let variables = (lval_to_list store e1)@(lval_to_list store e2) in
-	  Variables variables
+	  ValueSyntax.Variables variables
 
 (* TODO: maybe dead code! *)
 let rec exp_to_lvalue e =
   match e with
-      LocalVar x -> VariableStart x
+      LocalVar x -> ValueSyntax.VariableStart x
     | _ -> 
 	invalid_arg ("State2.exp_to_lvalue: not implemented yet: "
 		     ^PtrSpeak.to_string e)
 
-let exp_to_value e = 
+let exp_to_value store e = 
   match e with
-      LocalVar _ | GlobalVar _ -> true
-    | Empty | Access _ | Join _ | Shift _ -> false
+      LocalVar _ | GlobalVar _ -> ValueSyntax.NotNull
+    | Access lv -> ValueSyntax.Lval (lval_to_value store lv)
+    | Empty | Join _ | Shift _ -> ValueSyntax.Unknown
 
 module Make(ValueStore: ValueStore) =
 struct
@@ -124,7 +134,7 @@ struct
     let e_p = translate_exp e in
     let store = Store2.assign lv_p e_p state.store in
     let lv_value = lval_to_value state.store lv in
-    let e_value = exp_to_value e in
+    let e_value = exp_to_value state.store e in
     let value = ValueStore.assign (lv_value, e_value) state.value in
       (* TODO: have VarAccess3 implement an assign too on a different syntax! *)
       { 

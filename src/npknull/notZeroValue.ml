@@ -23,14 +23,19 @@
   email: charles.hymans@penjili.org
 *)
 
+open State2.ValueSyntax
+
 (* set of all variables x such that (x, 0) points to a non-zero pointer *)
 type t = VarSet.t
 
 let universe () = VarSet.empty
 
-let assign (lv, is_not_null) s = 
-  match lv with
-      State2.VariableStart x when is_not_null -> VarSet.add x s
+let assign (lv, e) s = 
+  match (lv, e) with
+      (VariableStart x, NotNull) -> VarSet.add x s
+    | (VariableStart x, Lval VariableStart y) when VarSet.mem y s -> 
+	VarSet.add x s
+    | (VariableStart _, Lval VariableStart _) -> s
     | _ -> universe ()
 
 let join = VarSet.inter
@@ -57,5 +62,5 @@ let print x =
 
 let is_not_null s lv =
   match lv with
-      State2.VariableStart x -> VarSet.mem x s
+      VariableStart x -> VarSet.mem x s
     | _ -> false

@@ -23,16 +23,25 @@
   email: charles.hymans@penjili.org
 *)
 
-type valueLval = 
-    VariableStart of string
-  | Variables of string list
+module ValueSyntax:
+sig
+  type lval = 
+      VariableStart of string
+    | Variables of string list
+
+  (* true if not null *)
+  type exp = 
+      NotNull
+    | Lval of lval
+    | Unknown
+end
 
 module type ValueStore =
 sig
   type t
     
   val universe: unit -> t
-  val assign: (valueLval * bool) -> t -> t
+  val assign: (ValueSyntax.lval * ValueSyntax.exp) -> t -> t
   val join: t -> t -> t
   val is_subset: t -> t -> bool
   val remove_variables: string list -> t -> t
@@ -41,7 +50,7 @@ sig
   val restrict:  VarSet.t -> t -> t
   val glue: t -> t -> t
   val print: t -> unit
-  val is_not_null: t -> valueLval -> bool
+  val is_not_null: t -> ValueSyntax.lval -> bool
 end
 
 module Make(ValueStore: ValueStore):
