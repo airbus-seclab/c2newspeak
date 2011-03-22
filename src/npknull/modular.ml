@@ -295,8 +295,8 @@ struct
 	  let info = Hashtbl.find fundecs f in
 	    Pretty.execute_call_and_print f (call info)
 	with Not_found -> 
-	  print_endline ("Function '"^f
-		       ^"' not found. Omitted from analysis.");
+	  Context.print_err ("Function '"^f
+			     ^"' not found. Omitted from analysis.");
 	  input
     in
       process_fun init state

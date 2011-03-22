@@ -1,1 +1,1 @@
-003.c:29#2: missing function: f, call ignored, analysis may be unsound
+003.c:29#2: Function 'f' not found. Omitted from analysis.

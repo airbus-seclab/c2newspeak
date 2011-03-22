@@ -55,7 +55,8 @@ let compute entry_points prog =
 	  let fundec = Hashtbl.find prog.fundecs f in
 	    process_blk fundec.body
 	with Not_found ->
-	  print_endline ("Function '"^f^"' not found. Omitted from analysis.");
+	  Context.print_err ("Function '"^f
+			     ^"' not found. Omitted from analysis.");
 	  VarSet.empty
       in
 	Hashtbl.add result f variables;
@@ -64,7 +65,9 @@ let compute entry_points prog =
   and process_blk x =
     match x with
 	[] -> VarSet.empty
-      | (stmt, _)::blk -> VarSet.union (process_stmt stmt) (process_blk blk)
+      | (stmt, loc)::blk -> 
+	  Context.set_current_loc loc;
+	  VarSet.union (process_stmt stmt) (process_blk blk)
 
   and process_stmt x =
     match x with
