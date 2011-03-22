@@ -43,3 +43,5 @@ val print_verbose: string -> unit
 val print_err: string -> unit
 
 val print_err_with_advice: option -> string -> unit
+
+val execute_call_and_print: string -> (unit -> 'a) -> 'a
