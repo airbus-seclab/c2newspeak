@@ -47,7 +47,7 @@ struct
 	  
   let join = VarSet.inter
     
-  let is_subset = VarSet.subset
+  let is_subset x1 x2 = VarSet.subset x2 x1
     
   let remove_variables variables x = VarSet.diff x (VarSet.of_list variables)
     
