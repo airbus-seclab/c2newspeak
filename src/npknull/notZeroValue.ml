@@ -38,6 +38,7 @@ struct
       | (VariableStart x, Lval VariableStart y) when VarSet.mem y s -> 
 	  VarSet.add x s
       | (VariableStart _, Lval VariableStart _) -> s
+      | (Variables x, _) -> VarSet.diff s (VarSet.of_list x)
       | _ -> universe ()
 	  
   let join = VarSet.inter

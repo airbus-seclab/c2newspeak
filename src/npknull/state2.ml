@@ -35,6 +35,18 @@ struct
       NotNull
     | Lval of lval
     | Unknown
+
+  let string_of_lval x = 
+    match x with
+	VariableStart x -> "("^x^", 0)"
+      | Variables (x::[]) -> "{"^x^"}"
+      | _ -> invalid_arg "Not implemented yet"
+
+  let string_of_exp e =
+    match e with
+	NotNull -> "!= 0"
+      | Lval lv -> string_of_lval lv
+      | Unknown -> "?"
 end
 
 module type ValueStore = functor (Subst: Transport.T) -> 
@@ -96,7 +108,7 @@ struct
       | LocalVar x -> ValueSyntax.VariableStart x
       | GlobalVar x -> ValueSyntax.VariableStart x
       | Shift e -> ValueSyntax.Variables (lval_to_list store e)
-      | Access e -> ValueSyntax.Variables (deref store e)
+      | Access _ -> ValueSyntax.Variables (deref store lv)
       | Join (e1, e2) -> 
 	  let variables = (lval_to_list store e1)@(lval_to_list store e2) in
 	    ValueSyntax.Variables variables
