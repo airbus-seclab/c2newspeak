@@ -95,9 +95,9 @@ struct
 	  LocalVar x | GlobalVar x -> x::[]
 	| Access e -> deref store e
 	| Shift e -> lval_to_list e
-	| _ -> 
-	    invalid_arg ("State2.lval_to_list: not implemented yet: "
-			 ^PtrSpeak.to_string e)
+	    (* TODO: should be better to return a VarSet *)
+	| Join (e1, e2) -> (lval_to_list e1)@(lval_to_list e2)
+	| Empty -> invalid_arg "State2.lval_to_list: case not implemented yet"
     in
       lval_to_list e
       
@@ -114,11 +114,14 @@ struct
 	    ValueSyntax.Variables variables
 	    
   let rec exp_to_value store e = 
-    match e with
-	LocalVar _ | GlobalVar _ -> ValueSyntax.NotNull
-      | Access lv -> ValueSyntax.Lval (lval_to_value store lv)
-      | Shift e -> exp_to_value store e 
-      | Empty | Join _ -> ValueSyntax.Unknown
+    let rec exp_to_value e =
+      match e with
+	  LocalVar _ | GlobalVar _ -> ValueSyntax.NotNull
+	| Access lv -> ValueSyntax.Lval (lval_to_value store lv)
+	| Shift e -> exp_to_value e 
+	| Empty | Join _ -> ValueSyntax.Unknown
+    in
+      exp_to_value e
 
   type t = {
     store: Store2.t;
