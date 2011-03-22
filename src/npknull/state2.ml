@@ -113,11 +113,12 @@ struct
 	  let variables = (lval_to_list store e1)@(lval_to_list store e2) in
 	    ValueSyntax.Variables variables
 	    
-  let exp_to_value store e = 
+  let rec exp_to_value store e = 
     match e with
 	LocalVar _ | GlobalVar _ -> ValueSyntax.NotNull
       | Access lv -> ValueSyntax.Lval (lval_to_value store lv)
-      | Empty | Join _ | Shift _ -> ValueSyntax.Unknown
+      | Shift e -> exp_to_value store e 
+      | Empty | Join _ -> ValueSyntax.Unknown
 
   type t = {
     store: Store2.t;
