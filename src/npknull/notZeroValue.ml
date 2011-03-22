@@ -32,14 +32,18 @@ struct
       
   let universe () = VarSet.empty
     
+  let is_not_null s e =
+    match e with
+	NotNull -> true
+      | Lval VariableStart x -> VarSet.mem x s
+      | _ -> false
+
   let assign (lv, e) s = 
     match (lv, e) with
-	(VariableStart x, NotNull) -> VarSet.add x s
-      | (VariableStart x, Lval VariableStart y) when VarSet.mem y s -> 
-	  VarSet.add x s
-      | (VariableStart _, Lval VariableStart _) -> s
+	(VariableStart x, e) -> 
+	  if (is_not_null s e) then VarSet.add x s
+	  else VarSet.remove x s
       | (Variables x, _) -> VarSet.diff s (VarSet.of_list x)
-      | _ -> universe ()
 	  
   let join = VarSet.inter
     
