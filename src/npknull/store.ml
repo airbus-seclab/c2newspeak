@@ -256,6 +256,7 @@ let translate_exp_P1 env s e =
 	  let v1 = translate e1 in
 	  let v2 = translate e2 in
 	    v1@v2
+      | BinOp (_, e1, e2) -> (translate e1)@(translate e2)
       | _ -> 
 	  invalid_arg ("Store.translate_exp_P1: case not implemented yet: "
 		       ^Lowspeak.string_of_exp e)
@@ -276,6 +277,7 @@ let translate_exp_P3 env s e =
       | BinOp ((N.PlusI|N.MinusI|N.MultI|N.Shiftrt|N.Shiftlt
 	       |N.BAnd _|N.BOr _|N.MinusPP), e1, e2) ->
 	  (translate e1)@(translate e2)
+      | BinOp (_, e1, e2) -> (translate e1)@(translate e2)
       | _ -> 
 	  invalid_arg ("Store.translate_exp_P3: case not implemented yet: "
 		       ^Lowspeak.string_of_exp e)
