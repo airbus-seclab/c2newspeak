@@ -130,14 +130,6 @@ struct
       value = ValueStore.universe ()
     }
       
-    (* TODO: remove? *)
-  let init _globals = invalid_arg "Not necessary, remove code"
-    (*
-      {
-      store = Store2.init globals;
-      }
-    *)
-    
   let assign lv e state =
     let lv_p = translate_exp lv in
     let e_p = translate_exp e in

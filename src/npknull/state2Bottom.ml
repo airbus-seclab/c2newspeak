@@ -28,7 +28,6 @@ sig
   type t
     
   val universe: unit -> t
-  val init: string list -> t
   val join: t -> t -> t
   val assign: PtrSpeak.exp -> PtrSpeak.exp -> t -> t
   val guard: PtrSpeak.exp -> t -> t
@@ -54,8 +53,6 @@ struct
   type t = State.t option
       
   let universe () = Some (State.universe ())
-    
-  let init v = Some (State.init v)
     
   let emptyset () = None
     

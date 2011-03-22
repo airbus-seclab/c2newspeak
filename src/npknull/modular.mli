@@ -32,8 +32,6 @@ sig
   (* TODO: try to remove universe *)
   val universe: unit -> t
     
-  val init: string list -> t
-    
   val join: t -> t -> t
     
   val assign: PtrSpeak.exp -> PtrSpeak.exp -> t -> t
