@@ -72,6 +72,7 @@ and translate_exp e =
     | Lval (lv, _) -> Access (translate_lval lv)
     | AddrOf lv -> translate_lval lv
     | UnOp (_, e) -> translate_exp e
+    | BinOp (PlusPI, e, _) -> Shift (translate_exp e)
     | BinOp (_, e1, e2) -> join (translate_exp e1) (translate_exp e2)
 
 and translate_exp_under_deref e = 
