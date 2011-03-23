@@ -34,6 +34,8 @@ sig
       NotNull
     | Lval of lval
     | Unknown
+
+  val string_of_lval: lval -> string
 end
 
 module type ValueStore = functor (Subst: Transport.T) -> 

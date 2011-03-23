@@ -101,13 +101,13 @@ struct
     in
       lval_to_list e
       
-  let lval_to_value store lv =
+  let rec lval_to_value store lv =
     match lv with
 	(* TODO: this case should not be possible *)
 	Empty -> invalid_arg "should be unreachable"
       | LocalVar x -> ValueSyntax.VariableStart x
       | GlobalVar x -> ValueSyntax.VariableStart x
-      | Shift e -> ValueSyntax.Variables (lval_to_list store e)
+      | Shift e -> lval_to_value store e (* TODO: seems unsound => write a test *)
       | Access _ -> ValueSyntax.Variables (deref store lv)
       | Join (e1, e2) -> 
 	  let variables = (lval_to_list store e1)@(lval_to_list store e2) in
