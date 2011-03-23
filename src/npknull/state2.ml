@@ -93,7 +93,7 @@ struct
     let rec lval_to_list e =
       match e with
 	  LocalVar x | GlobalVar x -> x::[]
-	| Access e -> deref store e
+	| Access _ -> deref store e
 	| Shift e -> lval_to_list e
 	    (* TODO: should be better to return a VarSet *)
 	| Join (e1, e2) -> (lval_to_list e1)@(lval_to_list e2)
