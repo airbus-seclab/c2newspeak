@@ -101,18 +101,19 @@ struct
     in
       lval_to_list e
       
-  let rec lval_to_value store lv =
+  let lval_to_value store lv =
     match lv with
-	(* TODO: this case should not be possible *)
+	(* TODO: this case should not be possible => strange, try to 
+	   remove by having a distinction between lval and exp in ptrSpeak? *)
 	Empty -> invalid_arg "should be unreachable"
       | LocalVar x -> ValueSyntax.VariableStart x
       | GlobalVar x -> ValueSyntax.VariableStart x
-      | Shift e -> lval_to_value store e (* TODO: seems unsound => write a test *)
+      | Shift e -> ValueSyntax.Variables (lval_to_list store e)
       | Access _ -> ValueSyntax.Variables (deref store lv)
       | Join (e1, e2) -> 
 	  let variables = (lval_to_list store e1)@(lval_to_list store e2) in
 	    ValueSyntax.Variables variables
-	    
+
   let rec exp_to_value store e = 
     let rec exp_to_value e =
       match e with
@@ -122,6 +123,23 @@ struct
 	| Empty | Join _ -> ValueSyntax.Unknown
     in
       exp_to_value e
+
+  (* TODO: try to simplify/factor with other functions *)
+  let exp_to_lval_value store lv =
+    let rec exp_to_lval_value lv =
+      match lv with
+	  (* TODO: this case should not be possible => strange, try to 
+	     remove by having a distinction between lval and exp in ptrSpeak? *)
+	  Empty -> invalid_arg "should be unreachable"
+	| LocalVar x -> ValueSyntax.VariableStart x
+	| GlobalVar x -> ValueSyntax.VariableStart x
+	| Shift e -> exp_to_lval_value e
+	| Access _ -> ValueSyntax.Variables (deref store lv)
+	| Join (e1, e2) -> 
+	    let variables = (lval_to_list store e1)@(lval_to_list store e2) in
+	      ValueSyntax.Variables variables
+    in
+      exp_to_lval_value lv
 
   type t = {
     store: Store2.t;
@@ -223,6 +241,6 @@ struct
 	  in
 	    Store2.satisfies state.store formula
       | IsNotNull e -> 
-	  let e = lval_to_value state.store e in
+	  let e = exp_to_lval_value state.store e in
 	    ValueStore.is_not_null state.value e
 end

@@ -25,6 +25,8 @@
 
 open Newspeak
 
+(* TODO: maybe should have left value and expressions!!! *)
+
 type exp = 
     Empty
 (* TODO: should have just Variable and the translate uses the environment
