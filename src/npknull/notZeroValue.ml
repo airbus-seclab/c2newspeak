@@ -73,7 +73,7 @@ struct
   let print x = 
     print_endline ("variables not null: "^(VarSet.to_string x))
       
-  let is_not_null s lv =
+  let satisfies s lv =
     match lv with
 	VariableStart x -> VarSet.mem x s
       | _ -> false

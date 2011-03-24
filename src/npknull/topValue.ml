@@ -47,5 +47,5 @@ struct
     
   let print _ = ()
     
-  let is_not_null _ _ = false
+  let satisfies _ _ = false
 end

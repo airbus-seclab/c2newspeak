@@ -57,19 +57,20 @@ sig
   val join: t -> t -> t
   val is_subset: t -> t -> bool
   val remove_variables: string list -> t -> t
+  val substitute: Subst.t -> t -> t
+  val glue: t -> t -> t
+  val restrict: VarSet.t -> t -> t
   val print: t -> unit
 
   val assign: PtrSyntax.exp -> PtrSyntax.exp -> t -> t
+  val satisfies: t -> PtrSyntax.formula -> bool
   val split: string list -> t -> (string list * t * t)
 
-  val substitute: Subst.t -> t -> t
+  val eval_exp: t -> PtrSyntax.exp -> VarSet.t
+
   val transport: string list -> t -> t -> Subst.t
-  val glue: t -> t -> t
   val normalize: string list -> t -> (t * Subst.t)
   val list_nodes: t -> VarSet.t
-  val restrict: VarSet.t -> t -> t
-  val satisfies: t -> PtrSyntax.formula -> bool
-  val eval_exp: t -> PtrSyntax.exp -> VarSet.t
 end
 
 module type ValueStore = functor (Subst: Transport.T) -> 
@@ -79,16 +80,14 @@ sig
   val join: t -> t -> t
   val is_subset: t -> t -> bool
   val remove_variables: string list -> t -> t
+  val substitute: Subst.t -> t -> t
+  val glue: t -> t -> t
+  val restrict:  VarSet.t -> t -> t
   val print: t -> unit
 
   val assign: (ValueSyntax.lval * ValueSyntax.exp) -> t -> t
+  val satisfies: t -> ValueSyntax.lval -> bool
   val split: string list -> t -> (t * t)
-
-  val substitute: Subst.t -> t -> t
-  val restrict:  VarSet.t -> t -> t
-  val glue: t -> t -> t
-
-  val is_not_null: t -> ValueSyntax.lval -> bool
 end
 
 module Make(PtrStore: PtrStore)(ValueStore: ValueStore): State2Bottom.State
