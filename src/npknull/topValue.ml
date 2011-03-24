@@ -23,26 +23,29 @@
   email: charles.hymans@penjili.org
 *)
 
-type t = unit
+module Make(Subst: Transport.T) =
+struct
+  type t = unit
+      
+  let universe () = ()
+    
+  let assign _ _ = ()
+    
+  let join _ _ = ()
 
-let universe () = ()
-
-let assign _ _ = ()
-
-let join _ _ = ()
-
-let is_subset _ _ = true
-
-let remove_variables _ _ = ()
-
-let split _ _ = ((), ())
-
-let substitute _ _ = ()
-
-let restrict _ _ = ()
-
-let glue _ _ = ()
-
-let print _ = ()
-
-let is_not_null _ _ = false
+  let is_subset _ _ = true
+    
+  let remove_variables _ _ = ()
+    
+  let split _ _ = ((), ())
+    
+  let substitute _ _ = ()
+    
+  let restrict _ _ = ()
+    
+  let glue _ _ = ()
+    
+  let print _ = ()
+    
+  let is_not_null _ _ = false
+end

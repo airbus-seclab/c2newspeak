@@ -47,13 +47,8 @@ let speclist =
     ("--precision", Arg.Int (fun x -> precision_level := x), "precision level")
   ]
 
-module TopValue(Subst: Transport.T) =
-struct
-  include TopValue
-end
-
 let run0 = 
-  let module State = State2Bottom.Make(State2.Make(TopValue)) in
+  let module State = State2Bottom.Make(State2.Make(TopValue.Make)) in
   let module Analysis = Modular.Make(Subst2)(State) in
     Analysis.process 
 

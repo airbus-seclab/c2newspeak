@@ -23,10 +23,10 @@
   email: charles.hymans@penjili.org
 *)
 
+open State2.ValueSyntax
+
 module Make(Subst: Transport.T) = 
 struct
-  open State2.ValueSyntax
-    
   (* set of all variables x such that (x, 0) points to a non-zero pointer *)
   type t = VarSet.t
       

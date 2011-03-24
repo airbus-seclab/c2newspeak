@@ -23,21 +23,4 @@
   email: charles.hymans@penjili.org
 *)
 
-module Make(Subst: Transport.T):
-sig
-  type t
-    
-  val universe: unit -> t
-(* true means is not null *)
-  val assign: (State2.ValueSyntax.lval * State2.ValueSyntax.exp) -> t -> t
-  val join: t -> t -> t
-  val is_subset: t -> t -> bool
-(* TODO: prefer only VarSets rather than string lists *)
-  val remove_variables: string list -> t -> t
-  val split: string list -> t -> (t * t)
-  val substitute: Subst.t -> t -> t
-  val restrict: VarSet.t -> t -> t
-  val glue: t -> t -> t
-  val print: t -> unit
-  val is_not_null: t -> State2.ValueSyntax.lval -> bool
-end
+module Make: State2.ValueStore

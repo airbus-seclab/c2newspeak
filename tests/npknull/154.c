@@ -5,6 +5,6 @@ int **x;
 void main()
 {
   x = &ptr;
-  *x = &t; // should not signal any null pointer deref
-  *ptr = 1;
+  *x = &t; 
+  *ptr = 1; // should not signal any null pointer deref
 }
