@@ -57,6 +57,19 @@ struct
     | Lval of lval
     | Unknown
 
+  let variables_of_lval lv =
+    match lv with
+	VariableStart x -> VarSet.singleton x
+      | Variables set -> set
+
+  let join_lval lv1 lv2 =
+    if (lv1 = lv2) then lv1
+    else begin
+      let set1 = variables_of_lval lv1 in
+      let set2 = variables_of_lval lv2 in
+	Variables (VarSet.union set1 set2)
+    end
+
   let string_of_lval x = 
     match x with
 	VariableStart x -> "("^x^", 0)"
@@ -128,31 +141,36 @@ struct
 	  let p2 = translate_exp e2 in
 	    PtrSyntax.Join (p1, p2)
 	      
-  let deref store e = Store2.eval_exp store (translate_exp e)
-
+  let deref store e = 
+    ValueSyntax.Variables (Store2.eval_exp store (translate_exp e))
+      
   let lval_to_list store e =
     let rec lval_to_list e =
       match e with
 	  LocalVar x | GlobalVar x -> VarSet.singleton x
-	| Access _ -> deref store e
 	| Shift e -> lval_to_list e
 	    (* TODO: should be better to return a VarSet *)
 	| Join (e1, e2) -> 
 	    VarSet.union (lval_to_list e1) (lval_to_list e2)
 	| Empty -> invalid_arg "State2.lval_to_list: case not implemented yet"
+	| Access _ -> ValueSyntax.variables_of_lval (deref store e)
     in
       lval_to_list e
-      
+
   let lval_to_value store lv =
-    match lv with
-	(* TODO: this case should not be possible => strange, try to 
-	   remove by having a distinction between lval and exp in ptrSpeak? *)
-	Empty -> invalid_arg "should be unreachable"
-      | LocalVar x -> ValueSyntax.VariableStart x
-      | GlobalVar x -> ValueSyntax.VariableStart x
-      | Shift e -> ValueSyntax.Variables (lval_to_list store e)
-      | Access _ -> ValueSyntax.Variables (deref store lv)
-      | Join _ -> ValueSyntax.Variables (lval_to_list store lv)
+    let rec lval_to_value lv =
+      match lv with
+	  (* TODO: this case should not be possible => strange, try to 
+	     remove by having a distinction between lval and exp in ptrSpeak? *)
+	  Empty -> invalid_arg "should be unreachable"
+	| LocalVar x -> ValueSyntax.VariableStart x
+	| GlobalVar x -> ValueSyntax.VariableStart x
+	| Shift lv -> ValueSyntax.Variables (lval_to_list store lv)
+	| Access _ -> deref store lv
+	| Join (lv1, lv2) -> 
+	    ValueSyntax.join_lval (lval_to_value lv1) (lval_to_value lv2)
+    in
+      lval_to_value lv
 
   let rec exp_to_value store e = 
     let rec exp_to_value e =
@@ -174,8 +192,9 @@ struct
 	| LocalVar x -> ValueSyntax.VariableStart x
 	| GlobalVar x -> ValueSyntax.VariableStart x
 	| Shift e -> exp_to_lval_value e
-	| Access _ -> ValueSyntax.Variables (deref store lv)
-	| Join _ -> ValueSyntax.Variables (lval_to_list store lv)
+	| Access _ -> deref store lv
+	| Join (e1, e2) -> 
+	    ValueSyntax.join_lval (exp_to_lval_value e1) (exp_to_lval_value e2)
     in
       exp_to_lval_value lv
 
