@@ -23,7 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
-open GraphExp
+open State2.PtrSyntax
 
 (* TODO: try to factor this code with pointsTo ? *)
 
@@ -55,8 +55,6 @@ struct
       VarMap.iter print_pointsto s
 	
   let universe () = VarMap.empty
-    
-  let init _ = invalid_arg "Store3.init: not implemented, should not exist"
     
   let deref s pointers =
     let result = ref VarSet.empty in
@@ -107,16 +105,6 @@ struct
     let dst = eval_exp s dst in
     let src = eval_exp s src in
       add_several_pointsto dst src s
-	
-  let eval_pathSet store p =
-    let result = ref VarSet.empty in
-    let eval_one path =
-      let path = GraphExp.Var path in
-      let v = eval_exp store path in
-	result := VarSet.union !result v
-    in
-      VarSet.iter eval_one p;
-      !result
 	
   let join store1 store2 =
     let result = ref store1 in
@@ -328,12 +316,10 @@ struct
 	
   let glue = join
     
-  let satisfies store f =
-    match f with
-	AreNotEqual (e1, e2) -> 
-	  let s1 = eval_exp store e1 in
-	  let s2 = eval_exp store e2 in
-	    (VarSet.is_empty (VarSet.inter s1 s2))
+  let satisfies store (e1, e2) =
+    let s1 = eval_exp store e1 in
+    let s2 = eval_exp store e2 in
+      (VarSet.is_empty (VarSet.inter s1 s2))
 	      
 (*
   let normalize roots store =

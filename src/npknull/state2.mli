@@ -23,6 +23,18 @@
   email: charles.hymans@penjili.org
 *)
 
+module PtrSyntax:
+sig
+  type exp = 
+      Empty
+    | Var of string
+    | Deref of exp
+    | Join of (exp * exp)
+    | InfDeref of exp
+	
+  type formula = exp * exp
+end
+
 module ValueSyntax:
 sig
   type lval = 
@@ -36,6 +48,27 @@ sig
     | Unknown
 
   val string_of_lval: lval -> string
+end
+
+module type PtrStore = functor(Subst: Transport.T) ->
+sig
+  type t
+  val universe: unit -> t
+  val assign: PtrSyntax.exp -> PtrSyntax.exp -> t -> t
+  val eval_exp: t -> PtrSyntax.exp -> VarSet.t
+  val join: t -> t -> t
+  val is_subset: t -> t -> bool
+  val remove_variables: string list -> t -> t
+  val print: t -> unit
+  val size_of: t -> int
+  val split: string list -> t -> (string list * t * t)
+  val substitute: Subst.t -> t -> t
+  val transport: string list -> t -> t -> Subst.t
+  val glue: t -> t -> t
+  val normalize: string list -> t -> (t * Subst.t)
+  val list_nodes: t -> VarSet.t
+  val restrict: VarSet.t -> t -> t
+  val satisfies: t -> PtrSyntax.formula -> bool
 end
 
 module type ValueStore = functor (Subst: Transport.T) -> 
@@ -55,4 +88,4 @@ sig
   val is_not_null: t -> ValueSyntax.lval -> bool
 end
 
-module Make(ValueStore: ValueStore): State2Bottom.State
+module Make(PtrStore: PtrStore)(ValueStore: ValueStore): State2Bottom.State

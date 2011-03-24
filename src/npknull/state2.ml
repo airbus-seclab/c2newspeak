@@ -24,8 +24,29 @@
 *)
 open PtrSpeak
 
+module PtrSyntax =
+struct
+  type exp = 
+      Empty
+    | Var of string
+    | Deref of exp
+    | Join of (exp * exp)
+    | InfDeref of exp
+
+  type formula = (exp * exp)
+
+  let rec string_of_exp e = 
+    match e with
+	Empty -> "{}"
+      | Var x -> x
+      | Deref e -> "*("^string_of_exp e^")"
+      | Join (e1, e2) -> "("^string_of_exp e1^"|"^string_of_exp e2^")"
+      | InfDeref e -> "*...*("^string_of_exp e^")"
+end
+
 module ValueSyntax =
 struct
+  (* TODO: merge lval and exp? *)
   type lval = 
       VariableStart of string
     | Variables of string list (* TODO: should be easier with a VarSet *)
@@ -49,7 +70,34 @@ struct
       | Unknown -> "?"
 end
 
-module type ValueStore = functor (Subst: Transport.T) -> 
+module type PtrStore = functor(Subst: Transport.T) ->
+sig
+  type t
+  val universe: unit -> t
+  val assign: PtrSyntax.exp -> PtrSyntax.exp -> t -> t
+  val eval_exp: t -> PtrSyntax.exp -> VarSet.t
+  (*  
+  (* TODO: why is this needed? *)
+  val eval_pathSet: t -> VarSet.t -> VarSet.t
+    
+  val init: string list -> t
+  *)
+  val join: t -> t -> t
+  val is_subset: t -> t -> bool
+  val remove_variables: string list -> t -> t
+  val print: t -> unit
+  val size_of: t -> int
+  val split: string list -> t -> (string list * t * t)
+  val substitute: Subst.t -> t -> t
+  val transport: string list -> t -> t -> Subst.t
+  val glue: t -> t -> t
+  val normalize: string list -> t -> (t * Subst.t)
+  val list_nodes: t -> VarSet.t
+  val restrict: VarSet.t -> t -> t
+  val satisfies: t -> PtrSyntax.formula -> bool
+end
+
+module type ValueStore = functor(Subst: Transport.T) -> 
 sig
   type t
     
@@ -68,22 +116,23 @@ sig
   val is_not_null: t -> ValueSyntax.lval -> bool
 end
 
-module Make(ValueStoreMake: ValueStore)(Subst: Transport.T) =
+module Make(Store2Make: PtrStore)(ValueStoreMake: ValueStore)
+  (Subst: Transport.T) =
 struct
   module ValueStore = ValueStoreMake(Subst)
-  module Store2 = Store2.Make(Subst)
+  module Store2 = Store2Make(Subst)
 
   let rec translate_exp e =
     match e with
-	Empty -> GraphExp.Empty
-      | LocalVar x -> GraphExp.Var x
-      | GlobalVar x -> GraphExp.Var x
-      | Access e -> GraphExp.Deref (translate_exp e)
+	Empty -> PtrSyntax.Empty
+      | LocalVar x -> PtrSyntax.Var x
+      | GlobalVar x -> PtrSyntax.Var x
+      | Access e -> PtrSyntax.Deref (translate_exp e)
       | Shift e -> translate_exp e
       | Join (e1, e2) ->
 	  let p1 = translate_exp e1 in
 	  let p2 = translate_exp e2 in
-	    GraphExp.Join (p1, p2)
+	    PtrSyntax.Join (p1, p2)
 	      
   let deref store e = 
     let variables = Store2.eval_exp store (translate_exp e) in
@@ -236,10 +285,9 @@ struct
   let satisfies state e = 
     match e with
 	AreNotEqual (e1, e2) -> 
-	  let formula = 
-	    GraphExp.AreNotEqual (translate_exp e1, translate_exp e2) 
-	  in
-	    Store2.satisfies state.store formula
+	  let e1 = translate_exp e1 in
+	  let e2 = translate_exp e2 in
+	    Store2.satisfies state.store (e1, e2)
       | IsNotNull e -> 
 	  let e = exp_to_lval_value state.store e in
 	    ValueStore.is_not_null state.value e

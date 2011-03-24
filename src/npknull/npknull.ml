@@ -48,17 +48,20 @@ let speclist =
   ]
 
 let run0 = 
-  let module State = State2Bottom.Make(State2.Make(TopValue.Make)) in
+  let module State = State2.Make(Store2.Make)(TopValue.Make) in
+  let module State = State2Bottom.Make(State) in
   let module Analysis = Modular.Make(Subst2)(State) in
     Analysis.process 
 
 let run1 = 
-  let module State = State2Bottom.Make(State2.Make(NotZeroValue.Make)) in
+  let module State = State2.Make(Store2.Make)(NotZeroValue.Make) in
+  let module State = State2Bottom.Make(State) in
   let module Analysis = Modular.Make(Subst2)(State) in
     Analysis.process 
 
 let run2 = 
-  let module State = State2Bottom.Make(State2.Make(NotZeroValue.Make)) in
+  let module State = State2.Make(Store2.Make)(NotZeroValue.Make) in
+  let module State = State2Bottom.Make(State) in
   let module Analysis = Modular.Make(Subst3)(State) in
     Analysis.process 
 
