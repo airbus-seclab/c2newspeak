@@ -39,7 +39,7 @@ module ValueSyntax:
 sig
   type lval = 
       VariableStart of string
-    | Variables of string list
+    | Variables of VarSet.t
 
   (* true if not null *)
   type exp = 

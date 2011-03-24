@@ -49,7 +49,7 @@ struct
   (* TODO: merge lval and exp? *)
   type lval = 
       VariableStart of string
-    | Variables of string list (* TODO: should be easier with a VarSet *)
+    | Variables of VarSet.t
 	
   (* true if not null *)
   type exp = 
@@ -60,7 +60,6 @@ struct
   let string_of_lval x = 
     match x with
 	VariableStart x -> "("^x^", 0)"
-      | Variables (x::[]) -> "{"^x^"}"
       | _ -> invalid_arg "Not implemented yet"
 
   let string_of_exp e =
@@ -129,18 +128,17 @@ struct
 	  let p2 = translate_exp e2 in
 	    PtrSyntax.Join (p1, p2)
 	      
-  let deref store e = 
-    let variables = Store2.eval_exp store (translate_exp e) in
-      VarSet.elements variables
+  let deref store e = Store2.eval_exp store (translate_exp e)
 
   let lval_to_list store e =
     let rec lval_to_list e =
       match e with
-	  LocalVar x | GlobalVar x -> x::[]
+	  LocalVar x | GlobalVar x -> VarSet.singleton x
 	| Access _ -> deref store e
 	| Shift e -> lval_to_list e
 	    (* TODO: should be better to return a VarSet *)
-	| Join (e1, e2) -> (lval_to_list e1)@(lval_to_list e2)
+	| Join (e1, e2) -> 
+	    VarSet.union (lval_to_list e1) (lval_to_list e2)
 	| Empty -> invalid_arg "State2.lval_to_list: case not implemented yet"
     in
       lval_to_list e
@@ -154,9 +152,7 @@ struct
       | GlobalVar x -> ValueSyntax.VariableStart x
       | Shift e -> ValueSyntax.Variables (lval_to_list store e)
       | Access _ -> ValueSyntax.Variables (deref store lv)
-      | Join (e1, e2) -> 
-	  let variables = (lval_to_list store e1)@(lval_to_list store e2) in
-	    ValueSyntax.Variables variables
+      | Join _ -> ValueSyntax.Variables (lval_to_list store lv)
 
   let rec exp_to_value store e = 
     let rec exp_to_value e =
@@ -179,9 +175,7 @@ struct
 	| GlobalVar x -> ValueSyntax.VariableStart x
 	| Shift e -> exp_to_lval_value e
 	| Access _ -> ValueSyntax.Variables (deref store lv)
-	| Join (e1, e2) -> 
-	    let variables = (lval_to_list store e1)@(lval_to_list store e2) in
-	      ValueSyntax.Variables variables
+	| Join _ -> ValueSyntax.Variables (lval_to_list store lv)
     in
       exp_to_lval_value lv
 
