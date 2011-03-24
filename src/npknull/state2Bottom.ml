@@ -37,7 +37,6 @@ sig
   val remove_variables: string list -> t -> t
   val split: string list -> t -> (t * t)
   val print: t -> unit
-  val size_of: t -> int
   val transport: string list -> t -> t -> Subst.t
   val glue: t -> t -> t
   val normalize: string list -> t -> (t * Subst.t)
@@ -96,11 +95,6 @@ struct
     match s with
 	None -> ()
       | Some s -> State.print s
-
-  let size_of s =
-    match s with
-	None -> 0
-      | Some s -> State.size_of s
 
 (* TODO: try to avoid having to implement this function at the state with
    bottom level *)

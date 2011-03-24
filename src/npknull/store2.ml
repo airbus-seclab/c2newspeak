@@ -135,12 +135,6 @@ struct
       VarMap.iter remove_variables store;
       !result
 	
-  let size_of store =
-    let result = ref 0 in
-    let count _ v = result := !result + (VarSet.cardinal v) in
-      VarMap.iter count store;
-      !result
-	
   (* shoud return: 
      the list of all variables that are reachable from root_variables, 
      the part of the store that is reachable,

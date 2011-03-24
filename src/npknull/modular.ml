@@ -47,10 +47,7 @@ sig
 
   val remove_variables: string list -> t -> t
     
-   
   val print: t -> unit
-    
-  val size_of: t -> int
     
   val is_subset: t -> t -> bool
 

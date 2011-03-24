@@ -37,7 +37,6 @@ sig
   val remove_variables: string list -> t -> t
   val split: string list -> t -> (t * t)
   val print: t -> unit
-  val size_of: t -> int
   val transport: string list -> t -> t -> Subst.t
   val glue: t -> t -> t
   val normalize: string list -> t -> (t * Subst.t)
