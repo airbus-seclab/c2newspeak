@@ -27,6 +27,8 @@ type address =
     VariableStart of string
   | Variables of VarSet.t
 
+val meet_address: address -> address -> address
+
 module PtrSyntax:
 sig
   type exp = 
@@ -62,7 +64,7 @@ sig
   val restrict: VarSet.t -> t -> t
   val print: t -> unit
 
-  val assign: PtrSyntax.exp -> PtrSyntax.exp -> t -> t
+  val assign: (PtrSyntax.exp * PtrSyntax.exp) -> t -> t
   val satisfies: t -> PtrSyntax.formula -> bool
   val split: string list -> t -> (string list * t * t)
 

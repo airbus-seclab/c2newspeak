@@ -28,6 +28,12 @@ type address =
     VariableStart of string
   | Variables of VarSet.t
 
+(* TODO: could be more precise if necessary *)
+let meet_address a1 a2 =
+  match (a1, a2) with
+      ((VariableStart _ as a), _) | (_, (VariableStart _ as a)) -> a
+    | _ -> a1
+
 module PtrSyntax =
 struct
   type exp = 
@@ -92,7 +98,7 @@ sig
   val restrict: VarSet.t -> t -> t
   val print: t -> unit
 
-  val assign: PtrSyntax.exp -> PtrSyntax.exp -> t -> t
+  val assign: (PtrSyntax.exp * PtrSyntax.exp) -> t -> t
   val satisfies: t -> PtrSyntax.formula -> bool
   val split: string list -> t -> (string list * t * t)
 
@@ -209,7 +215,7 @@ struct
   let assign lv e state =
     let lv_p = translate_exp lv in
     let e_p = translate_exp e in
-    let store = Store2.assign lv_p e_p state.store in
+    let store = Store2.assign (lv_p, e_p) state.store in
     let lv_value = lval_to_value state.store lv in
     let e_value = exp_to_value state.store e in
     let value = ValueStore.assign (lv_value, e_value) state.value in

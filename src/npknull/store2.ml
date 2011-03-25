@@ -101,7 +101,7 @@ struct
       VarSet.iter (fun x -> result := add_pointsto x dst !result) src;
       !result
 	
-  let assign dst src s =
+  let assign (dst, src) s =
     let dst = deref s dst in
     let src = deref s src in
       add_several_pointsto dst src s
@@ -347,7 +347,7 @@ module Test = Make(Subst2)
 let test0 () =
   print_string "Store3.test0...";
   let store = Test.universe () in
-  let store = Test.assign (Var "x") (Var "y") store in
+  let store = Test.assign (Var "x", Var "y") store in
   let (store, _) = Test.normalize ["x"] store in
   let v = Test.deref store (Deref (Var "x")) in
   let v = VarSet.choose v in
@@ -357,8 +357,8 @@ let test0 () =
 let test1 () =
   print_string "Store3.test1...";
   let store = Test.universe () in
-  let store = Test.assign (Var "x") (Var "a") store in
-  let store = Test.assign (Var "y") (Var "heap0") store in
+  let store = Test.assign (Var "x", Var "a") store in
+  let store = Test.assign (Var "y", Var "heap0") store in
   let (store, _) = Test.normalize ["x"] store in
   let v1 = Test.deref store (Deref (Var "x")) in
   let v2 = Test.deref store (Deref (Var "y")) in
@@ -369,7 +369,7 @@ let test1 () =
 let test2 () =
   print_string "Store3.test2...";
   let store = Test.universe () in
-  let store = Test.assign (Var "x") (Var "y") store in
+  let store = Test.assign (Var "x", Var "y") store in
   let (_, subst) = Test.normalize ["x"] store in
     if (VarSet.choose (Subst2.apply subst "y") = "y") 
     then failwith "normalize should change heap variables";
@@ -378,8 +378,8 @@ let test2 () =
 let test3 () = 
   print_string "Store3.test3...";
   let store = Test.universe () in
-  let store = Test.assign (Var "x") (Var "z") store in
-  let store = Test.assign (Var "z") (Var "t") store in
+  let store = Test.assign (Var "x", Var "z") store in
+  let store = Test.assign (Var "z", Var "t") store in
   let (store, _) = Test.normalize ["x"] store in
   let v = Test.deref store (Deref (Deref (Var "x"))) in
     if (VarSet.is_empty v) then failwith "normalize should not change pointers";
@@ -388,10 +388,10 @@ let test3 () =
 let test4 () = 
   print_string "Store3.test4...";
   let store = Test.universe () in
-  let store1 = Test.assign (Var "x") (Var "y1") store in
-  let store1 = Test.assign (Var "y1") (Var "z1") store1 in
-  let store2 = Test.assign (Var "x") (Var "y2") store in
-  let store2 = Test.assign (Var "y2") (Var "z2") store2 in
+  let store1 = Test.assign (Var "x", Var "y1") store in
+  let store1 = Test.assign (Var "y1", Var "z1") store1 in
+  let store2 = Test.assign (Var "x", Var "y2") store in
+  let store2 = Test.assign (Var "y2", Var "z2") store2 in
   let subst = Test.transport ["x"] store1 store2 in
   let v = VarSet.choose (Subst2.apply subst "z1") in
     if (v <> "z2") then failwith "transport should go recursively";
@@ -400,31 +400,31 @@ let test4 () =
 let test5_normalize_should_not_loop () =
   print_string "Store3.test5...";
   let store = Test.universe () in
-  let store = Test.assign (Var "x") (Var "x") store in
+  let store = Test.assign (Var "x", Var "x") store in
   let _ = Test.normalize ["x"] store in
     print_endline "OK"
 
 let test6_normalize_should_not_loop () =
   print_string "Store3.test6...";
   let store = Test.universe () in
-  let store = Test.assign (Var "x") (Var "y") store in
-  let store = Test.assign (Var "y") (Var "y") store in
+  let store = Test.assign (Var "x", Var "y") store in
+  let store = Test.assign (Var "y", Var "y") store in
   let _ = Test.normalize ["x"] store in
     print_endline "OK"
 
 let test7_transport_should_not_loop () =
   print_string "Store3.test7...";
   let store = Test.universe () in
-  let store1 = Test.assign (Var "x") (Var "x") store in
-  let store2 = Test.assign (Var "x") (Var "x") store in
+  let store1 = Test.assign (Var "x", Var "x") store in
+  let store2 = Test.assign (Var "x", Var "x") store in
   let _ = Test.transport ["x"] store1 store2 in
     print_endline "OK"
 
 let test8 () =
   print_string "Store3.test8...";
   let store = Test.universe () in
-  let store = Test.assign (Var "a") (Var "x") store in
-  let store = Test.assign (Var "b") (Var "x") store in
+  let store = Test.assign (Var "a", Var "x") store in
+  let store = Test.assign (Var "b", Var "x") store in
   let (store, _) = Test.normalize ["a"; "b"] store in
   let v = Test.deref store (Deref (Var "a")) in
     if (VarSet.cardinal v <> 1) then failwith "should have only one successor";
@@ -433,36 +433,36 @@ let test8 () =
 let test9 () =
   print_string "Store3.test9...";
   let store = Test.universe () in
-  let store = Test.assign (Var "x") (Var "a") store in
-  let store = Test.assign (Var "x") (Var "b") store in
-  let store = Test.assign (Var "x") (Var "c") store in
+  let store = Test.assign (Var "x", Var "a") store in
+  let store = Test.assign (Var "x", Var "b") store in
+  let store = Test.assign (Var "x", Var "c") store in
   let _ = Test.normalize ["x"] store in
     print_endline "OK"
 
 let test10 () =
   print_string "Store3.test10...";
   let store = Test.universe () in
-  let store1 = Test.assign (Var "x1") (Var "h") store in
-  let store1 = Test.assign (Var "x1") (Var "x2") store1 in
+  let store1 = Test.assign (Var "x1", Var "h") store in
+  let store1 = Test.assign (Var "x1", Var "x2") store1 in
   let _ = Test.transport ["x1"; "x2"] store1 store in
     print_endline "OK"
 
 let test11 () =
   print_string "Store3.test11...";
   let store = Test.universe () in
-  let store1 = Test.assign (Var "f") (Var "h2") store in
-  let store1 = Test.assign (Var "a1") (Var "a1") store1 in
-  let store1 = Test.assign (Var "a1") (Var "h2") store1 in
-  let store2 = Test.assign (Var "f") (Var "h1") store in
+  let store1 = Test.assign (Var "f", Var "h2") store in
+  let store1 = Test.assign (Var "a1", Var "a1") store1 in
+  let store1 = Test.assign (Var "a1", Var "h2") store1 in
+  let store2 = Test.assign (Var "f", Var "h1") store in
   let _ = Test.transport ["f"; "a1"] store1 store2 in
     print_endline "OK"
 
 let test12 () =
   print_string "Store3.test12...";
   let store = Test.universe () in
-  let store = Test.assign (Var "x") (Var "e") store in
-  let store = Test.assign (Var "x") (Var "x") store in
-  let store = Test.assign (Var "y") (Var "x") store in
+  let store = Test.assign (Var "x", Var "e") store in
+  let store = Test.assign (Var "x", Var "x") store in
+  let store = Test.assign (Var "y", Var "x") store in
   let roots = ["e"; "y"] in
   let (store, _) = Test.normalize roots store in
   let v = Test.deref store (Deref (Deref (Var "y"))) in
@@ -474,10 +474,10 @@ let test12 () =
 let test13 () =
   print_string "Store3.test13...";
   let store = Test.universe () in
-  let store = Test.assign (Var "a") (Var "x") store in
-  let store = Test.assign (Var "x") (Var "x") store in
-  let store = Test.assign (Var "x") (Var "y") store in
-  let store = Test.assign (Var "y") (Var "z") store in
+  let store = Test.assign (Var "a", Var "x") store in
+  let store = Test.assign (Var "x", Var "x") store in
+  let store = Test.assign (Var "x", Var "y") store in
+  let store = Test.assign (Var "y", Var "z") store in
   let _ = Test.normalize ["a"] store in
     print_endline "OK"
 
