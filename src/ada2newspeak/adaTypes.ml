@@ -603,9 +603,9 @@ let rec translate t = match t.base.trait with
                "Type of unknown trait remaining at translate time"
   | Univ_int  ->
       (*
-       * This is hacky : actually, typechecking should get rid of this by
-       * synthetizing CInts' type from the context, but this could need a
-       * two-phase typechecker.
+       * This is hacky : actually, typechecking should get rid of 
+       * this by synthetizing CInts' type from the context, 
+       * but this could need a two-phase typechecker.
        * Here we only type as Integer.
        *)
       Npkcontext.print_debug "Universal_integer remaining at translate time";
@@ -725,21 +725,23 @@ let check_exp t_ctx exp =
           , Some (A.IntegerRangeConstraint(c,d))
             -> if (a <=% c && d <=% b) then None
             else c1
-      | _ -> Npkcontext.report_error "check_exp" "Float range constraint found"
+      | _ -> Npkcontext.report_error 
+	           "check_exp" 
+	           "Float range constraint found"
   in
   let extract_constr e = 
     match e with
-    | Cir.Unop ( Npkil.Belongs_tmp (a, Npkil.Known b_plus_1) , _) ->  
+    | Cir.Unop ( Npkil.Belongs_tmp (a, Npkil.Known b_plus_1), _) ->  
 	Some (A.IntegerRangeConstraint(a, Newspeak.Nat.add_int (-1) b_plus_1))
-(*    | Cir.Unop ( Npkil.Cast _ , _) ->
- 	Npkcontext.report_warning "AdaTypes" "... Cast disappear..."; 
-	None
-*)                    
+	  (*    | Cir.Unop ( Npkil.Cast _ , _) ->
+ 		Npkcontext.report_warning "AdaTypes" 
+		"... Cast disappear..."; 
+		None
+	  *)                    
     | _ -> None
   in
-  let constr =
-    constr_combine (compute_constr t_ctx)
-                   (extract_constr exp)
+  let constr = constr_combine (compute_constr t_ctx)
+                              ( extract_constr exp )
   in
   match constr with
   | Some (A.IntegerRangeConstraint(a,b)) -> belongs a b exp

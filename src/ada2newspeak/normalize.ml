@@ -538,8 +538,9 @@ and make_arg_list args spec =
    
     | InOut , Ast.Lval _ -> Ast.InOut exp	
     | InOut , Ast.Cast _ -> begin
-	Npkcontext.report_warning "make_arg_copy"
+	(*Npkcontext.report_warning "make_arg_copy"
 	  "cast in out result might have to be cast back";
+	*)
 	Ast.InOut exp
       end
 	  
