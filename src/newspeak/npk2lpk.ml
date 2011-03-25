@@ -136,7 +136,17 @@ let translate prog =
 
   let translate_set (lv, e, t) =
     match (t, e) with
-	(Scalar t, _) -> L.Set (translate_lval lv, translate_exp e, t)
+	(Scalar t, _) -> 
+	  let tr_lv = translate_lval lv in
+	  let tr_ex =  translate_exp e in
+	    (*cast introduce for cast arguments => cast back
+	      let tr_ex_cast = 
+	      L.UnOp (---, translate_exp etr_ex)
+	    *)
+	  
+	    L.Set (tr_lv, tr_ex , t)
+	    
+	    
       | (Region (_, n), Lval (lv', _)) -> 
 	  L.Copy (translate_lval lv, translate_lval lv', n)
       | _ -> 
@@ -210,11 +220,13 @@ let translate prog =
           (lv, t)::[] -> 
             push tmp_var;
             let e = Lval (Local tmp_var, t) in
-            let set = translate_set (lv, e, t) in
+	    (* TO DO:  Cast back for ADA 
+		       (casted parameter) in translate_set? *)
+	    let set = translate_set (lv, e, t) in  
             let call = prefix_args loc f args args_ids ft in
             let x = Temps.to_string (new_id ()) (Temps.Value_of fid) in
               pop tmp_var;
-              L.Decl (x, t, (call, loc)::(set, loc)::[])
+	      L.Decl (x, t, (call, loc)::(set, loc)::[])
         | [] -> prefix_args loc f args args_ids ft
 	| _ ->
             Npkcontext.report_error "Npk2lpk.suffix_rets" 
@@ -224,7 +236,7 @@ let translate prog =
       match rets with
           (Local v, _)::[] when Hashtbl.find env v = !stack_height -> 
 	    prefix_args loc f args args_ids ft
-        | _ -> add rets
+        | _ ->  add rets
     in
       add_fst ret_vars
   in
@@ -235,24 +247,25 @@ let translate prog =
 
   and translate_stmtkind loc x = 
     match x with
-        Call (args, f, ret_vars) -> 
+        Call (args, f, ret_vars) ->
           let (fid, args_ids) = 
             match f with
-                FunId fid -> 
+                FunId fid ->
                   let args_ids = 
                     try
                       let fundec = Hashtbl.find prog.fundecs fid in
                         List.map fst fundec.args
-                    with Not_found -> default_args_ids fid (List.length args)
+                    with Not_found -> 
+		      default_args_ids fid (List.length args)
                   in 
 		    (fid, args_ids)
-		    
-              | FunDeref _ -> 
+	      | FunDeref _ -> 
                   let fid = "fptr_call" in
                     (fid, default_args_ids fid (List.length args))
           in
 	  let ft = (List.map snd args, List.map snd ret_vars) in
             suffix_rets fid loc f (args, ret_vars) args_ids ft
+
       | DoWith (body, lbl) -> L.DoWith (translate_blk body, lbl)
       | Goto lbl -> L.Goto lbl
       | Decl (x, t, body) -> 
@@ -260,8 +273,10 @@ let translate prog =
           let body = translate_blk body in
             pop x;
             L.Decl (x, t, body)
-      | Set (lv, e, t) -> translate_set (lv, e, Scalar t)
-      | Copy (dst, src, sz) -> L.Copy (translate_lval dst, translate_lval src, sz)
+      | Set (lv, e, t) ->
+	  translate_set (lv, e, Scalar t)
+      | Copy (dst, src, sz) -> 
+	  L.Copy (translate_lval dst, translate_lval src, sz)
       | Select (body1, body2) -> 
           let body1 = translate_blk body1 in
           let body2 = translate_blk body2 in

@@ -192,13 +192,10 @@ let translate compil_unit =
 	 C.Binop (N.Mod, c1, c2)
        end
          
-
       (* | Power TO DO test 2nd postif when fst integer cf p.93*\) *)
       | Power  ,_ ->
           Npkcontext.report_error "Firstpass.translate_binop"
            "run-time operator not implemented (Power 3)"
-
- 
 
       | _ -> Npkcontext.report_error "Firstpass.translate_binop"
             "invalid operator and argument"
@@ -212,14 +209,16 @@ let translate compil_unit =
       | Out lv   -> 
 	  let (lv, t) = translate_lv lv in
 	    C.Out (lv, T.translate t)
-      | InOut (Ast.Cast (a,aa,aaa) , b)-> 
-	  print_endline "TO DO: take this info in order to cast back"; 
-	  C.InOut (T.check_exp t (translate_exp  (Ast.Cast (a,aa,aaa), b)))
-
+      | InOut (Ast.Cast (o,n,e), b)-> 
+	  (*T.check_exp: t would remove Cast *)
+	  C.InOut (translate_exp  (Ast.Cast (o,n,e), b))
+	    
+      (* 'No cast' case *)
       | InOut e (*lv*) -> 
 	  C.InOut (T.check_exp t (translate_exp e))
-	(*  let (lv, t) = translate_lv lv in
-	    C.InOut (lv, T.translate t)*)
+	    (*  let (lv, t) = translate_lv lv in
+		C.InOut (lv, T.translate t)
+	    *)
       in
       (x_t, x_arg)
     in

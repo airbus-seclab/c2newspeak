@@ -162,7 +162,7 @@ let translate src_lang prog =
 
   let rec translate_blk x = 
     match x with
-(* TODO: pass id up to npkil!! *)
+	(*TODO: pass id up to npkil!! *)
 	(Decl (t, x), loc)::body ->
 	  Npkcontext.set_loc loc;
 	  let t = translate_typ t in
@@ -223,7 +223,8 @@ let translate src_lang prog =
 	    "unexpected expression as statement"
 
       | Decl _ -> 
-	  Npkcontext.report_error "Cir2npkil.translate_stmt" "unreachable code"
+	  Npkcontext.report_error "Cir2npkil.translate_stmt" 
+	    "unreachable code"
 
   and translate_fn fn =
     match fn with
@@ -255,18 +256,30 @@ let translate src_lang prog =
 	    rets_t := (translate_typ t)::!rets_t;
 	    out_vars := (translate_lv lv)::!out_vars
 	      
-	| InOut (Unop ( K.Belongs_tmp _, Lval (lv, _)))  -> 
-	    (*Cast is gone, (turned to belongs...)  T.check_exp from Firstpass 
-	      translate_subprogram_parameter; which is problem because 
+
+	| InOut (Unop ( K.Cast (sc_o, _sc_n), Lval (lv, _)))  ->  
+	    (* Npkcontext.report_warning "cir2npkil translate_arg"
+               ( "******        keep this Cast sc1 <=> sc2"^
+	         "******        for later ******");
+	    *)
+
+	     rets_t := (K.Scalar sc_o)::!rets_t;
+	     out_vars := (translate_lv lv)::!out_vars
+
+	| InOut (Unop ( K.Belongs_tmp _, Lval (lv, _))) -> 
+	    (*Cast is gone, (turned to belongs)  
+	      T.check_exp from Firstpass 
+	      translate_subprogram_parameter; 
+	      which is problem because 
 	      parameter Inout with cast
 	    *) 
-	    Npkcontext.report_warning "TO DO cir2npkil translate_arg"
-              "Must be cast back be a left-value or a cast, remove warning in t369";
+	    Npkcontext.report_warning "TO DO remove this cir2npkil translate_arg"
+             ( "Must be cast back be a left-value or a cast,"^
+	      " remove warning in t369");
 	    rets_t := (translate_typ t)::!rets_t;
 	    out_vars := (translate_lv lv)::!out_vars
-
-	      
-	| InOut _ -> Npkcontext.report_error "cir2npkil trnaslate_arg"
+	    
+	| InOut _ -> Npkcontext.report_error "cir2npkil translate_arg"
                   ( "Actual parameter with \"out\" or \"in out\" mode "
                   ^ "must be a left-value or a cast")
 	   
