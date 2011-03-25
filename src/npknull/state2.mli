@@ -33,12 +33,14 @@ module PtrSyntax:
 sig
   type exp = 
       Empty
-    | Var of string
+    | Var of (string * bool) (* true if offset is 0 *)
     | Deref of exp
     | Join of (exp * exp)
     | InfDeref of exp
 	
   type formula = exp * exp
+
+  val string_of_exp: exp -> string
 end
 
 module ValueSyntax:

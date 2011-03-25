@@ -23,22 +23,4 @@
   email: charles.hymans@penjili.org
 *)
 
-module type SimplePtrStore = functor (Subst: Transport.T) ->
-sig
-  type t
-
-  val universe: unit -> t
-  val join: t -> t -> t
-  val is_subset: t -> t -> bool
-  val remove_variables: string list -> t -> t
-  val substitute: Subst.t -> t -> t
-  val glue: t -> t -> t
-  val restrict: VarSet.t -> t -> t
-  val print: t -> unit
-  val assign: (State2.PtrSyntax.exp * State2.PtrSyntax.exp) -> t -> t
-  val split: string list -> t -> (t * t)
-(* None is for Top, think about this *)
-  val eval_exp: t -> State2.PtrSyntax.exp -> State2.address option
-end
-
-module Make(Store1: State2.PtrStore)(Store2: SimplePtrStore): State2.PtrStore
+module Make: PtrPair.SimplePtrStore

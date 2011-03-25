@@ -23,7 +23,26 @@
   email: charles.hymans@penjili.org
 *)
 
-module Make(Store1Make: State2.PtrStore)(Store2Make: State2.PtrStore)
+module type SimplePtrStore = functor (Subst: Transport.T) ->
+sig
+  type t
+
+  val universe: unit -> t
+  val join: t -> t -> t
+  val is_subset: t -> t -> bool
+  val remove_variables: string list -> t -> t
+  val substitute: Subst.t -> t -> t
+  val glue: t -> t -> t
+  val restrict: VarSet.t -> t -> t
+  val print: t -> unit
+  val assign: (State2.PtrSyntax.exp * State2.PtrSyntax.exp) -> t -> t
+  val split: string list -> t -> (t * t)
+(* None is for Top, think about this *)
+  val eval_exp: t -> State2.PtrSyntax.exp -> State2.address option
+
+end
+
+module Make(Store1Make: State2.PtrStore)(Store2Make: SimplePtrStore)
 (Subst: Transport.T) =
 struct
   module Store1 = Store1Make(Subst)
@@ -75,9 +94,8 @@ struct
     let (reachable_variables, reachable_store1, unreachable_store1) =
       Store1.split roots state.store1
     in
-    let (_, reachable_store2, unreachable_store2) =
-      (* TODO: change this to reachable_variables! *)
-      Store2.split roots state.store2
+    let (reachable_store2, unreachable_store2) =
+      Store2.split reachable_variables state.store2
     in
       (reachable_variables,
        { store1 = reachable_store1; store2 = reachable_store2 }, 
@@ -86,8 +104,12 @@ struct
   let eval_exp state e = 
     let address1 = Store1.eval_exp state.store1 e in
     let address2 = Store2.eval_exp state.store2 e in
-(* TODO: should create a module Address *)
-      State2.meet_address address1 address2
+   (* TODO: this Some/None, seems like a bit of a hack, think about it
+   what about refine_address rather than eval_exp? *)
+      match address2 with
+	  (* TODO: should create a module Address *)
+	  Some address2 -> State2.meet_address address1 address2
+	| None -> address1
 
   let satisfies state e = Store1.satisfies state.store1 e
 

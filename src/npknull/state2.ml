@@ -38,7 +38,7 @@ module PtrSyntax =
 struct
   type exp = 
       Empty
-    | Var of string
+    | Var of (string * bool)
     | Deref of exp
     | Join of (exp * exp)
     | InfDeref of exp
@@ -48,7 +48,9 @@ struct
   let rec string_of_exp e = 
     match e with
 	Empty -> "{}"
-      | Var x -> x
+      | Var (x, is_zero) -> 
+	  let offset = if is_zero then "0" else "?" in
+	    "("^x^", "^offset^")"
       | Deref e -> "*("^string_of_exp e^")"
       | Join (e1, e2) -> "("^string_of_exp e1^"|"^string_of_exp e2^")"
       | InfDeref e -> "*...*("^string_of_exp e^")"
@@ -92,6 +94,8 @@ sig
   val universe: unit -> t
   val join: t -> t -> t
   val is_subset: t -> t -> bool
+(* TODO: simplify: should only have remove_variable? 
+   rather than remove_variables? think about it *)
   val remove_variables: string list -> t -> t
   val substitute: Subst.t -> t -> t
   val glue: t -> t -> t
@@ -136,10 +140,18 @@ struct
   let rec translate_exp e =
     match e with
 	Empty -> PtrSyntax.Empty
-      | LocalVar x -> PtrSyntax.Var x
-      | GlobalVar x -> PtrSyntax.Var x
+      | LocalVar x -> PtrSyntax.Var (x, true)
+      | GlobalVar x -> PtrSyntax.Var (x, true)
       | Access e -> PtrSyntax.Deref (translate_exp e)
-      | Shift e -> translate_exp e
+      | Shift e -> 
+	  let e = translate_exp e in begin
+	      match e with
+		  PtrSyntax.Var (x, _) -> PtrSyntax.Var (x, false)
+		| PtrSyntax.Deref _ | PtrSyntax.Empty -> e
+		| _ -> 
+		    invalid_arg ("State2.translate_exp: not implemented yet"
+				 ^PtrSyntax.string_of_exp e)
+	    end
       | Join (e1, e2) ->
 	  let p1 = translate_exp e1 in
 	  let p2 = translate_exp e2 in
