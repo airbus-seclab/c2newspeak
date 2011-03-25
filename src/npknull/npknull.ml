@@ -27,6 +27,10 @@
 
 let stats = ref false
 
+let experimental = ref false
+
+let precision_level = ref 2
+
 let speclist = 
   [
     ("--stats", Arg.Set stats, "prints analysis stats");
@@ -38,14 +42,47 @@ let speclist =
      "prints infos to display call graph during analysis");
     (Context.string_of_option Context.Verbose, 
      Arg.Unit (Context.set_option Context.Verbose), 
-     "prints more details")
+     "prints more details");
+    ("--experimental", Arg.Set experimental, "experimental version");
+    ("--precision", Arg.Int (fun x -> precision_level := x), "precision level")
   ]
 
+let run0 = 
+  let module State = State2.Make(Store2.Make)(TopValue.Make) in
+  let module State = State2Bottom.Make(State) in
+  let module Analysis = Modular.Make(Subst2)(State) in
+    Analysis.process 
+
+let run1 = 
+  let module State = State2.Make(Store2.Make)(NotZeroValue.Make) in
+  let module State = State2Bottom.Make(State) in
+  let module Analysis = Modular.Make(Subst2)(State) in
+    Analysis.process 
+
+let run2 = 
+  let module State = State2.Make(Store2.Make)(NotZeroValue.Make) in
+  let module State = State2Bottom.Make(State) in
+  let module Analysis = Modular.Make(Subst3)(State) in
+    Analysis.process 
+
 let process input = 
-  let prog = Npk2lpk.translate (Newspeak.read input) in
-  let glb_tbl = GlbCollect.process true prog in
-  let results = Solver.process glb_tbl prog in
-    if !stats then Stats.print prog results
+  let prog = Newspeak.read input in
+    if !experimental then begin
+      let prog = Npk2lpk.translate prog in
+      let glb_tbl = GlbCollect.process true prog in
+      let results = Solver.process glb_tbl prog in
+	if !stats then Stats.print prog results
+    end else begin
+      let entry_point = "main" in
+      let global_tbl = UsedGlobals.compute [entry_point] prog in
+      let prog = Preprocessor.prepare prog in
+      let analysis = 
+	if !precision_level = 0 then run0 
+	else if !precision_level = 1 then run1
+	else run2
+      in
+	analysis (global_tbl, prog) entry_point
+    end
 
 let _ =
   StandardApplication.launch_process_with_npk_argument "npknull" speclist 

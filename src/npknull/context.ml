@@ -30,9 +30,13 @@ type option =
 
 module OptionSet = Set.Make(struct type t = option let compare = compare end)
 
+(* TODO: do a type with all options, instead of global variables *)
+
 let options = ref OptionSet.empty
 
 let current_loc = ref (Newspeak.dummy_loc "initialization")
+
+let call_stack = ref []
 
 let errors = ref StrSet.empty
 
@@ -51,6 +55,22 @@ let set_option option () = options := OptionSet.add option !options
 let option_is_set option = OptionSet.mem option !options
 
 let print_verbose msg = if option_is_set Verbose then print_endline msg
+
+let print_current_call () =
+  if !call_stack <> [] then begin
+    let len = List.length !call_stack - 1 in
+    let margin = String.make (2*len) ' ' in
+    let f = List.hd !call_stack in
+      print_verbose (margin^"Analyzing "^f^"...")
+  end
+
+let execute_call_and_print f call =
+  call_stack := f::!call_stack;
+  print_current_call ();
+  let result = call () in
+    call_stack := List.tl !call_stack;
+    print_current_call ();
+    result
 
 let print_err msg = 
   let msg = Newspeak.string_of_loc !current_loc^": "^msg in
