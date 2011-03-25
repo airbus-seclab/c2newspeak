@@ -23,6 +23,10 @@
   email: charles.hymans@penjili.org
 *)
 
+type address = 
+    VariableStart of string
+  | Variables of VarSet.t
+
 module PtrSyntax:
 sig
   type exp = 
@@ -37,17 +41,13 @@ end
 
 module ValueSyntax:
 sig
-  type lval = 
-      VariableStart of string
-    | Variables of VarSet.t
-
   (* true if not null *)
   type exp = 
       NotNull
-    | Lval of lval
+    | Lval of address
     | Unknown
 
-  val string_of_lval: lval -> string
+  val string_of_lval: address -> string
 end
 
 module type PtrStore = functor(Subst: Transport.T) ->
@@ -66,7 +66,7 @@ sig
   val satisfies: t -> PtrSyntax.formula -> bool
   val split: string list -> t -> (string list * t * t)
 
-  val eval_exp: t -> PtrSyntax.exp -> VarSet.t
+  val eval_exp: t -> PtrSyntax.exp -> address
 
   val transport: string list -> t -> t -> Subst.t
   val normalize: string list -> t -> (t * Subst.t)
@@ -85,8 +85,8 @@ sig
   val restrict:  VarSet.t -> t -> t
   val print: t -> unit
 
-  val assign: (ValueSyntax.lval * ValueSyntax.exp) -> t -> t
-  val satisfies: t -> ValueSyntax.lval -> bool
+  val assign: (address * ValueSyntax.exp) -> t -> t
+  val satisfies: t -> address -> bool
   val split: string list -> t -> (t * t)
 end
 

@@ -24,6 +24,10 @@
 *)
 open PtrSpeak
 
+type address = 
+    VariableStart of string
+  | Variables of VarSet.t
+
 module PtrSyntax =
 struct
   type exp = 
@@ -46,15 +50,9 @@ end
 
 module ValueSyntax =
 struct
-  (* TODO: merge lval and exp? *)
-  type lval = 
-      VariableStart of string
-    | Variables of VarSet.t
-	
-  (* true if not null *)
   type exp = 
       NotNull
-    | Lval of lval
+    | Lval of address
     | Unknown
 
   let variables_of_lval lv =
@@ -98,7 +96,7 @@ sig
   val satisfies: t -> PtrSyntax.formula -> bool
   val split: string list -> t -> (string list * t * t)
 
-  val eval_exp: t -> PtrSyntax.exp -> VarSet.t
+  val eval_exp: t -> PtrSyntax.exp -> address
 
   val transport: string list -> t -> t -> Subst.t
   val normalize: string list -> t -> (t * Subst.t)
@@ -118,8 +116,8 @@ sig
   val restrict: VarSet.t -> t -> t
   val print: t -> unit
 
-  val assign: (ValueSyntax.lval * ValueSyntax.exp) -> t -> t
-  val satisfies: t -> ValueSyntax.lval -> bool
+  val assign: (address * ValueSyntax.exp) -> t -> t
+  val satisfies: t -> address -> bool
   val split: string list -> t -> (t * t)
 end
 
@@ -141,8 +139,7 @@ struct
 	  let p2 = translate_exp e2 in
 	    PtrSyntax.Join (p1, p2)
 	      
-  let deref store e = 
-    ValueSyntax.Variables (Store2.eval_exp store (translate_exp e))
+  let deref store e = Store2.eval_exp store (translate_exp e)
       
   let lval_to_list store e =
     let rec lval_to_list e =
@@ -163,9 +160,9 @@ struct
 	  (* TODO: this case should not be possible => strange, try to 
 	     remove by having a distinction between lval and exp in ptrSpeak? *)
 	  Empty -> invalid_arg "should be unreachable"
-	| LocalVar x -> ValueSyntax.VariableStart x
-	| GlobalVar x -> ValueSyntax.VariableStart x
-	| Shift lv -> ValueSyntax.Variables (lval_to_list store lv)
+	| LocalVar x -> VariableStart x
+	| GlobalVar x -> VariableStart x
+	| Shift lv -> Variables (lval_to_list store lv)
 	| Access _ -> deref store lv
 	| Join (lv1, lv2) -> 
 	    ValueSyntax.join_lval (lval_to_value lv1) (lval_to_value lv2)
@@ -189,8 +186,8 @@ struct
 	  (* TODO: this case should not be possible => strange, try to 
 	     remove by having a distinction between lval and exp in ptrSpeak? *)
 	  Empty -> invalid_arg "should be unreachable"
-	| LocalVar x -> ValueSyntax.VariableStart x
-	| GlobalVar x -> ValueSyntax.VariableStart x
+	| LocalVar x -> VariableStart x
+	| GlobalVar x -> VariableStart x
 	| Shift e -> exp_to_lval_value e
 	| Access _ -> deref store lv
 	| Join (e1, e2) -> 

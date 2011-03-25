@@ -23,6 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
+open State2
 open State2.ValueSyntax
 
 module Make(Subst: Transport.T) = 
