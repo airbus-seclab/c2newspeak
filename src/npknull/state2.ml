@@ -26,6 +26,7 @@ open PtrSpeak
 
 type address = 
     VariableStart of string
+  | VariableRest of string (* from offset 4 onward *)
   | Variables of VarSet.t
 
 (* TODO: could be more precise if necessary *)
@@ -63,7 +64,7 @@ struct
 
   let variables_of_lval lv =
     match lv with
-	VariableStart x -> VarSet.singleton x
+	VariableStart x | VariableRest x -> VarSet.singleton x
       | Variables set -> set
 
   let join_lval lv1 lv2 =
@@ -77,6 +78,7 @@ struct
   let string_of_lval x = 
     match x with
 	VariableStart x -> "("^x^", 0)"
+      | VariableRest x -> "("^x^", > 3)"
       | Variables x -> VarSet.to_string x
 
   let string_of_exp e =
@@ -138,8 +140,7 @@ struct
   let rec translate_exp e =
     match e with
 	Empty -> PtrSyntax.Empty
-      | LocalVar x -> PtrSyntax.Var (x, true)
-      | GlobalVar x -> PtrSyntax.Var (x, true)
+      | Var x -> PtrSyntax.Var (x, true)
       | Access e -> PtrSyntax.Deref (translate_exp e)
       | Shift e -> 
 	  let e = translate_exp e in begin
@@ -160,7 +161,7 @@ struct
   let lval_to_list store e =
     let rec lval_to_list e =
       match e with
-	  LocalVar x | GlobalVar x -> VarSet.singleton x
+	  Var x -> VarSet.singleton x
 	| Shift e -> lval_to_list e
 	    (* TODO: should be better to return a VarSet *)
 	| Join (e1, e2) -> 
@@ -176,8 +177,7 @@ struct
 	  (* TODO: this case should not be possible => strange, try to 
 	     remove by having a distinction between lval and exp in ptrSpeak? *)
 	  Empty -> invalid_arg "should be unreachable"
-	| LocalVar x -> VariableStart x
-	| GlobalVar x -> VariableStart x
+	| Var x -> VariableStart x
 	| Shift lv -> Variables (lval_to_list store lv)
 	| Access _ -> deref store lv
 	| Join (lv1, lv2) -> 
@@ -188,7 +188,7 @@ struct
   let rec exp_to_value store e = 
     let rec exp_to_value e =
       match e with
-	  LocalVar _ | GlobalVar _ -> ValueSyntax.NotNull
+	  Var _ -> ValueSyntax.NotNull
 	| Access lv -> ValueSyntax.Lval (lval_to_value store lv)
 	| Shift e -> exp_to_value e 
 	| Empty | Join _ -> ValueSyntax.Unknown
@@ -202,8 +202,7 @@ struct
 	  (* TODO: this case should not be possible => strange, try to 
 	     remove by having a distinction between lval and exp in ptrSpeak? *)
 	  Empty -> invalid_arg "should be unreachable"
-	| LocalVar x -> VariableStart x
-	| GlobalVar x -> VariableStart x
+	| Var x -> VariableStart x
 	| Shift e -> exp_to_lval_value e
 	| Access _ -> deref store lv
 	| Join (e1, e2) -> 

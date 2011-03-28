@@ -25,10 +25,7 @@
 
 type exp = 
     Empty
-(* TODO: should have just Variable and the translate uses the environment
-   information!!! *)
-  | LocalVar of string
-  | GlobalVar of string
+  | Var of string
   | Access of exp
   | Shift of exp
   | Join of (exp * exp)

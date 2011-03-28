@@ -29,10 +29,7 @@ open Newspeak
 
 type exp = 
     Empty
-(* TODO: should have just Variable and the translate uses the environment
-   information!!! *)
-  | LocalVar of string
-  | GlobalVar of string
+  | Var of string
   | Access of exp
   | Shift of exp
   | Join of (exp * exp)
@@ -59,8 +56,7 @@ let join v1 v2 =
 
 let rec translate_lval lv =
   match lv with
-      Local x -> LocalVar x
-    | Global x -> GlobalVar x
+      Local x | Global x -> Var x
     | Deref (e, _) -> Access (translate_exp_under_deref e)
 (* TODO: not nice, translation should be in a different file than language 
    definition *)
@@ -88,8 +84,7 @@ and translate_exp_under_deref e =
 let rec to_string e =
   match e with
       Empty -> "{}"
-    | LocalVar x -> "local("^x^")"
-    | GlobalVar x -> "global("^x^")"
+    | Var x -> x
     | Access e -> "*("^to_string e^")"
     | Shift e -> "("^to_string e^" + ?)"
     | Join (e1, e2) -> "("^to_string e1^" | "^to_string e2^")"
@@ -102,7 +97,7 @@ let test1 () =
 	  Scalar (Int (Signed, 32)))
   in
   let e = translate_exp e in
-  let expected = Access (Access (LocalVar var)) in
+  let expected = Access (Access (Var var)) in
     if (e <> expected) then invalid_arg "failed";
     print_endline "OK"
 

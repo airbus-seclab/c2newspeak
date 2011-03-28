@@ -25,6 +25,7 @@
 
 type address = 
     VariableStart of string
+  | VariableRest of string
   | Variables of VarSet.t
 
 val meet_address: address -> address -> address

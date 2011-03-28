@@ -92,7 +92,7 @@ struct
       let param = gen_param () in
       let actual = "!actual"^param in
       let formal = "!formal"^param in
-      let lv = LocalVar actual in
+      let lv = Var actual in
 	result := State.assign lv e !result;
 	(formal, actual)
     in
@@ -112,7 +112,7 @@ struct
     let assign_return_value lv =
       (* TODO: think about it, but there is a dangerous disconnect between this
 	 number 0 and the one in pass_arguments and also the name of the argument!! *)
-      let e = PtrSpeak.Access (PtrSpeak.LocalVar "!actual0") in
+      let e = PtrSpeak.Access (PtrSpeak.Var "!actual0") in
 	result := State.assign lv e !result
     in
       List.iter assign_return_value rets;
@@ -121,7 +121,7 @@ struct
   let assign_return_value rets state =
     let result = ref state in
     let assign lv =
-      let e = PtrSpeak.Access (PtrSpeak.LocalVar "!actual0") in
+      let e = PtrSpeak.Access (PtrSpeak.Var "!actual0") in
 	result := State.assign lv e !result
     in
       List.iter assign rets;
@@ -140,7 +140,7 @@ struct
     in
     let pass_argument e =
       let (actual, formal) = gen_param () in
-      let lv = LocalVar actual in
+      let lv = Var actual in
 	result := State.assign lv e !result;
 	(actual, formal)
   in
