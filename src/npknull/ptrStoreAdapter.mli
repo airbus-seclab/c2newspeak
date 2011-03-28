@@ -23,10 +23,21 @@
   email: charles.hymans@penjili.org
 *)
 
-module type SimplePtrStore = functor (Subst: Transport.T) ->
+module OffsetInsensitivePtrSyntax:
+sig
+  type exp = 
+      Empty
+    | Var of string
+    | Deref of exp
+    | Join of (exp * exp)
+    | InfDeref of exp
+	
+  type formula = exp * exp
+end
+
+module type OffsetInsensitivePtrStore = functor(Subst: Transport.T) ->
 sig
   type t
-
   val universe: unit -> t
   val join: t -> t -> t
   val is_subset: t -> t -> bool
@@ -35,11 +46,18 @@ sig
   val glue: t -> t -> t
   val restrict: VarSet.t -> t -> t
   val print: t -> unit
-  val assign: (State2.PtrSyntax.exp * State2.PtrSyntax.exp) -> t -> t
-  val split: string list -> t -> (t * t)
-(* None is for Top, think about this *)
-  val eval_exp: t -> State2.PtrSyntax.exp -> State2.address option
+
+  val assign: 
+    (OffsetInsensitivePtrSyntax.exp * OffsetInsensitivePtrSyntax.exp) -> t -> t
+  val satisfies: t -> OffsetInsensitivePtrSyntax.formula -> bool
+  val split: string list -> t -> (string list * t * t)
+
+  val eval_exp: t -> OffsetInsensitivePtrSyntax.exp -> State2.address
+
+  val transport: string list -> t -> t -> Subst.t
+  val normalize: string list -> t -> (t * Subst.t)
+  val list_nodes: t -> VarSet.t
 end
 
-module Make(Store1: State2.PtrStore)(Store2: SimplePtrStore): 
-  State2.PtrStore
+module Make(OffsetInsensitivePtrStore: OffsetInsensitivePtrStore)
+  : State2.PtrStore

@@ -48,25 +48,29 @@ let speclist =
   ]
 
 let run0 = 
-  let module State = State2.Make(Store2.Make)(TopValue.Make) in
+  let module PtrStore = PtrStoreAdapter.Make(Store2.Make) in
+  let module State = State2.Make(PtrStore)(TopValue.Make) in
   let module State = State2Bottom.Make(State) in
   let module Analysis = Modular.Make(Subst2)(State) in
     Analysis.process 
 
 let run1 = 
-  let module State = State2.Make(Store2.Make)(NotZeroValue.Make) in
+  let module PtrStore = PtrStoreAdapter.Make(Store2.Make) in
+  let module State = State2.Make(PtrStore)(NotZeroValue.Make) in
   let module State = State2Bottom.Make(State) in
   let module Analysis = Modular.Make(Subst2)(State) in
     Analysis.process 
 
 let run2 = 
-  let module State = State2.Make(Store2.Make)(NotZeroValue.Make) in
+  let module PtrStore = PtrStoreAdapter.Make(Store2.Make) in
+  let module State = State2.Make(PtrStore)(NotZeroValue.Make) in
   let module State = State2Bottom.Make(State) in
   let module Analysis = Modular.Make(Subst3)(State) in
     Analysis.process 
 
 let run3 = 
-  let module PtrStore = PtrPair.Make(Store2.Make)(CstStore.Make) in
+  let module PtrStore = PtrStoreAdapter.Make(Store2.Make) in
+  let module PtrStore = PtrPair.Make(PtrStore)(CstStore.Make) in
   let module State = State2.Make(PtrStore)(NotZeroValue.Make) in
   let module State = State2Bottom.Make(State) in
   let module Analysis = Modular.Make(Subst3)(State) in

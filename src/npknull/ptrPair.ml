@@ -111,7 +111,7 @@ struct
 	  Some address2 -> State2.meet_address address1 address2
 	| None -> address1
 
-  let satisfies state e = Store1.satisfies state.store1 e
+  let satisfies state formula = Store1.satisfies state.store1 formula
 
   let transport roots state1 state2 = 
     Store1.transport roots state1.store1 state2.store1

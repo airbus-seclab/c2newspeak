@@ -23,6 +23,6 @@
   email: charles.hymans@penjili.org
 *)
 
-module Make: State2.PtrStore
+module Make: PtrStoreAdapter.OffsetInsensitivePtrStore
 
 val test: unit -> unit

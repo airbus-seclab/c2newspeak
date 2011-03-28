@@ -23,7 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
-open State2.PtrSyntax
+open PtrStoreAdapter.OffsetInsensitivePtrSyntax
 
 (* TODO: try to factor this code with pointsTo ? *)
 
@@ -77,7 +77,7 @@ struct
 	  Empty -> VarSet.empty
 	    (* TODO: instead of ignoring here, should do a translation that 
 	       forgets the offset!!!!!!! *)
-	| Var (x, _) -> VarSet.singleton x
+	| Var x -> VarSet.singleton x
 	| Deref e -> 
 	    let p = eval_exp e in
 	      deref s p
@@ -346,7 +346,7 @@ end
 
 module Test = Make(Subst2)
 
-let assign x y = Test.assign (Var (x, true), Var (y, true))
+let assign x y = Test.assign (Var x, Var y)
 
 let test0 () =
   print_string "Store3.test0...";
@@ -355,7 +355,7 @@ let test0 () =
        forgets the offset!!!!!!! *)
   let store = assign "x" "y" store in
   let (store, _) = Test.normalize ["x"] store in
-  let v = Test.deref store (Deref (Var ("x", true))) in
+  let v = Test.deref store (Deref (Var "x")) in
   let v = VarSet.choose v in
     if (v <> "heap0") then failwith "merge should not have changed store";
     print_endline "OK"
@@ -366,8 +366,8 @@ let test1 () =
   let store = assign "x" "a" store in
   let store = assign "y" "heap0" store in
   let (store, _) = Test.normalize ["x"] store in
-  let v1 = Test.deref store (Deref (Var ("x", true))) in
-  let v2 = Test.deref store (Deref (Var ("y", true))) in
+  let v1 = Test.deref store (Deref (Var "x")) in
+  let v2 = Test.deref store (Deref (Var "y")) in
     if not (VarSet.is_empty (VarSet.inter v1 v2))
     then failwith "normalize should not merge capture variables";
     print_endline "OK"
@@ -387,7 +387,7 @@ let test3 () =
   let store = assign "x" "z" store in
   let store = assign "z" "t" store in
   let (store, _) = Test.normalize ["x"] store in
-  let v = Test.deref store (Deref (Deref (Var ("x", true)))) in
+  let v = Test.deref store (Deref (Deref (Var "x"))) in
     if (VarSet.is_empty v) then failwith "normalize should not change pointers";
     print_endline "OK"
 
@@ -432,7 +432,7 @@ let test8 () =
   let store = assign "a" "x" store in
   let store = assign "b" "x" store in
   let (store, _) = Test.normalize ["a"; "b"] store in
-  let v = Test.deref store (Deref (Var ("a", true))) in
+  let v = Test.deref store (Deref (Var "a")) in
     if (VarSet.cardinal v <> 1) then failwith "should have only one successor";
     print_endline "OK"
 
@@ -471,7 +471,7 @@ let test12 () =
   let store = assign "y" "x" store in
   let roots = ["e"; "y"] in
   let (store, _) = Test.normalize roots store in
-  let v = Test.deref store (Deref (Deref (Var ("y", true)))) in
+  let v = Test.deref store (Deref (Deref (Var "y"))) in
   let v = VarSet.diff v (VarSet.of_list roots) in
     if (VarSet.cardinal v > 1) 
     then failwith "should not point to more than one heap variable";
