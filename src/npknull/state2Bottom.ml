@@ -31,7 +31,6 @@ sig
   val join: t -> t -> t
   val assign: PtrSpeak.exp -> PtrSpeak.exp -> t -> t
   val guard: PtrSpeak.exp -> t -> t
-  val compose: t -> t -> t
   val is_subset: t -> t -> bool
   val substitute: Subst.t -> t -> t
   val remove_variables: string list -> t -> t
@@ -69,11 +68,6 @@ struct
     match s with
 	None -> None
       | Some s -> Some (State.guard e s)
-	
-  let compose s1 s2 =
-    match (s1, s2) with
-	(None, _) | (_, None) -> None
-      | (Some s1, Some s2) -> Some (State.compose s1 s2)
 	
   let is_subset s1 s2 =
     match (s1, s2) with

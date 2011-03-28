@@ -267,9 +267,6 @@ struct
     Store2.print state.store;
     ValueStore.print state.value
 
-    (* TODO: remove? *)
-  let compose _ _ = invalid_arg "State2.compose: Not implement because probably not needed, think about it"
-
   let substitute subst state = 
     { store = Store2.substitute subst state.store;
       value = ValueStore.substitute subst state.value }

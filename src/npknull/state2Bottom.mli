@@ -31,7 +31,6 @@ sig
   val join: t -> t -> t
   val assign: PtrSpeak.exp -> PtrSpeak.exp -> t -> t
   val guard: PtrSpeak.exp -> t -> t
-  val compose: t -> t -> t
   val is_subset: t -> t -> bool
   val substitute: Subst.t -> t -> t
   val remove_variables: string list -> t -> t

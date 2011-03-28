@@ -38,8 +38,6 @@ sig
     
   val guard: PtrSpeak.exp -> t -> t
     
-  val compose: t -> t -> t
-
   val substitute: Subst.t -> t -> t
 
   val remove_variables: string list -> t -> t
