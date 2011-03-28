@@ -61,7 +61,21 @@ struct
       List.iter (fun x -> result := VarMap.remove x !result) variables;
       !result
 
-  let substitute _ _ = universe ()
+  let substitute subst store = 
+    let result = ref (universe ()) in
+    let substitute_info x y =
+      let (x, has_no_delta1) = Subst.apply_variable_start subst x in
+      let (y, has_no_delta2) = Subst.apply_variable_start subst y in
+	if (VarSet.cardinal x = 1) && (VarSet.cardinal y = 1)
+	  && has_no_delta1 && has_no_delta2 then begin
+	    let x = VarSet.choose x in
+	    let y = VarSet.choose y in
+	      result := VarMap.add x y !result
+	  end
+    in
+      VarMap.iter substitute_info store;
+      !result
+    
 
   let glue _ _ = universe ()
 

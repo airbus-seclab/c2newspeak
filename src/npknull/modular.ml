@@ -221,10 +221,11 @@ struct
 	      let roots = actuals@globals in
 		
 	      let (state, unreachable) = State.split roots state in
+
+(*		State.print state;*)
 	      (* TODO: a bit clumsy, think about how to simplify this... *)
 	      let (state, normalize_subst) = State.normalize roots state in
-		(*	      print_endline "After normalize";
-			      State.print state;*)
+(*		State.print state;*)
 	      let roots = formals@globals in
 	      let state = rename_formals rename_subst state in 
 	      let (input, output) = 
