@@ -77,7 +77,7 @@ struct
   let string_of_lval x = 
     match x with
 	VariableStart x -> "("^x^", 0)"
-      | _ -> invalid_arg "Not implemented yet"
+      | Variables x -> VarSet.to_string x
 
   let string_of_exp e =
     match e with
