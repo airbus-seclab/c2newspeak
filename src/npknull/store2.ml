@@ -85,7 +85,6 @@ struct
 	    let v1 = eval_exp e1 in
 	    let v2 = eval_exp e2 in
 	      VarSet.union v1 v2
-	| InfDeref e -> fixpoint_deref (eval_exp e)
     in
       eval_exp e
 	

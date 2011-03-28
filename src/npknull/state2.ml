@@ -41,7 +41,6 @@ struct
     | Var of (string * bool)
     | Deref of exp
     | Join of (exp * exp)
-    | InfDeref of exp
 
   type formula = (exp * exp)
 
@@ -53,7 +52,6 @@ struct
 	    "("^x^", "^offset^")"
       | Deref e -> "*("^string_of_exp e^")"
       | Join (e1, e2) -> "("^string_of_exp e1^"|"^string_of_exp e2^")"
-      | InfDeref e -> "*...*("^string_of_exp e^")"
 end
 
 module ValueSyntax =

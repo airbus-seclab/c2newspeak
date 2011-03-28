@@ -30,7 +30,6 @@ struct
     | Var of string
     | Deref of exp
     | Join of (exp * exp)
-    | InfDeref of exp
 	
   type formula = exp * exp
 
@@ -42,8 +41,6 @@ struct
       | State2.PtrSyntax.Deref e -> Deref (translate_exp e)
       | State2.PtrSyntax.Join (e1, e2) -> 
 	  Join (translate_exp e1, translate_exp e2)
-(* TODO: remove InfDeref *)
-      | State2.PtrSyntax.InfDeref e -> InfDeref (translate_exp e)
 
   let translate_formula (e1, e2) = (translate_exp e1, translate_exp e2)
 end

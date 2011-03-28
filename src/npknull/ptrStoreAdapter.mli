@@ -30,7 +30,6 @@ sig
     | Var of string
     | Deref of exp
     | Join of (exp * exp)
-    | InfDeref of exp
 	
   type formula = exp * exp
 end
