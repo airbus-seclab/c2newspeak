@@ -29,9 +29,10 @@ open Newspeak
 
 type exp = 
     Empty
+  | Cst of Nat.t
   | Var of string
   | Access of exp
-  | Shift of exp
+  | Shift of (exp * exp)
   | Join of (exp * exp)
 
 type stmt = 
@@ -60,33 +61,37 @@ let rec translate_lval lv =
     | Deref (e, _) -> Access (translate_exp_under_deref e)
 (* TODO: not nice, translation should be in a different file than language 
    definition *)
-    | Newspeak.Shift (lv, _) -> Shift (translate_lval lv)
+    | Newspeak.Shift (lv, e) -> Shift (translate_lval lv, translate_exp e)
 
 and translate_exp e = 
   match e with
-      Const _ | AddrOfFun _ -> Empty
+      Const CInt n -> Cst n
+    | Const _ | AddrOfFun _ -> Empty
     | Lval (lv, _) -> Access (translate_lval lv)
     | AddrOf lv -> translate_lval lv
     | UnOp (_, e) -> translate_exp e
-    | BinOp (PlusPI, e, _) -> Shift (translate_exp e)
+    | BinOp (PlusPI, lv, e) -> Shift (translate_exp lv, translate_exp e)
     | BinOp (_, e1, e2) -> join (translate_exp e1) (translate_exp e2)
 
 and translate_exp_under_deref e = 
   match e with
-      Const _ | AddrOfFun _ -> Empty
+      Const CInt n -> Cst n
+    | Const _ | AddrOfFun _ -> Empty
     | Lval (lv, _) -> translate_lval lv
     | AddrOf lv -> translate_lval lv (* TODO: this case may be incorrect *)
     | UnOp (_, e) -> translate_exp_under_deref e
-    | BinOp (PlusPI, e, _) -> Shift (translate_exp_under_deref e)
+    | BinOp (PlusPI, lv, e) -> 
+	Shift (translate_exp_under_deref lv, translate_exp e)
     | BinOp (_, e1, e2) -> 
 	join (translate_exp_under_deref e1) (translate_exp e2)
 
 let rec to_string e =
   match e with
       Empty -> "{}"
+    | Cst n -> Nat.to_string n
     | Var x -> x
     | Access e -> "*("^to_string e^")"
-    | Shift e -> "("^to_string e^" + ?)"
+    | Shift (lv, e) -> "("^to_string lv^" + "^to_string e^")"
     | Join (e1, e2) -> "("^to_string e1^" | "^to_string e2^")"
 
 let test1 () =

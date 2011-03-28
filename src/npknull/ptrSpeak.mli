@@ -25,9 +25,10 @@
 
 type exp = 
     Empty
+  | Cst of Newspeak.Nat.t
   | Var of string
   | Access of exp
-  | Shift of exp
+  | Shift of (exp * exp)
   | Join of (exp * exp)
 
 type stmt = 

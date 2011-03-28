@@ -139,11 +139,11 @@ struct
 
   let rec translate_exp e =
     match e with
-	Empty -> PtrSyntax.Empty
+	Empty | Cst _ -> PtrSyntax.Empty
       | Var x -> PtrSyntax.Var (x, true)
       | Access e -> PtrSyntax.Deref (translate_exp e)
-      | Shift e -> 
-	  let e = translate_exp e in begin
+      | Shift (lv, _) -> 
+	  let e = translate_exp lv in begin
 	      match e with
 		  PtrSyntax.Var (x, _) -> PtrSyntax.Var (x, false)
 		| PtrSyntax.Deref _ | PtrSyntax.Empty -> e
@@ -162,11 +162,12 @@ struct
     let rec lval_to_list e =
       match e with
 	  Var x -> VarSet.singleton x
-	| Shift e -> lval_to_list e
+	| Shift (e, _) -> lval_to_list e
 	    (* TODO: should be better to return a VarSet *)
 	| Join (e1, e2) -> 
 	    VarSet.union (lval_to_list e1) (lval_to_list e2)
-	| Empty -> invalid_arg "State2.lval_to_list: case not implemented yet"
+	| Empty | Cst _ -> 
+	    invalid_arg "State2.lval_to_list: case not implemented yet"
 	| Access _ -> ValueSyntax.variables_of_lval (deref store e)
     in
       lval_to_list e
@@ -176,9 +177,13 @@ struct
       match lv with
 	  (* TODO: this case should not be possible => strange, try to 
 	     remove by having a distinction between lval and exp in ptrSpeak? *)
-	  Empty -> invalid_arg "should be unreachable"
+	  Empty | Cst _ -> invalid_arg "should be unreachable"
 	| Var x -> VariableStart x
-	| Shift lv -> Variables (lval_to_list store lv)
+(* TODO: this hardcoded 32, not nice!!! *)
+	| Shift (Var x, Cst n) 
+	    when Newspeak.Nat.compare n (Newspeak.Nat.of_int 32) >= 0 -> 
+	    VariableRest x
+	| Shift (lv, _) -> Variables (lval_to_list store lv)
 	| Access _ -> deref store lv
 	| Join (lv1, lv2) -> 
 	    ValueSyntax.join_lval (lval_to_value lv1) (lval_to_value lv2)
@@ -190,8 +195,8 @@ struct
       match e with
 	  Var _ -> ValueSyntax.NotNull
 	| Access lv -> ValueSyntax.Lval (lval_to_value store lv)
-	| Shift e -> exp_to_value e 
-	| Empty | Join _ -> ValueSyntax.Unknown
+	| Shift (e, _) -> exp_to_value e 
+	| Empty | Cst _ | Join _ -> ValueSyntax.Unknown
     in
       exp_to_value e
 
@@ -201,9 +206,9 @@ struct
       match lv with
 	  (* TODO: this case should not be possible => strange, try to 
 	     remove by having a distinction between lval and exp in ptrSpeak? *)
-	  Empty -> invalid_arg "should be unreachable"
+	  Empty | Cst _ -> invalid_arg "should be unreachable"
 	| Var x -> VariableStart x
-	| Shift e -> exp_to_lval_value e
+	| Shift (e, _) -> exp_to_lval_value e
 	| Access _ -> deref store lv
 	| Join (e1, e2) -> 
 	    ValueSyntax.join_lval (exp_to_lval_value e1) (exp_to_lval_value e2)
