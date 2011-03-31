@@ -1,7 +1,7 @@
-(*
+/*
   C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
   well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans
+  Copyright (C) 2007  Charles Hymans, Olivier Levillain
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -21,22 +21,15 @@
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
-*)
+*/
 
-module type T =
-sig
-  type t
+int g;
+int *ptr;
+int x;
 
-  val inverse: t -> t
-  val of_list: (string * string) list -> t
-  val identity: unit -> t
-  val associate: string -> string -> t -> t
-
-  val apply: t -> string -> VarSet.t
-  val apply_set: t -> VarSet.t -> VarSet.t
-
-  (* true: if it has not delta *)
-  val apply_variable_start: t -> string -> (VarSet.t * bool)
-
-  val to_string: t -> string
-end
+void main() {
+  ptr = &x;
+  g = &ptr;
+  *((int**)g) = 0;
+  *ptr = 1;         // should display a potential null pointer deref here
+}

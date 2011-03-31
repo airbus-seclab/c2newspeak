@@ -23,20 +23,40 @@
   email: charles.hymans@penjili.org
 *)
 
-module type T =
+module OffsetInsensitivePtrSyntax:
+sig
+  type exp = 
+      Empty
+    | Var of string
+    | Deref of exp
+    | Join of (exp * exp)
+	
+  type formula = exp * exp
+end
+
+module type OffsetInsensitivePtrStore = functor(Subst: Transport.T) ->
 sig
   type t
+  val universe: unit -> t
+  val join: t -> t -> t
+  val is_subset: t -> t -> bool
+  val remove_variables: string list -> t -> t
+  val substitute: Subst.t -> t -> t
+  val glue: t -> t -> t
+  val restrict: VarSet.t -> t -> t
+  val print: t -> unit
 
-  val inverse: t -> t
-  val of_list: (string * string) list -> t
-  val identity: unit -> t
-  val associate: string -> string -> t -> t
+  val assign: 
+    (OffsetInsensitivePtrSyntax.exp * OffsetInsensitivePtrSyntax.exp) -> t -> t
+  val satisfies: t -> OffsetInsensitivePtrSyntax.formula -> bool
+  val split: string list -> t -> (string list * t * t)
 
-  val apply: t -> string -> VarSet.t
-  val apply_set: t -> VarSet.t -> VarSet.t
+  val eval_exp: t -> OffsetInsensitivePtrSyntax.exp -> State2.address
 
-  (* true: if it has not delta *)
-  val apply_variable_start: t -> string -> (VarSet.t * bool)
-
-  val to_string: t -> string
+  val transport: string list -> t -> t -> Subst.t
+  val normalize: string list -> t -> (t * Subst.t)
+  val list_nodes: t -> VarSet.t
 end
+
+module Make(OffsetInsensitivePtrStore: OffsetInsensitivePtrStore)
+  : State2.PtrStore

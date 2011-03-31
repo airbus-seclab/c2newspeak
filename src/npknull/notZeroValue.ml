@@ -23,6 +23,7 @@
   email: charles.hymans@penjili.org
 *)
 
+open State2
 open State2.ValueSyntax
 
 module Make(Subst: Transport.T) = 
@@ -43,6 +44,7 @@ struct
 	(VariableStart x, e) -> 
 	  if (is_not_null s e) then VarSet.add x s
 	  else VarSet.remove x s
+      | (VariableRest _, _) -> s
       | (Variables x, _) -> VarSet.diff s x
 	  
   let join = VarSet.inter

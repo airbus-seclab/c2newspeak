@@ -25,12 +25,10 @@
 
 type exp = 
     Empty
-(* TODO: should have just Variable and the translate uses the environment
-   information!!! *)
-  | LocalVar of string
-  | GlobalVar of string
+  | Cst of Newspeak.Nat.t
+  | Var of string
   | Access of exp
-  | Shift of exp
+  | Shift of (exp * exp)
   | Join of (exp * exp)
 
 type stmt = 

@@ -23,38 +23,29 @@
   email: charles.hymans@penjili.org
 *)
 
-type address = 
-    VariableStart of string
-  | VariableRest of string
-  | Variables of VarSet.t
-
-val meet_address: address -> address -> address
-
-module PtrSyntax:
-sig
+module OffsetInsensitivePtrSyntax =
+struct
   type exp = 
       Empty
-    | Var of (string * bool) (* true if offset is 0 *)
+    | Var of string
     | Deref of exp
     | Join of (exp * exp)
 	
   type formula = exp * exp
 
-  val string_of_exp: exp -> string
+(* TODO: think about it, where to put this? in Make down there? *)
+  let rec translate_exp e =
+    match e with
+	State2.PtrSyntax.Empty -> Empty
+      | State2.PtrSyntax.Var (x, _) -> Var x
+      | State2.PtrSyntax.Deref e -> Deref (translate_exp e)
+      | State2.PtrSyntax.Join (e1, e2) -> 
+	  Join (translate_exp e1, translate_exp e2)
+
+  let translate_formula (e1, e2) = (translate_exp e1, translate_exp e2)
 end
 
-module ValueSyntax:
-sig
-  (* true if not null *)
-  type exp = 
-      NotNull
-    | Lval of address
-    | Unknown
-
-  val string_of_lval: address -> string
-end
-
-module type PtrStore = functor(Subst: Transport.T) ->
+module type OffsetInsensitivePtrStore = functor(Subst: Transport.T) ->
 sig
   type t
   val universe: unit -> t
@@ -66,32 +57,34 @@ sig
   val restrict: VarSet.t -> t -> t
   val print: t -> unit
 
-  val assign: (PtrSyntax.exp * PtrSyntax.exp) -> t -> t
-  val satisfies: t -> PtrSyntax.formula -> bool
+  val assign: 
+    (OffsetInsensitivePtrSyntax.exp * OffsetInsensitivePtrSyntax.exp) -> t -> t
+  val satisfies: t -> OffsetInsensitivePtrSyntax.formula -> bool
   val split: string list -> t -> (string list * t * t)
 
-  val eval_exp: t -> PtrSyntax.exp -> address
+  val eval_exp: t -> OffsetInsensitivePtrSyntax.exp -> State2.address
 
   val transport: string list -> t -> t -> Subst.t
   val normalize: string list -> t -> (t * Subst.t)
   val list_nodes: t -> VarSet.t
 end
 
-module type ValueStore = functor (Subst: Transport.T) -> 
-sig
-  type t
-  val universe: unit -> t
-  val join: t -> t -> t
-  val is_subset: t -> t -> bool
-  val remove_variables: string list -> t -> t
-  val substitute: Subst.t -> t -> t
-  val glue: t -> t -> t
-  val restrict:  VarSet.t -> t -> t
-  val print: t -> unit
+module Make(StoreMake: OffsetInsensitivePtrStore)(Subst: Transport.T) =
+struct
+  module Store = StoreMake(Subst)
 
-  val assign: (address * ValueSyntax.exp) -> t -> t
-  val satisfies: t -> address -> bool
-  val split: string list -> t -> (t * t)
+  include Store
+
+  let assign (lv, e) store =
+    let lv = OffsetInsensitivePtrSyntax.translate_exp lv in
+    let e = OffsetInsensitivePtrSyntax.translate_exp e in
+      Store.assign (lv, e) store
+
+  let eval_exp store e =
+    let e = OffsetInsensitivePtrSyntax.translate_exp e in
+      Store.eval_exp store e
+
+  let satisfies store formula = 
+    let formula = OffsetInsensitivePtrSyntax.translate_formula formula in
+      Store.satisfies store formula
 end
-
-module Make(PtrStore: PtrStore)(ValueStore: ValueStore): State2Bottom.State

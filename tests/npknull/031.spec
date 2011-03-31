@@ -1,1 +1,1 @@
-Fatal error: Solver.process: missing main function
+initialization: Function 'main' not found. Omitted from analysis.

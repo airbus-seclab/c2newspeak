@@ -24,42 +24,47 @@
 *)
 open PtrSpeak
 
+type address = 
+    VariableStart of string
+  | VariableRest of string (* from offset 4 onward *)
+  | Variables of VarSet.t
+
+(* TODO: could be more precise if necessary *)
+let meet_address a1 a2 =
+  match (a1, a2) with
+      ((VariableStart _ as a), _) | (_, (VariableStart _ as a)) -> a
+    | _ -> a1
+
 module PtrSyntax =
 struct
   type exp = 
       Empty
-    | Var of string
+    | Var of (string * bool)
     | Deref of exp
     | Join of (exp * exp)
-    | InfDeref of exp
 
   type formula = (exp * exp)
 
   let rec string_of_exp e = 
     match e with
 	Empty -> "{}"
-      | Var x -> x
+      | Var (x, is_zero) -> 
+	  let offset = if is_zero then "0" else "?" in
+	    "("^x^", "^offset^")"
       | Deref e -> "*("^string_of_exp e^")"
       | Join (e1, e2) -> "("^string_of_exp e1^"|"^string_of_exp e2^")"
-      | InfDeref e -> "*...*("^string_of_exp e^")"
 end
 
 module ValueSyntax =
 struct
-  (* TODO: merge lval and exp? *)
-  type lval = 
-      VariableStart of string
-    | Variables of VarSet.t
-	
-  (* true if not null *)
   type exp = 
       NotNull
-    | Lval of lval
+    | Lval of address
     | Unknown
 
   let variables_of_lval lv =
     match lv with
-	VariableStart x -> VarSet.singleton x
+	VariableStart x | VariableRest x -> VarSet.singleton x
       | Variables set -> set
 
   let join_lval lv1 lv2 =
@@ -73,7 +78,8 @@ struct
   let string_of_lval x = 
     match x with
 	VariableStart x -> "("^x^", 0)"
-      | _ -> invalid_arg "Not implemented yet"
+      | VariableRest x -> "("^x^", > 3)"
+      | Variables x -> VarSet.to_string x
 
   let string_of_exp e =
     match e with
@@ -88,17 +94,19 @@ sig
   val universe: unit -> t
   val join: t -> t -> t
   val is_subset: t -> t -> bool
+(* TODO: simplify: should only have remove_variable? 
+   rather than remove_variables? think about it *)
   val remove_variables: string list -> t -> t
   val substitute: Subst.t -> t -> t
   val glue: t -> t -> t
   val restrict: VarSet.t -> t -> t
   val print: t -> unit
 
-  val assign: PtrSyntax.exp -> PtrSyntax.exp -> t -> t
+  val assign: (PtrSyntax.exp * PtrSyntax.exp) -> t -> t
   val satisfies: t -> PtrSyntax.formula -> bool
   val split: string list -> t -> (string list * t * t)
 
-  val eval_exp: t -> PtrSyntax.exp -> VarSet.t
+  val eval_exp: t -> PtrSyntax.exp -> address
 
   val transport: string list -> t -> t -> Subst.t
   val normalize: string list -> t -> (t * Subst.t)
@@ -118,8 +126,8 @@ sig
   val restrict: VarSet.t -> t -> t
   val print: t -> unit
 
-  val assign: (ValueSyntax.lval * ValueSyntax.exp) -> t -> t
-  val satisfies: t -> ValueSyntax.lval -> bool
+  val assign: (address * ValueSyntax.exp) -> t -> t
+  val satisfies: t -> address -> bool
   val split: string list -> t -> (t * t)
 end
 
@@ -131,28 +139,35 @@ struct
 
   let rec translate_exp e =
     match e with
-	Empty -> PtrSyntax.Empty
-      | LocalVar x -> PtrSyntax.Var x
-      | GlobalVar x -> PtrSyntax.Var x
+	Empty | Cst _ -> PtrSyntax.Empty
+      | Var x -> PtrSyntax.Var (x, true)
       | Access e -> PtrSyntax.Deref (translate_exp e)
-      | Shift e -> translate_exp e
+      | Shift (lv, _) -> 
+	  let e = translate_exp lv in begin
+	      match e with
+		  PtrSyntax.Var (x, _) -> PtrSyntax.Var (x, false)
+		| PtrSyntax.Deref _ | PtrSyntax.Empty -> e
+		| _ -> 
+		    invalid_arg ("State2.translate_exp: not implemented yet"
+				 ^PtrSyntax.string_of_exp e)
+	    end
       | Join (e1, e2) ->
 	  let p1 = translate_exp e1 in
 	  let p2 = translate_exp e2 in
 	    PtrSyntax.Join (p1, p2)
 	      
-  let deref store e = 
-    ValueSyntax.Variables (Store2.eval_exp store (translate_exp e))
+  let deref store e = Store2.eval_exp store (translate_exp e)
       
   let lval_to_list store e =
     let rec lval_to_list e =
       match e with
-	  LocalVar x | GlobalVar x -> VarSet.singleton x
-	| Shift e -> lval_to_list e
+	  Var x -> VarSet.singleton x
+	| Shift (e, _) -> lval_to_list e
 	    (* TODO: should be better to return a VarSet *)
 	| Join (e1, e2) -> 
 	    VarSet.union (lval_to_list e1) (lval_to_list e2)
-	| Empty -> invalid_arg "State2.lval_to_list: case not implemented yet"
+	| Empty | Cst _ -> 
+	    invalid_arg "State2.lval_to_list: case not implemented yet"
 	| Access _ -> ValueSyntax.variables_of_lval (deref store e)
     in
       lval_to_list e
@@ -162,10 +177,13 @@ struct
       match lv with
 	  (* TODO: this case should not be possible => strange, try to 
 	     remove by having a distinction between lval and exp in ptrSpeak? *)
-	  Empty -> invalid_arg "should be unreachable"
-	| LocalVar x -> ValueSyntax.VariableStart x
-	| GlobalVar x -> ValueSyntax.VariableStart x
-	| Shift lv -> ValueSyntax.Variables (lval_to_list store lv)
+	  Empty | Cst _ -> invalid_arg "should be unreachable"
+	| Var x -> VariableStart x
+(* TODO: this hardcoded 32, not nice!!! *)
+	| Shift (Var x, Cst n) 
+	    when Newspeak.Nat.compare n (Newspeak.Nat.of_int 32) >= 0 -> 
+	    VariableRest x
+	| Shift (lv, _) -> Variables (lval_to_list store lv)
 	| Access _ -> deref store lv
 	| Join (lv1, lv2) -> 
 	    ValueSyntax.join_lval (lval_to_value lv1) (lval_to_value lv2)
@@ -175,10 +193,10 @@ struct
   let rec exp_to_value store e = 
     let rec exp_to_value e =
       match e with
-	  LocalVar _ | GlobalVar _ -> ValueSyntax.NotNull
+	  Var _ -> ValueSyntax.NotNull
 	| Access lv -> ValueSyntax.Lval (lval_to_value store lv)
-	| Shift e -> exp_to_value e 
-	| Empty | Join _ -> ValueSyntax.Unknown
+	| Shift (e, _) -> exp_to_value e 
+	| Empty | Cst _ | Join _ -> ValueSyntax.Unknown
     in
       exp_to_value e
 
@@ -188,10 +206,9 @@ struct
       match lv with
 	  (* TODO: this case should not be possible => strange, try to 
 	     remove by having a distinction between lval and exp in ptrSpeak? *)
-	  Empty -> invalid_arg "should be unreachable"
-	| LocalVar x -> ValueSyntax.VariableStart x
-	| GlobalVar x -> ValueSyntax.VariableStart x
-	| Shift e -> exp_to_lval_value e
+	  Empty | Cst _ -> invalid_arg "should be unreachable"
+	| Var x -> VariableStart x
+	| Shift (e, _) -> exp_to_lval_value e
 	| Access _ -> deref store lv
 	| Join (e1, e2) -> 
 	    ValueSyntax.join_lval (exp_to_lval_value e1) (exp_to_lval_value e2)
@@ -212,7 +229,7 @@ struct
   let assign lv e state =
     let lv_p = translate_exp lv in
     let e_p = translate_exp e in
-    let store = Store2.assign lv_p e_p state.store in
+    let store = Store2.assign (lv_p, e_p) state.store in
     let lv_value = lval_to_value state.store lv in
     let e_value = exp_to_value state.store e in
     let value = ValueStore.assign (lv_value, e_value) state.value in
@@ -253,9 +270,6 @@ struct
   let print state = 
     Store2.print state.store;
     ValueStore.print state.value
-
-    (* TODO: remove? *)
-  let compose _ _ = invalid_arg "State2.compose: Not implement because probably not needed, think about it"
 
   let substitute subst state = 
     { store = Store2.substitute subst state.store;

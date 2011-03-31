@@ -23,20 +23,4 @@
   email: charles.hymans@penjili.org
 *)
 
-module type T =
-sig
-  type t
-
-  val inverse: t -> t
-  val of_list: (string * string) list -> t
-  val identity: unit -> t
-  val associate: string -> string -> t -> t
-
-  val apply: t -> string -> VarSet.t
-  val apply_set: t -> VarSet.t -> VarSet.t
-
-  (* true: if it has not delta *)
-  val apply_variable_start: t -> string -> (VarSet.t * bool)
-
-  val to_string: t -> string
-end
+module Make: PtrPair.SimplePtrStore

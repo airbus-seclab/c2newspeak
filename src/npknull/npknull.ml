@@ -29,7 +29,7 @@ let stats = ref false
 
 let experimental = ref false
 
-let precision_level = ref 2
+let precision_level = ref max_int
 
 let speclist = 
   [
@@ -48,19 +48,30 @@ let speclist =
   ]
 
 let run0 = 
-  let module State = State2.Make(Store2.Make)(TopValue.Make) in
+  let module PtrStore = PtrStoreAdapter.Make(Store2.Make) in
+  let module State = State2.Make(PtrStore)(TopValue.Make) in
   let module State = State2Bottom.Make(State) in
   let module Analysis = Modular.Make(Subst2)(State) in
     Analysis.process 
 
 let run1 = 
-  let module State = State2.Make(Store2.Make)(NotZeroValue.Make) in
+  let module PtrStore = PtrStoreAdapter.Make(Store2.Make) in
+  let module State = State2.Make(PtrStore)(NotZeroValue.Make) in
   let module State = State2Bottom.Make(State) in
   let module Analysis = Modular.Make(Subst2)(State) in
     Analysis.process 
 
 let run2 = 
-  let module State = State2.Make(Store2.Make)(NotZeroValue.Make) in
+  let module PtrStore = PtrStoreAdapter.Make(Store2.Make) in
+  let module State = State2.Make(PtrStore)(NotZeroValue.Make) in
+  let module State = State2Bottom.Make(State) in
+  let module Analysis = Modular.Make(Subst3)(State) in
+    Analysis.process 
+
+let run3 = 
+  let module PtrStore = PtrStoreAdapter.Make(Store2.Make) in
+  let module PtrStore = PtrPair.Make(PtrStore)(CstStore.Make) in
+  let module State = State2.Make(PtrStore)(NotZeroValue.Make) in
   let module State = State2Bottom.Make(State) in
   let module Analysis = Modular.Make(Subst3)(State) in
     Analysis.process 
@@ -79,7 +90,8 @@ let process input =
       let analysis = 
 	if !precision_level = 0 then run0 
 	else if !precision_level = 1 then run1
-	else run2
+	else if !precision_level = 2 then run2
+	else run3
       in
 	analysis (global_tbl, prog) entry_point
     end

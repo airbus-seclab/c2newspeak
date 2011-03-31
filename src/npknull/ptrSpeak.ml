@@ -29,12 +29,10 @@ open Newspeak
 
 type exp = 
     Empty
-(* TODO: should have just Variable and the translate uses the environment
-   information!!! *)
-  | LocalVar of string
-  | GlobalVar of string
+  | Cst of Nat.t
+  | Var of string
   | Access of exp
-  | Shift of exp
+  | Shift of (exp * exp)
   | Join of (exp * exp)
 
 type stmt = 
@@ -59,39 +57,41 @@ let join v1 v2 =
 
 let rec translate_lval lv =
   match lv with
-      Local x -> LocalVar x
-    | Global x -> GlobalVar x
+      Local x | Global x -> Var x
     | Deref (e, _) -> Access (translate_exp_under_deref e)
 (* TODO: not nice, translation should be in a different file than language 
    definition *)
-    | Newspeak.Shift (lv, _) -> Shift (translate_lval lv)
+    | Newspeak.Shift (lv, e) -> Shift (translate_lval lv, translate_exp e)
 
 and translate_exp e = 
   match e with
-      Const _ | AddrOfFun _ -> Empty
+      Const CInt n -> Cst n
+    | Const _ | AddrOfFun _ -> Empty
     | Lval (lv, _) -> Access (translate_lval lv)
     | AddrOf lv -> translate_lval lv
     | UnOp (_, e) -> translate_exp e
-    | BinOp (PlusPI, e, _) -> Shift (translate_exp e)
+    | BinOp (PlusPI, lv, e) -> Shift (translate_exp lv, translate_exp e)
     | BinOp (_, e1, e2) -> join (translate_exp e1) (translate_exp e2)
 
 and translate_exp_under_deref e = 
   match e with
-      Const _ | AddrOfFun _ -> Empty
+      Const CInt n -> Cst n
+    | Const _ | AddrOfFun _ -> Empty
     | Lval (lv, _) -> translate_lval lv
     | AddrOf lv -> translate_lval lv (* TODO: this case may be incorrect *)
-    | UnOp (_, e) -> translate_exp e
-    | BinOp (PlusPI, e, _) -> Shift (translate_exp_under_deref e)
+    | UnOp (_, e) -> translate_exp_under_deref e
+    | BinOp (PlusPI, lv, e) -> 
+	Shift (translate_exp_under_deref lv, translate_exp e)
     | BinOp (_, e1, e2) -> 
 	join (translate_exp_under_deref e1) (translate_exp e2)
 
 let rec to_string e =
   match e with
       Empty -> "{}"
-    | LocalVar x -> "local("^x^")"
-    | GlobalVar x -> "global("^x^")"
+    | Cst n -> Nat.to_string n
+    | Var x -> x
     | Access e -> "*("^to_string e^")"
-    | Shift e -> "("^to_string e^" + ?)"
+    | Shift (lv, e) -> "("^to_string lv^" + "^to_string e^")"
     | Join (e1, e2) -> "("^to_string e1^" | "^to_string e2^")"
 
 let test1 () =
@@ -102,7 +102,7 @@ let test1 () =
 	  Scalar (Int (Signed, 32)))
   in
   let e = translate_exp e in
-  let expected = Access (Access (LocalVar var)) in
+  let expected = Access (Access (Var var)) in
     if (e <> expected) then invalid_arg "failed";
     print_endline "OK"
 

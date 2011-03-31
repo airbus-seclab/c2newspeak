@@ -41,8 +41,6 @@ sig
     
   val guard: PtrSpeak.exp -> t -> t
     
-  val compose: t -> t -> t
-
   val substitute: Subst.t -> t -> t
 
   val remove_variables: string list -> t -> t
@@ -94,7 +92,7 @@ struct
       let param = gen_param () in
       let actual = "!actual"^param in
       let formal = "!formal"^param in
-      let lv = LocalVar actual in
+      let lv = Var actual in
 	result := State.assign lv e !result;
 	(formal, actual)
     in
@@ -114,7 +112,7 @@ struct
     let assign_return_value lv =
       (* TODO: think about it, but there is a dangerous disconnect between this
 	 number 0 and the one in pass_arguments and also the name of the argument!! *)
-      let e = PtrSpeak.Access (PtrSpeak.LocalVar "!actual0") in
+      let e = PtrSpeak.Access (PtrSpeak.Var "!actual0") in
 	result := State.assign lv e !result
     in
       List.iter assign_return_value rets;
@@ -123,7 +121,7 @@ struct
   let assign_return_value rets state =
     let result = ref state in
     let assign lv =
-      let e = PtrSpeak.Access (PtrSpeak.LocalVar "!actual0") in
+      let e = PtrSpeak.Access (PtrSpeak.Var "!actual0") in
 	result := State.assign lv e !result
     in
       List.iter assign rets;
@@ -142,7 +140,7 @@ struct
     in
     let pass_argument e =
       let (actual, formal) = gen_param () in
-      let lv = LocalVar actual in
+      let lv = Var actual in
 	result := State.assign lv e !result;
 	(actual, formal)
   in
@@ -221,10 +219,11 @@ struct
 	      let roots = actuals@globals in
 		
 	      let (state, unreachable) = State.split roots state in
+
+(*		State.print state;*)
 	      (* TODO: a bit clumsy, think about how to simplify this... *)
 	      let (state, normalize_subst) = State.normalize roots state in
-		(*	      print_endline "After normalize";
-			      State.print state;*)
+(*		State.print state;*)
 	      let roots = formals@globals in
 	      let state = rename_formals rename_subst state in 
 	      let (input, output) = 

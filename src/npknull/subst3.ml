@@ -46,7 +46,7 @@ let associate x y subst =
     try Map.find x subst
     with Not_found -> Data.empty
   in
-  let v = Data.union v (VarSet.singleton y, false) in
+  let v = Data.union v (VarSet.singleton y, true) in
     Map.add x v subst
 
 let apply subst x =
