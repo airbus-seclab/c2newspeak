@@ -1,4 +1,5 @@
 Warning: t369.adb:18#7: Must be cast back be a left-value or a cast, remove warning in t369
+Warning: t369.adb:18#7: Must be cast back be a left-value or a cast, remove warning in t369
 Newspeak output
 ---------------
 void t369.f(int32 x, int32 y, int32 z) {

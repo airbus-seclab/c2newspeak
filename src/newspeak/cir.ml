@@ -121,7 +121,7 @@ and exp =
 (* TODO: should simplify cir!!! *)
 and arg =
   | In    of exp    (* Copy-in only (C style) *)
-  | Out   of typ_lv (* Copy-out only (no initializer) *)
+  | Out   of exp    (* Copy-out only (no initializer) *)
   | InOut of exp (*typ_lv*) (* Copy-in + Copy-out *)
 
 and funexp =
@@ -433,37 +433,29 @@ and normalize_exp_post loc e t =
     end else (pref, e)
       
 and normalize_args loc args args_t =
+
   match (args, args_t) with
-    | ((Out (lv, ot))::args, t::args_t) -> 
-	let (pref1, args) = normalize_args loc args args_t in
-	let (pref2, e) = normalize_exp_post loc (Lval (lv, t)) t in
-        let lv' = begin match e with
-        | Lval (l,_) -> l
-        | _ -> Npkcontext.report_error "Cir.normalize_args" "unreachable"
-        end in
-	let pref = concat_effects pref1 pref2 in
-	  (pref, (Out (lv', ot))::args)
     | ((In e)::args, t::args_t) -> 
 	let (pref1, args) = normalize_args loc args args_t in
 	let (pref2, e) = normalize_exp_post loc e t in
 	let pref = concat_effects pref1 pref2 in
 	  (pref, (In e)::args)
 
-    | ((InOut e(*lv, ot*))::args, t::args_t) -> 
+   | ((Out e)::args, t::args_t)   -> 
 	let (pref1, args) = normalize_args loc args args_t in
-	let (pref2, e) = normalize_exp_post loc e (*Lval (lv, t)*) t in
-	  (*        let lv' = begin match e with
-		    | Lval (l,_) -> l
-		    | _ -> Npkcontext.report_error 
-		    "Cir.normalize_args" "unreachable"
-		    end in
-	  *)
+	let (pref2, e) = normalize_exp_post loc e t in
 	let pref = concat_effects pref1 pref2 in
-	  (pref, (InOut e (*lv', ot*))::args)
-   
-    | ([], []) -> ([], [])
+	  (pref, (Out e )::args)
 
-    | _ -> Npkcontext.report_error "Cir.normalize_args" "unreachable statement"
+   | ((InOut e)::args, t::args_t)  -> 
+	let (pref1, args) = normalize_args loc args args_t in
+	let (pref2, e) = normalize_exp_post loc e t in
+	let pref = concat_effects pref1 pref2 in
+	  (pref, (InOut e )::args)
+   
+   | ([], []) -> ([], [])
+       
+   | _ -> Npkcontext.report_error "Cir.normalize_args" "unreachable statement"
 	
 and normalize_choice pref ((e, t), body) =
   let (empty_pref, e, empty_post) = normalize_exp e in

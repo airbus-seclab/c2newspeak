@@ -205,22 +205,27 @@ let translate compil_unit =
     let translate_parameter (t,arg) =
       let x_t = T.translate t in
       let x_arg = match arg with
+
       | In  e    -> C.In (T.check_exp t (translate_exp e))
-      | Out lv   -> 
-	  let (lv, t) = translate_lv lv in
-	    C.Out (lv, T.translate t)
+
+      | Out  (Ast.Lval lv, t)  -> 
+	  C.Out (T.check_exp t (translate_exp (Ast.Lval lv, t) ))
+      | Out (Ast.Cast (o,n,e), b)-> 
+	  (*T.check_exp  would remove Cast *)
+	  C.Out   (translate_exp  (Ast.Cast (o,n,e), b))	
+
+
+      | InOut (Ast.Lval lv, t)  ->
+	  C.InOut (T.check_exp t (translate_exp (Ast.Lval lv, t) ))
+
       | InOut (Ast.Cast (o,n,e), b)-> 
-	  (*T.check_exp: t would remove Cast *)
-	  C.InOut (translate_exp  (Ast.Cast (o,n,e), b))
-	    
-      (* 'No cast' case *)
-      | InOut e (*lv*) -> 
-	  C.InOut (T.check_exp t (translate_exp e))
-	    (*  let (lv, t) = translate_lv lv in
-		C.InOut (lv, T.translate t)
-	    *)
+	  C.InOut (translate_exp  (Ast.Cast (o,n,e), b))	    
+
+      | _ ->  Npkcontext.report_error 
+	  "Firstpass.translate_subprogram_parameters "
+            "Unexpected arguments"
       in
-      (x_t, x_arg)
+	(x_t, x_arg)
     in
     List.split (List.map translate_parameter params)
 

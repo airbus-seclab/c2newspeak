@@ -20,7 +20,9 @@
   Charles Hymans
   EADS Innovation Works - SE/CS
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
-  email: charles.hymans@penjili.org
+ haracters 19-21:
+Error: Syntax error
+ email: charles.hymans@penjili.org
 
   Sarah Zennou
   EADS Innovation Works - SE/IS
@@ -119,7 +121,7 @@ and stmtkind =
   | DoWith   of (blk * lbl)
   | Goto     of lbl
 (* arguments, type, function, return values *)
-  | Call     of ((exp * typ) list * funexp * (lval * typ) list)
+  | Call     of ((exp * typ) list * funexp * (lval * typ) list )
   | UserSpec of assertion
 
 and specs = assertion list
@@ -495,12 +497,13 @@ let string_of_blk offset x =
           dump_line ("} with lbl"^(string_of_int lbl)^":")
 
       | Goto l -> dump_line_at loc ("goto "^(string_of_lbl l)^";")
-      | Call (args, fn, ret_vars) ->
+      | Call (args, fn, ret_vars) ->  
 	  let string_of_args (x, t) = string_of_exp x^": "^string_of_typ t in
 	  let string_of_rets (x, t) = string_of_lval x^": "^string_of_typ t in
 	  let args = List.map string_of_args args in
 	  let rets = List.map string_of_rets ret_vars in
-          let ret_str = 
+          
+	  let ret_str = 
 	    match rets with
 	      | [] -> ""
 	      | r::[] -> r ^ " <- "

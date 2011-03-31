@@ -100,8 +100,8 @@ and add_glb_cstr str =
       let len = String.length str in	  
       let t = N.Array (N.Scalar char_typ, len + 1) in
 	Hashtbl.add globals name t;
-	(* TODO: think about it, this code is redundant with initialization in
-	   typedC2Cir *)
+	(* TODO: think about it, this code is 
+	   redundant with initialization in typedC2Cir *)
 	let offset = ref 0 in
 	let size = Config.size_of_char in
 	  for i = 0 to len - 1 do
@@ -223,11 +223,13 @@ let rec generate_stmt (sk, loc) =
 and generate_rets out_vars out_t =
   match (out_vars, out_t) with
       (lv::out_vars, t::out_t) -> 
-	(generate_lv lv, generate_typ t)::(generate_rets out_vars out_t)
+	(generate_lv lv, generate_typ t)::(
+	   generate_rets out_vars out_t)
+
     | ([], []) -> []
     | _ -> 
-(* TODO: clean code up so that this case doesn't need to be => change type
-   of Call in npkil *)
+	(* TODO: clean code up so that this case doesn't need 
+	   to be => change type of Call in npkil *)
 	Npkcontext.report_error "Npklink.generate_rets" 
 	  "return variables: invalid case"
 

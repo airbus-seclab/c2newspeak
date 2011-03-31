@@ -181,9 +181,8 @@ let translate prog =
 	      pop tmp_var;
 	      let full_call = (set, loc)::(call, loc)::[] in
 		L.Decl (x, t, full_call)
-(* TODO:         (arg::args, t::args_t, x::args_ids) -> *)
-(* TODO:
-            push tmp_var;
+(* TODO: (arg::args, t::args_t, x::args_ids) -> *)
+(* TODO: push tmp_var;
             let set = begin match arg with
               | In    e -> Some (translate_set (Local tmp_var, e, t))
               | Out   _ -> None
@@ -205,39 +204,69 @@ let translate prog =
               in
 		L.Decl (x, t, full_call)
 *)
-        | ([], []) -> L.Call (translate_fn f ft)
-        | _ -> 
-	    Npkcontext.report_error "hpk2npk.prefix_args"
+
+
+        (*BEFORE | ([], []) -> L.Call (translate_fn f ft)*)
+	| ([], _) -> L.Call (translate_fn f ft) (************************CHECK THIS HACK*)
+
+	| _ -> (*BEFORE*)
+	    (* Npkcontext.report_error "hpk2npk.prefix_args"
               "Mismatching  number of parameters"
+	    *) raise Not_found
+
+	    
     in
       add (args, args_ids)
   in
 
   let suffix_rets fid loc f (args, ret_vars) args_ids ft =
-    let add rets =
+    let  (*rec*)rec add rets =
       match rets with
           (* TODO: should have one list instead of two here!!! *)
-          (lv, t)::[] -> 
+          (lv, t)::titi(*[]*) -> 
             push tmp_var;
             let e = Lval (Local tmp_var, t) in
-	    (* TO DO:  Cast back for ADA 
-		       (casted parameter) in translate_set? *)
+
+	    (* TO DO:  Cast back for ADA in translate_set *)
 	    let set = translate_set (lv, e, t) in  
-            let call = prefix_args loc f args args_ids ft in
+
+            (*BEFORE
+	    let call = prefix_args loc f args args_ids ft in*)
+	    let call = add titi in 
+	    (*BEFORE*)
+	    (* !!!!!!!!!       !!!!!!!!!!!!    tmp var !!!! *)
+
             let x = Temps.to_string (new_id ()) (Temps.Value_of fid) in
               pop tmp_var;
 	      L.Decl (x, t, (call, loc)::(set, loc)::[])
         | [] -> prefix_args loc f args args_ids ft
-	| _ ->
-            Npkcontext.report_error "Npk2lpk.suffix_rets" 
+	    (*BEFORE titi	
+	      | _ -> Npkcontext.report_error "Npk2lpk.suffix_rets" 
 	      "case not implemented yet"
+	    *)
+
     in
+    (*   AFTER   *)
     let add_fst rets =
       match rets with
-          (Local v, _)::[] when Hashtbl.find env v = !stack_height -> 
-	    prefix_args loc f args args_ids ft
+          (Local v, _)::[] when Hashtbl.find env v = !stack_height -> begin
+	    try 
+	      prefix_args loc f args args_ids ft
+	    with _ -> 
+	      (*Not_found due to the mix btw 
+		returned_val et Out param Ada*)
+	      add rets 
+	  end
+	    
         | _ ->  add rets
     in
+    (* BEFORE     
+	let add_fst rets =
+	match rets with
+        (Local v, _)::[] when Hashtbl.find env v = !stack_height -> 
+	prefix_args loc f args args_ids ft
+        | _ ->  add rets             in
+    *)
       add_fst ret_vars
   in
 

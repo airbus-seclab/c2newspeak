@@ -125,7 +125,7 @@ and stmtkind =
   | Goto     of lbl
 (* TODO: maybe should use a record rather than a tuple? *)
 (* arguments, function type, function expression, return left values *)
-  | Call     of ((exp * typ) list * funexp * (lval * typ) list)
+  | Call     of ((exp * typ) list * funexp * (lval * typ) list  )
   | UserSpec of assertion
 
 and specs = assertion list

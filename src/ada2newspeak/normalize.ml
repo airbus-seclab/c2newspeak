@@ -231,7 +231,8 @@ let check_package_body_against_spec ~body ~spec =
     if (filterspec sp) then
       begin
         if not (find_body_for_spec ~specification:sp ~bodylist)
-        then Npkcontext.report_error "Ada_utils.check_package_body_against_spec"
+        then Npkcontext.report_error
+	  "Ada_utils.check_package_body_against_spec"
           ( "Body for package " ^ pkgname
           ^ " does not match its specification : cannot find a body for \""
           ^ Ast.name_of_spec sp ^ "\"")
@@ -534,15 +535,12 @@ and make_arg_list args spec =
   let make_arg arg exp =
     let mode = match (arg.mode, fst exp) with
     | In    , _          -> Ast.In   exp
-    | Out   , Ast.Lval l -> Ast.Out   l
-   
-    | InOut , Ast.Lval _ -> Ast.InOut exp	
-    | InOut , Ast.Cast _ -> begin
-	(*Npkcontext.report_warning "make_arg_copy"
-	  "cast in out result might have to be cast back";
-	*)
-	Ast.InOut exp
-      end
+
+    | Out   , Ast.Lval _ 
+    | Out   , Ast.Cast _ -> Ast.Out   exp
+
+    | InOut , Ast.Lval _  
+    | InOut , Ast.Cast _  -> Ast.InOut exp	
 	  
     | _ -> Npkcontext.report_error "make_arg_copy"
                   ( "Actual parameter with \"out\" or \"in out\" mode "

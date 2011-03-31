@@ -76,7 +76,7 @@ and argument = AdaTypes.t * arg_mode
 
 and arg_mode = 
   | In    of expression
-  | Out   of lval
+  | Out   of expression (*of lval*)
   | InOut of expression (*of lval*)
 
 and iteration_scheme =

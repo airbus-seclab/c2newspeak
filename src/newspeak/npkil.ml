@@ -67,7 +67,7 @@ and stmtkind =
   | Goto of lbl
 (* TODO: remove return value *)
 (* in arguments, ftyp, fun exp, outputs *)
-  | Call of (exp list * ftyp * fn * lval list)
+  | Call of (exp list * ftyp * fn * lval list )
   | UserSpec of assertion
 
 (* TODO: remove this type, unused *)

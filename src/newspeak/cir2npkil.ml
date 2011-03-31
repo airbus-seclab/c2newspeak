@@ -236,66 +236,53 @@ let translate src_lang prog =
     let out_vars = ref [] in
     let args_t = ref [] in
     let rets_t = ref [] in
+    
     let collect_in_var (x, t) =
       match x with
-	| In e -> 
-	    args_t := (translate_typ t)::!args_t;
+	| In e 	
+	| InOut e -> 
+	    args_t  := (translate_typ t)::!args_t;
 	    in_vars := (translate_exp e)::!in_vars
-	| InOut e (*typ_lv*) ->
-	    args_t := (translate_typ t)::!args_t;
-	    in_vars := (translate_exp e (*Lval typ_lv*))::!in_vars
+
 	| Out _ ->  ()
     in
     let collect_out_var (x, t) =
       match x with
-	  Out (lv, _) ->  
-	    rets_t := (translate_typ t)::!rets_t;
-	    out_vars := (translate_lv lv)::!out_vars
-
-	| InOut (Lval (lv,_)) (*lv, _*) -> 
-	    rets_t := (translate_typ t)::!rets_t;
+	| InOut (Lval (lv,_)) 
+	| Out   (Lval (lv,_))  -> 
+	    rets_t   := (translate_typ t)::!rets_t;
 	    out_vars := (translate_lv lv)::!out_vars
 	      
+	| InOut( Unop ( K.Cast (sc_o, _sc_n), Lval (lv, _))) 
+	| Out  ( Unop ( K.Cast (sc_o, _sc_n), Lval (lv, _))) -> 
+	    rets_t := (K.Scalar sc_o)::!rets_t;
+	    out_vars := (translate_lv lv)::!out_vars
 
-	| InOut (Unop ( K.Cast (sc_o, _sc_n), Lval (lv, _)))  ->  
-	    (* Npkcontext.report_warning "cir2npkil translate_arg"
-               ( "******        keep this Cast sc1 <=> sc2"^
-	         "******        for later ******");
-	    *)
-
-	     rets_t := (K.Scalar sc_o)::!rets_t;
-	     out_vars := (translate_lv lv)::!out_vars
-
-	| InOut (Unop ( K.Belongs_tmp _, Lval (lv, _))) -> 
-	    (*Cast is gone, (turned to belongs)  
-	      T.check_exp from Firstpass 
-	      translate_subprogram_parameter; 
-	      which is problem because 
-	      parameter Inout with cast
-	    *) 
-	    Npkcontext.report_warning "TO DO remove this cir2npkil translate_arg"
+	| InOut ( Unop ( K.Belongs_tmp _, Lval (lv, _))) 
+	| Out   ( Unop ( K.Belongs_tmp _, Lval (lv, _)))  -> 
+	    Npkcontext.report_warning "cir2npkil translate_arg"
              ( "Must be cast back be a left-value or a cast,"^
 	      " remove warning in t369");
 	    rets_t := (translate_typ t)::!rets_t;
 	    out_vars := (translate_lv lv)::!out_vars
 	    
-	| InOut _ -> Npkcontext.report_error "cir2npkil translate_arg"
-                  ( "Actual parameter with \"out\" or \"in out\" mode "
-                  ^ "must be a left-value or a cast")
-	   
+	| InOut _ | Out _ -> 
+	    Npkcontext.report_error "cir2npkil translate_arg"
+              ("Actual parameter \"out\" or \"in out\" mode "
+               ^ "must be a left-value or a cast")
+	      
 	| In _ -> ()
     in
       List.iter collect_in_var args;
       List.iter collect_out_var args;
       let ft = (List.rev !args_t, List.rev !rets_t) in
 	(List.rev !in_vars, List.rev !out_vars, ft)
-
+	  
   and translate_call ret ((args_t, ret_t), fn, args) =
     let args = List.combine args args_t in
-    (* TODO: cleanup this is really a bit of a hack *)
     let args =
       match ret with
-	  Some lv -> (Out (lv, ret_t), ret_t)::args
+	  Some lv -> (Out (Lval (lv, ret_t)), ret_t)::args
 	| None -> args
     in
     let (in_vars, out_vars, ft) = translate_args args in

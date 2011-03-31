@@ -789,7 +789,7 @@ let rec find_subprogram_aux s ?(silent=false) (pack,n) n_args xpect t_find use =
 		 | _ ->  
 		     if silent then raise Not_found
 		     else 
-		       Npkcontext.report_error 
+		       Npkcontext.report_error
 			 "Symboltbl" 
 			 ("Cannot find subprogram '" ^ n ^ "'")
 			 
