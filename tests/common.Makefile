@@ -31,7 +31,6 @@ ADA2NEWSPEAK=../../bin/ada2newspeak
 NPKSTATS=../../bin/npkstats
 NPKSTRIP=../../bin/npkstrip
 NPKCHECK=../../bin/npkcheck
-NPKPOINTER=../../bin/npkpointer
 SIMPLEAI=../../bin/simpleai
 NPKSOLVER=../../bin/npksolver
 NPKMERGER=../../bin/npkmerger
