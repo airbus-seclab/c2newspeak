@@ -14,7 +14,8 @@
 #  
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library; if not, write to the Free Software
-#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, 
+#  MA  02110-1301  USA
 #
 #  Charles Hymans
 #  email: charles.hymans@penjili.org
@@ -28,7 +29,6 @@ WC=wc -c
 C2NEWSPEAK=../../bin/c2newspeak
 ADA2NEWSPEAK=../../bin/ada2newspeak
 NPKSTATS=../../bin/npkstats
-NPKFUNS=../../bin/npkfuns
 NPKSTRIP=../../bin/npkstrip
 NPKCHECK=../../bin/npkcheck
 NPKPOINTER=../../bin/npkpointer
