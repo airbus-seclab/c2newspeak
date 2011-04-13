@@ -28,7 +28,7 @@
 #
 
 DIR=c2newspeak mult-files lowspeak npkstats mem_opt npkcheck \
-    npkdiff newspeak npkstrip ada2newspeak npkpointer options \
+    newspeak npkstrip ada2newspeak npkpointer options \
     npkflow npkfuns simpleai npksolver npkmerger ulimit
 
 .PHONY: $(DIR)

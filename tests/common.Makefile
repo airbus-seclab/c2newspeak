@@ -32,7 +32,6 @@ NPKFUNS=../../bin/npkfuns
 NPKFLOW=../../bin/npkflow
 NPKSTRIP=../../bin/npkstrip
 NPKCHECK=../../bin/npkcheck
-NPKDIFF=../../bin/npkdiff
 NPKPOINTER=../../bin/npkpointer
 SIMPLEAI=../../bin/simpleai
 NPKSOLVER=../../bin/npksolver
