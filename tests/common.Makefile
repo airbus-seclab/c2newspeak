@@ -29,7 +29,6 @@ C2NEWSPEAK=../../bin/c2newspeak
 ADA2NEWSPEAK=../../bin/ada2newspeak
 NPKSTATS=../../bin/npkstats
 NPKFUNS=../../bin/npkfuns
-NPKFLOW=../../bin/npkflow
 NPKSTRIP=../../bin/npkstrip
 NPKCHECK=../../bin/npkcheck
 NPKPOINTER=../../bin/npkpointer

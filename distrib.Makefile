@@ -35,7 +35,7 @@ OCAMLDOC=ocamldoc
 
 #FILES
 EXE=c2newspeak npkstrip npkstats \
-    npkcheck ada2newspeak npkpointer npkflow \
+    npkcheck ada2newspeak npkpointer \
     npkfuns simpleai npksolver npkmerger
 COMPONENTS=newspeak $(EXE)
 
