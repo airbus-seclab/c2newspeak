@@ -19,19 +19,17 @@
 #
 #
 # Charles Hymans
-# EADS Innovation Works - SE/CS
-# 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
 # email: charles.hymans@penjili.org
 #
 # Sarah Zennou
-# EADS Innovation Works - SE/IS
+# EADS Innovation Works - SE/IT
 # 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
 # email: sarah(dot)zennou(at)eads(dot)net
 #
 
 DIR=c2newspeak mult-files lowspeak npkstats mem_opt npkcheck \
     npkbugfind npkdiff newspeak npkstrip ada2newspeak npkpointer options \
-    npkflow npkfuns npktests npknull simpleai npksolver npkmerger ulimit
+    npkflow npkfuns npknull simpleai npksolver npkmerger ulimit
 
 .PHONY: $(DIR)
 
