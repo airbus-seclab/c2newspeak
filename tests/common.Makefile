@@ -31,7 +31,6 @@ NPKSTATS=../../bin/npkstats
 NPKFUNS=../../bin/npkfuns
 NPKFLOW=../../bin/npkflow
 NPKSTRIP=../../bin/npkstrip
-NPKBUGFIND=../../bin/npkbugfind
 NPKCHECK=../../bin/npkcheck
 NPKDIFF=../../bin/npkdiff
 NPKPOINTER=../../bin/npkpointer
