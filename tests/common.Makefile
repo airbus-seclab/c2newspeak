@@ -1,6 +1,6 @@
 #  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
 #  well-suited for static analysis.
-#  Copyright (C) 2007  Charles Hymans, Olivier Levillain
+#  Copyright (C) 2007, 2011  Charles Hymans, Olivier Levillain, Sarah Zennou
 #  
 #  This library is free software; you can redistribute it and/or
 #  modify it under the terms of the GNU Lesser General Public
@@ -17,9 +17,10 @@
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #
 #  Charles Hymans
-#  EADS Innovation Works - SE/CS
-#  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
 #  email: charles.hymans@penjili.org
+#
+#  Sarah Zennou
+#  sarah(dot)zennou(at)eads(dot)net
 
 #commands
 RM=rm -f
@@ -31,7 +32,6 @@ NPKFUNS=../../bin/npkfuns
 NPKNULL=../../bin/npknull
 NPKFLOW=../../bin/npkflow
 NPKSTRIP=../../bin/npkstrip
-NPKALC = ../../bin/npkalc
 NPKBUGFIND=../../bin/npkbugfind
 NPKCHECK=../../bin/npkcheck
 NPKDIFF=../../bin/npkdiff

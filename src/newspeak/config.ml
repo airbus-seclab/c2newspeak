@@ -64,15 +64,15 @@ let get () =  c
 
 let is_char_type_signed = true
 (* only defined in gnuc mode *)
-let size_of_void = 1*byte
-let size_of_char = c.size_of_char
-let size_of_ptr = c.size_of_ptr
-let size_of_int = c.size_of_int
-let size_of_long = c.size_of_long
-let size_of_longlong = c.size_of_longlong
-let size_of_double = c.size_of_double
-let size_of_float = c.size_of_float
-let size_of_longdouble = c.size_of_longdouble
-let size_of_short = c.size_of_short
-let size_of_byte = c.size_of_byte
-let max_array_length = c.max_array_length
+let size_of_void 	= 1*byte
+let size_of_char 	= c.size_of_char
+let size_of_ptr 	= c.size_of_ptr
+let size_of_int 	= c.size_of_int
+let size_of_long 	= c.size_of_long
+let size_of_longlong 	= c.size_of_longlong
+let size_of_double 	= c.size_of_double
+let size_of_float 	= c.size_of_float
+let size_of_longdouble 	= c.size_of_longdouble
+let size_of_short 	= c.size_of_short
+let size_of_byte 	= c.size_of_byte
+let max_array_length 	= c.max_array_length
