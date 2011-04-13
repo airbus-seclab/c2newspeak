@@ -36,7 +36,7 @@ OCAMLDOC=ocamldoc
 #FILES
 EXE=c2newspeak npkstrip npkstats \
     npkcheck npkbugfind npkdiff ada2newspeak npkpointer npkflow \
-    npkfuns npknull simpleai npksolver npkmerger
+    npkfuns simpleai npksolver npkmerger
 COMPONENTS=newspeak $(EXE)
 
 CLEANFILES=*~ bin/* lib/*~ lib/sys/*~ doc/*.html doc/*~ src/version.cmo src/*~ \

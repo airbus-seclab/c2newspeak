@@ -1,1 +1,0 @@
-maybe as a stat: have the number of variables in the domain of each function (and the distribution)
