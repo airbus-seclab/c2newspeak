@@ -26,8 +26,6 @@
 
 VERSION=1.7
 
-PREFIX=/usr
-
 #utils
 CP=cp
 RM=rm -rf
@@ -56,14 +54,6 @@ coverage:
 	cd src/ ; bisect-report `find ../tests/ -name bisect*` \
                     -html ../../cov/$(shell date +%Y%m%d%H%M)
 	ln -nsf ./$(shell date +%Y%m%d%H%M) ../cov/LATEST
-
-install:
-	@echo "Installing programs in      "$(PREFIX)/bin
-	@cd bin; install $(EXE) $(PREFIX)/bin
-
-uninstall:
-	@echo "Removing programs from      "$(PREFIX)/bin
-	@$(RM) $(addsuffix *,$(addprefix $(PREFIX)/bin/,$(EXE)))
 
 lib: bin bin/lib/assert.h
 
