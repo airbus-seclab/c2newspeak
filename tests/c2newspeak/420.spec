@@ -3,7 +3,7 @@ Newspeak output
 void (420.c:29#5)^main(void) {
   (420.c:30#7)^i =(int32) 0;
   (420.c:30#14)^j =(int32) 0;
-  (420.c:29#5)^do {
+  (420.c:30#2)^do {
     (420.c:30#2)^while (1) {
       (420.c:30#2)^choose {
        -->

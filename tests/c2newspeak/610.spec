@@ -20,7 +20,7 @@ void (610.c:26#5)^main(void) {
         } with lbl3:
         (610.c:30#4)^goto lbl1;
       } with lbl2:
-      (610.c:32#4)^do {
+      (610.c:33#4)^do {
         (610.c:33#4)^do {
           (610.c:32#4)^choose {
            -->

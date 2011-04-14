@@ -18,14 +18,10 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
   Charles Hymans
-  EADS Innovation Works - SE/CS
-  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
- haracters 19-21:
-Error: Syntax error
  email: charles.hymans@penjili.org
 
   Sarah Zennou
-  EADS Innovation Works - SE/IS
+  EADS Innovation Works - SE/IT
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: sarah(dot)zennou(at)eads(dot)net
 *)
@@ -583,9 +579,6 @@ let string_of_blk x = string_of_blk 0 x
 
 let string_of_stmt x = string_of_blk (x::[])
 
-(* TODO: Implement two dumps, a pretty and an bare one
-   implement the pretty one in a separate utility: npkpretty *)
-
 (* Input/output functions *)
 let write name prog =
   let cout = open_out_bin name in
@@ -667,7 +660,6 @@ class simplify_coerce =
 object 
   inherit builder
 
-(* TODO: put these theorems in Newspeak semantics paper *)
   method process_exp e =
     match e with
         (* Coerce [a;b] Coerce [c;d] e 
@@ -891,7 +883,12 @@ let simplify_gotos blk =
     match body with
         (DoWith (body, lbl'), _)::[] -> 
           push lbl' lbl;
-          let x = simplify_dowith_goto loc (body, lbl) in
+	  let loc' =
+	    match body with
+		[] -> loc
+	      | (_, loc')::_ -> loc'
+	  in
+          let x = simplify_dowith_goto loc' (body, lbl) in
             pop ();
             x
       | hd::tl -> 
@@ -1006,7 +1003,8 @@ let has_goto lbl x =
   and has_goto (x, _) =
   match x with
       Decl (_, _, body) | InfLoop body | DoWith (body, _) -> blk_has_goto body
-    | Select (body1, body2) 				  -> (blk_has_goto body1) || (blk_has_goto body2)
+    | Select (body1, body2) 				  -> 
+	(blk_has_goto body1) || (blk_has_goto body2)
     | Goto lbl' 	    				  -> lbl = lbl'
     | _ 		    				  -> false
   in

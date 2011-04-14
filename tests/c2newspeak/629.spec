@@ -14,7 +14,7 @@ void (629.c:26#5)^main(void) {
       uint32 goto!lbl2;
       (629.c:28#2)^goto!lbl2 =(uint32) 0;
       (629.c:28#2)^while (1) {
-        (629.c:28#2)^do {
+        (629.c:46#4)^do {
           (629.c:46#4)^while (1) {
             (629.c:29#4)^while (1) {
               (629.c:29#4)^choose {

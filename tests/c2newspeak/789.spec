@@ -8,7 +8,7 @@ void (789.c:1#5)^main(void) {
   (789.c:2#2)^{
     uint32 goto!lbl2;
     (789.c:2#2)^goto!lbl2 =(uint32) 0;
-    (789.c:12#2)^do {
+    (789.c:5#2)^do {
       (789.c:5#2)^while (1) {
         (789.c:2#9)^choose {
          -->

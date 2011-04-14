@@ -3,7 +3,7 @@ Newspeak output
 void (036.c:29#5)^main(void) {
   (036.c:30#6)^int32 x;
   (036.c:31#6)^int32 y;
-  (036.c:32#2)^do {
+  (036.c:33#2)^do {
     (036.c:33#2)^do {
       (036.c:32#2)^choose {
        -->
