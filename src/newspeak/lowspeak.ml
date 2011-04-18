@@ -154,15 +154,6 @@ let bind_var x t body =
   
 let exp_of_int x = Const (N.CInt (N.Nat.of_int x))
 
-let char_typ =
-  let char_signedness =
-    if Config.is_char_type_signed then N.Signed else N.Unsigned
-  in
-  N.Int (char_signedness, Config.size_of_char)
-
-
-
-
 let new_id =
   let c = ref 0 in
   fun _ ->

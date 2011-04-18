@@ -173,10 +173,7 @@ and offset_exp =
   | OField of aux_offset_exp * string
   | OArray of aux_offset_exp * string * typ_exp
 
-
-let char_kind = (Newspeak.Signed, Config.size_of_char)
-
-let char_typ = Int char_kind
+let char_typ = Int (Newspeak.char_kind)
 
 let uint_typ = Int (Newspeak.Unsigned, Config.size_of_int)
 

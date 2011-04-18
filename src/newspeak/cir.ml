@@ -255,12 +255,9 @@ let rec size_of_typ t =
 	  Npkcontext.report_accept_warning "Csyntax.size_of_typ" "unknown size of void" Npkcontext.GnuC;
 	Config.size_of_void
 
-(* TODO: if possible remove int_kind, int_typ and char_typ, they are
+(* TODO: if possible remove int_kind, and  int_typ, they are
    in csyntax rather *)
 let int_kind = (Signed, Config.size_of_int)
-(* TODO: remove and move to npkil? *)
-let char_typ = Scalar (Int (Signed, Config.size_of_char))
-
 let int_typ = Scalar (Int int_kind)
 
 let concat_effects blk1 blk2 =

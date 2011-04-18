@@ -642,7 +642,6 @@ types may be designated in several additional ways, as described in
 6.7.2.)
 */
 ityp:
-  CHAR                                   { Config.size_of_char }
 | SHORT INT                              { Config.size_of_short }
 | INT                                    { Config.size_of_int }
 | LONG INT                               { Config.size_of_long }
@@ -709,12 +708,15 @@ ftyp:
 
 type_specifier:
   VOID                                    { Void }
+| CHAR                                    { Integer (Newspeak.char_kind) }
 | ityp                                    { Integer (Newspeak.Signed, $1) }
+| SIGNED CHAR                             { Integer (Newspeak.Signed, Config.size_of_char ) }
 | SIGNED ityp                             {
     Npkcontext.report_strict_warning "Parser.type_specifier" 
       "signed specifier not necessary";
     Integer (Newspeak.Signed, $2)
   }
+| UNSIGNED CHAR                           { Integer (Newspeak.Unsigned, Config.size_of_char ) }
 | LONG LONG UNSIGNED INT                  {
     Npkcontext.report_strict_warning "Parser.type_specifier"
       ("'long long unsigned int' is not normalized : "

@@ -95,10 +95,8 @@ and add_glb_cstr str =
   let name = Temps.to_string 0 (Temps.Cstr str) in
     if not (Hashtbl.mem globals name) then begin
       let loc = Npkcontext.get_loc () in
-      (* TODO: put in newspeak? *)
-      let char_typ = N.Int (N.Signed, Config.size_of_char) in
       let len = String.length str in	  
-      let t = N.Array (N.Scalar char_typ, len + 1) in
+      let t = N.Array (N.Scalar N.char_typ, len + 1) in
 	Hashtbl.add globals name t;
 	(* TODO: think about it, this code is 
 	   redundant with initialization in typedC2Cir *)
@@ -108,12 +106,12 @@ and add_glb_cstr str =
 	    let e = exp_of_char str.[i] in
 (* TODO: factor creation of lv *)
 	    let lv = N.Shift (N.Global name, exp_of_int !offset) in
-	      cstr_init := (N.Set (lv, e, char_typ), loc)::!cstr_init;
+	      cstr_init := (N.Set (lv, e, N.char_typ), loc)::!cstr_init;
 	      offset := !offset + size
 	  done;
 	  let lv = N.Shift (N.Global name, exp_of_int !offset) in
 	    cstr_init := 
-	      (N.Set (lv, exp_of_char '\x00', char_typ), loc)::!cstr_init
+	      (N.Set (lv, exp_of_char '\x00', N.char_typ), loc)::!cstr_init
     end;
     N.Global name
     

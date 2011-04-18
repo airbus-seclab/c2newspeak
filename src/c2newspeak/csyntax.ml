@@ -157,10 +157,8 @@ and offset_exp =
   | OField of aux_offset_exp * string
   | OArray of aux_offset_exp * string * exp
 
-let char_kind = (Signed, Config.size_of_char)
-
 let char_typ = Int char_kind
-
+  
 let int_typ = Int (Signed, Config.size_of_int)
 
 let long_typ = Int (Signed, Config.size_of_long)

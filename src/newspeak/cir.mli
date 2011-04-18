@@ -123,9 +123,6 @@ and cst =
 (** kind of C int type *)
 val int_kind: Newspeak.ikind
 
-(** type of C char type *)
-val char_typ: typ
-
 (** type of C int type *)
 val int_typ: typ
 
