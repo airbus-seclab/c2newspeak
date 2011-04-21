@@ -8,7 +8,7 @@ void (803.c:1#5)^main(void) {
   (803.c:2#1)^{
     uint32 goto!aa;
     (803.c:2#1)^goto!aa =(uint32) 0;
-    (803.c:5#1)^do {
+    (803.c:2#1)^do {
       (803.c:2#1)^while (1) {
         (803.c:3#9)^goto!b =(uint32) 1;
         (803.c:3#9)^choose {

@@ -1,6 +1,0 @@
-currently have locality in variables
-could also have loclity in depth
-
-that is if a function is first called with a deep structure and then with a 
-smaller structure (included in the first one), maybe ok to represent only
-a prefix of the structures??
