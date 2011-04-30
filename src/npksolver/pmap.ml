@@ -126,7 +126,7 @@ let mem x { cmp = cmp; map = map } =
 
 let exists = mem
 
-let iter f { map = map } =
+let iter f { map = map ; cmp = _ } =
   let rec loop = function
     | Empty -> ()
     | Node (l, k, v, r, _) -> loop l; f k v; loop r in
@@ -150,14 +150,14 @@ let mapi f { cmp = cmp; map = map } =
 	  Node (l, k, f k v, r, h) in
   { cmp = cmp; map = loop map }
 
-let fold f { map = map } acc =
+let fold f { map = map ; cmp = _ } acc =
   let rec loop acc = function
     | Empty -> acc
     | Node (l, _k, v, r, _) ->
 	  loop (f v (loop acc l)) r in
   loop acc map
 
-let foldi f { map = map } acc =
+let foldi f { map = map ; cmp = _ } acc =
   let rec loop acc = function
     | Empty -> acc
 	| Node (l, k, v, r, _) ->
