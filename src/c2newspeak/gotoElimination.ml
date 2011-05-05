@@ -38,10 +38,10 @@ let del_goto_suffix lbl =
     let i = String.index lbl '.' in String.sub lbl 0 i
   with Not_found -> lbl
  
-let zero = Cst (Cir.CInt Newspeak.Nat.zero, uint_typ)
-let one = Cst (Cir.CInt (Newspeak.Nat.of_int 1), uint_typ) 
+let zero () = Cst (Cir.CInt Newspeak.Nat.zero, uint_typ ())
+let one () = Cst (Cir.CInt (Newspeak.Nat.of_int 1), uint_typ ()) 
   
-let dummy_cond = one
+let dummy_cond () = one ()
  
 let goto_equal lbl lbl' g_offset = compare lbl' (lbl^"."^ g_offset) = 0
     
@@ -121,7 +121,7 @@ let preprocessing lbls stmts =
 		      Hashtbl.add lbls lbl ([o, l],  Newspeak.unknown_loc)
 		  end;
 		  nth := !nth + 1;
-		  let if' = If(dummy_cond, [Goto lbl', l], []) in
+		  let if' = If(dummy_cond (), [Goto lbl', l], []) in
 		    (if', l)::(add stmts)
 	      end
 
@@ -171,10 +171,10 @@ let preprocessing lbls stmts =
       let (_, l) = List.hd stmts in
       let decl lbl =
 	let lbl' = fresh_lbl lbl in
-	let init = Data zero in
+	let init = Data (zero ()) in
 	let d = 
 	  {
-	    t = uint_typ;
+	    t = uint_typ ();
 	    is_static = false;
 	    is_extern = false;
 	    initialization = Some init
@@ -284,7 +284,7 @@ let indirectly_related stmts lbl g_offset =
 let avoid_break_continue_capture stmts lwhile l g_offset vdecls = 
   let rec add stmts l var skind =
     let stmts', vars = search stmts in
-    let set = Exp (Set( (Var var), None, one)) in
+    let set = Exp (Set( (Var var), None, one ())) in
       (set, l)::((skind, l)::stmts'), (skind, var)::vars
   and search stmts =
     match stmts with 
@@ -314,20 +314,20 @@ let avoid_break_continue_capture stmts lwhile l g_offset vdecls =
   let stmts', vars = search stmts in
     if vars = [] then stmts', []
     else 
-      let init = Data zero in
+      let init = Data (zero ()) in
       let after = ref [] in 
       let add (skind, var) =
 	(* TODO: factor VDecl creations *)
 	let d = 
 	  {
-	    t = uint_typ;
+	    t = uint_typ ();
 	    is_static = false;
 	    is_extern = false;
 	    initialization = Some init
 	  }
 	in
 	let vdecl = LocalDecl (var, VDecl d) in
-	let set = Exp (Set (Var var, None, zero)) in
+	let set = Exp (Set (Var var, None, zero ())) in
 	let if_blk = (set, lwhile)::[skind, lwhile] in
 	let if' = If (Var var, if_blk, []) in
 	  vdecls := vdecl::!vdecls;
@@ -765,7 +765,7 @@ and loop_in lbl l e before cond blk g_offset g_loc b =
       | (stmt, l)::stmts ->
 	  match stmt with
 	      Label lb when lb = lbl -> 
-		let set = Exp (Set(lbl', None, zero)) in
+		let set = Exp (Set(lbl', None, zero ())) in
 		  (stmt, l)::((set, l)::stmts)
 
 	    | Block blk -> 
@@ -811,7 +811,7 @@ and cswitch_in lbl l e before cond cases default g_offset g_loc =
   let tswitch = "switch."^(Newspeak.string_of_loc l)^"."^g_offset in
   let d = 
     { 
-      t = uint_typ;
+      t = uint_typ ();
       is_static = false;
       is_extern = false;
       initialization = None
@@ -849,7 +849,7 @@ and cswitch_in lbl l e before cond cases default g_offset g_loc =
     with Not_found ->
       let conds = List.map (fun (e, _, _) -> e) cases in
       let build e e' = or_bexp e e' in
-      let e_default = List.fold_left build zero conds in
+      let e_default = List.fold_left build (zero ()) conds in
       let e_default = Unop(Not, e_default) in
       let set_else = Exp (Set(tswitch, None, e_default)) in
       let default' = (if', l)::default in

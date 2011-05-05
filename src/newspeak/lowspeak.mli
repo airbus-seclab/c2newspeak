@@ -38,6 +38,7 @@ type t = {
   fundecs: (Newspeak.fid, fundec) Hashtbl.t;
   ptr_sz: Newspeak.size_t;
   src_lang: Newspeak.src_lang;
+  abi: Newspeak.abi_t;
 }
 
 and fundec = {

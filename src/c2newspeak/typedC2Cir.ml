@@ -67,9 +67,9 @@ let next_aligned o x =
    in Npkil *)
 let seq_of_string str =
   let len = String.length str in
-  let res = ref [(None, Data (TypedC.exp_of_char '\x00', char_typ))] in
+  let res = ref [(None, Data (TypedC.exp_of_char '\x00', char_typ ()))] in
     for i = len - 1 downto 0 do
-      res := (None, Data (TypedC.exp_of_char str.[i], char_typ))::!res
+      res := (None, Data (TypedC.exp_of_char str.[i], char_typ ()))::!res
     done;
     !res
 
@@ -92,8 +92,8 @@ let check_array_type_length typ =
 	    match s with
 		N.Int (_, sz) -> Nat.of_int sz
 	      | N.Float sz -> Nat.of_int sz
-	      | N.Ptr -> Nat.of_int (Config.size_of_ptr)
-	      | N.FunPtr -> Nat.of_int (Config.size_of_ptr)
+	      | N.Ptr -> Nat.of_int (!Config.size_of_ptr)
+	      | N.FunPtr -> Nat.of_int (!Config.size_of_ptr)
 	  end
       | C.Struct (_, sz) -> Nat.of_int sz
       | C.Union (_, sz) -> Nat.of_int sz
@@ -101,7 +101,7 @@ let check_array_type_length typ =
   in
     try 
       let sz = length typ in 
-	if Nat.compare sz (Nat.of_int Config.max_array_length) > 0 then
+	if Nat.compare sz (Nat.of_int !Config.max_array_length) > 0 then
 	  Npkcontext.report_error "Firstpass.translate_typ" 
 	    "invalid size for array"
     with Exit -> ()
@@ -210,7 +210,7 @@ let translate prog =
       match (x, t) with
 	  (* TODO: move this case to csyntax2TypedC?? *)
 	  ((Data (Str str, _)|Sequence ([(None, Data (Str str, _))])), 
-	   Array (Int (_, n), _)) when n = Config.size_of_char ->
+	   Array (Int (_, n), _)) when n = !Config.size_of_char ->
 	    let seq = seq_of_string str in
 	      translate o t (Sequence seq)
 
@@ -347,8 +347,8 @@ let translate prog =
 	  Int _ -> res := (o, translate_typ t, C.exp_of_int 0)::!res
 	| Ptr _ -> 
 	    (* TODO: inefficient: t is translated twice *)
-	    let e = translate_exp false (exp_of_int 0, int_typ) in
-	    let (e, t) = cast (e, int_typ) t in
+	    let e = translate_exp false (exp_of_int 0, int_typ ()) in
+	    let (e, t) = cast (e, int_typ ()) t in
 	      res := (o, translate_typ t, e)::!res
 	| Float _ -> 
 	    res := (o, translate_typ t, C.exp_of_float 0.)::!res
@@ -410,9 +410,9 @@ let translate prog =
 
       | OpExp (op, (lv, t), is_after) -> 
 	  let loc = Npkcontext.get_loc () in
-	  let e = Cst (C.CInt (Nat.of_int 1), TypedC.int_typ)  in
+	  let e = Cst (C.CInt (Nat.of_int 1), TypedC.int_typ ())  in
 	  let (incr, _) = 
-	    translate_set ((lv, t), Some op, (e, TypedC.int_typ)) 
+	    translate_set ((lv, t), Some op, (e, TypedC.int_typ ())) 
 	  in
 	  let (lv, _, _) = incr in
 	    C.BlkLv ((C.Set incr, loc)::[], lv, is_after)
@@ -477,7 +477,7 @@ let translate prog =
 
 	| AddrOf (Index (lv, (t, len), e), t') ->
 	    let base = 
-	      AddrOf (Index (lv, (t, len), (exp_of_int 0, int_typ)), t') 
+	      AddrOf (Index (lv, (t, len), (exp_of_int 0, int_typ ())), t') 
 	    in
 	      (*Case AddrOf Access, the access is check to detected integers*)  
 	    let access  = translate_exp is_sz e in
@@ -556,7 +556,7 @@ let translate prog =
 	| Offsetof (t, f) -> 
 	    let (r, _, _) = translate_comp (TypedC.comp_of_typ t) in
 	    let o 	  = find_offset_field f r in
-	      C.exp_of_int (o / Config.size_of_byte)
+	      C.exp_of_int (o / !Config.size_of_byte)
 		
     and find_offset_field f r =
       let translate c =
@@ -699,14 +699,14 @@ let translate prog =
     let rec translate_args args args_t =
       match (args, args_t) with
 	  ([], (Va_arg, id)::[]) ->
-	    let e = translate_exp false (exp_of_int 0, int_typ) in
-	    let (e, _) = cast (e, int_typ) (Ptr char_typ) in
+	    let e = translate_exp false (exp_of_int 0, int_typ ()) in
+	    let (e, _) = cast (e, int_typ ()) (Ptr (char_typ ())) in
 	      (e::[], (Va_arg, id)::[])
 	| (_, (Va_arg, id)::[]) -> 
 	    let (args, sz)   = translate_va_args args in
 	    let loc 	     = Npkcontext.get_loc () in
 	    let sz 	     = if sz mod 8 = 0 then sz/8 else (sz/8)+1 in
-	    let t 	     = Array (char_typ, Some (exp_of_int sz)) in
+	    let t 	     = Array (char_typ (), Some (exp_of_int sz)) in
 	    let (_, decl, v) = gen_tmp t in
 	    let e 	     = addr_of (v, t) in
 	    let init 	     = init_va_args loc v args in
@@ -746,7 +746,7 @@ let translate prog =
       let (o', t, sz) =
 	match t with
 	    Bitfield ((s, n), sz) ->
-	      let sz = translate_exp false (sz, int_typ) in
+	      let sz = translate_exp false (sz, int_typ ()) in
 	      let sz = Nat.to_int (C.eval_exp sz) in
 		if sz > n then begin
 		  Npkcontext.report_error "Firstpass.process_struct_fields"
@@ -794,7 +794,7 @@ let translate prog =
       | Ptr _ 		      -> N.Ptr
       | Va_arg 		      -> N.Ptr
       | Bitfield ((s, n), sz) -> 
-	  let sz = translate_exp false (sz, int_typ) in
+	  let sz = translate_exp false (sz, int_typ ()) in
 	  let sz = Nat.to_int (C.eval_exp sz) in
 	    if sz > n then begin
 	      Npkcontext.report_error "Firstpass.process_struct_fields"
@@ -831,7 +831,7 @@ let translate prog =
     match x with
 	None -> None
       | Some e -> 
-	  let e = translate_exp true (e, int_typ) in
+	  let e = translate_exp true (e, int_typ ()) in
 	  let i = 
 	    try Nat.to_int (C.eval_exp e) 
 	    with Invalid_argument _ -> 
@@ -839,7 +839,7 @@ let translate prog =
 	      Npkcontext.report_error "Firstpass.translate_typ" 
 		"invalid size for array"
 	  in
-	    if (i < 0) || (i > Config.max_array_length) then begin
+	    if (i < 0) || (i > !Config.max_array_length) then begin
 	      (* TODO: should print the expression e?? *)
 	      Npkcontext.report_error "Firstpass.translate_typ" 
 		"invalid size for array"
@@ -1053,7 +1053,7 @@ let translate prog =
 	    translate_guard (IfExp (c, (IfExp (fst t1, t2, f2, t), t), 
 				    (IfExp (fst f1, t2, f2, t), t), t))
 	| IfExp (c, (t, _), (f, _), _) -> 
-	    let c = translate_exp false (c, int_typ) in
+	    let c = translate_exp false (c, int_typ ()) in
 	    let (pref, c, post) = C.normalize_exp c in
 	    let guard_c = (C.Guard c, loc) in
 	    let guard_not_c = (C.Guard (C.Unop (K.Not, c)), loc) in
@@ -1082,7 +1082,7 @@ let translate prog =
 	      else (body@br1, body@br2)
 
 	| e -> 
-	    let e = translate_exp false (e, int_typ) in
+	    let e = translate_exp false (e, int_typ ()) in
 	    let (pref, e, post) = C.normalize_exp e in
 	    let guard_e = pref@(C.Guard e, loc)::post in
 	    let guard_not_e = pref@(C.Guard (C.Unop (K.Not, e)), loc)::post in
@@ -1096,8 +1096,8 @@ let translate prog =
   and translate_switch x =
     match x with
 	(e, body, loc)::tl ->
-	  let e = translate_exp false (e, int_typ) in
-	  let t = translate_scalar_typ int_typ in
+	  let e = translate_exp false (e, int_typ ()) in
+	  let t = translate_scalar_typ (int_typ ()) in
 	  let (lbl, tl) = translate_switch tl in
 	  let lbl = if body = [] then lbl else lbl+1 in
 	    (lbl, ((e, t), (C.Goto lbl, loc)::[])::tl)
@@ -1157,7 +1157,7 @@ let translate prog =
     let (op, (e1, t1), (e2, t2)) = normalize_binop is_sz (op, t) e1 e2 in
     let t = 
       match op with
-	  Gt|Eq -> int_typ
+	  Gt|Eq -> int_typ ()
 	| _ -> t
     in
     let op =
@@ -1217,7 +1217,7 @@ let translate prog =
 	| (N.MinusPP, Ptr t, _) -> 
 	    let step = size_of t in
 	    let e = C.Binop (N.DivI, e, C.exp_of_int step) in
-	      C.Unop (K.Coerce (Newspeak.domain_of_typ C.int_kind), e)
+	      C.Unop (K.Coerce (Newspeak.domain_of_typ (C.int_kind ())), e)
 	| _ -> e
     in
       (e, t)
@@ -1229,7 +1229,7 @@ let translate prog =
 	  (Not, Ptr _) -> 
 	    (* TODO: this is a bit of a hack, have Nil in cir?? *)
 	    let nil = 
-	      C.Unop (K.Cast (N.Int C.int_kind, N.Ptr), C.exp_of_int 0) 
+	      C.Unop (K.Cast (N.Int (C.int_kind ()), N.Ptr), C.exp_of_int 0) 
 	    in
 	      C.Binop (Newspeak.Eq Newspeak.Ptr, e, nil)
 	| _ -> e

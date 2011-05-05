@@ -104,6 +104,10 @@ let merge_funs t1 t2 =
     Hashtbl.iter check t1;
     Hashtbl.iter check_and_add t2
 
+let check_abi a b =
+  if (a <> b) then
+    failwith "Two files have been compiled with different ABIs, exiting"
+
 let merge progs = 
   if !debug then print_endline "Merging...";
   let pi = List.hd progs in
@@ -113,11 +117,13 @@ let merge progs =
     N.fundecs  = Hashtbl.copy pi.N.fundecs;
     N.ptr_sz   = pi.N.ptr_sz;
     N.src_lang = pi.N.src_lang;
+    N.abi      = pi.N.abi;
   } 
   in
   let add init p =
     merge_globals po.N.globals p.N.globals;
     merge_funs po.N.fundecs p.N.fundecs;
+    check_abi po.N.abi p.N.abi;
     p.N.init @ init
   in
   let init = List.fold_left add po.N.init (List.tl progs) in

@@ -157,17 +157,17 @@ and offset_exp =
   | OField of aux_offset_exp * string
   | OArray of aux_offset_exp * string * exp
 
-let char_typ = Int char_kind
+let char_typ () = Int (char_kind ())
   
-let int_typ = Int (Signed, Config.size_of_int)
+let int_typ () = Int (Signed, !Config.size_of_int)
 
-let long_typ = Int (Signed, Config.size_of_long)
+let long_typ () = Int (Signed, !Config.size_of_long)
 
-let uint_typ = Int (Unsigned, Config.size_of_int)
+let uint_typ () = Int (Unsigned, !Config.size_of_int)
 
-let exp_of_char c = Cst (Cir.CInt (Nat.of_int (Char.code c)), char_typ)
+let exp_of_char c = Cst (Cir.CInt (Nat.of_int (Char.code c)), char_typ ())
 
-let exp_of_int i = Cst (Cir.CInt (Nat.of_int i), int_typ)
+let exp_of_int i = Cst (Cir.CInt (Nat.of_int i), int_typ ())
 
 let nat_of_lexeme base x =
   let read_digit c = (int_of_char c) - (int_of_char '0') in
@@ -193,12 +193,6 @@ let nat_of_lexeme base x =
     String.iter add_digit x;
     !v
 
-let ikind_tbl =
-  [(Signed, Config.size_of_int); (Unsigned, Config.size_of_int); 
-   (Signed, Config.size_of_long); (Unsigned, Config.size_of_long); 
-   (Signed, Config.size_of_longlong); (Unsigned, Config.size_of_longlong)
-  ]    
-
 (* See C standard ANSI 6.4.4 *)
 let int_cst_of_lexeme (base, x, sign, min_sz) = 
   let x = nat_of_lexeme base x in
@@ -214,9 +208,9 @@ let int_cst_of_lexeme (base, x, sign, min_sz) =
   in
   let min_sz =
     match min_sz with
-	None -> Config.size_of_int
-      | Some ("L"|"l") -> Config.size_of_long
-      | Some "LL" -> Config.size_of_longlong
+	None -> !Config.size_of_int
+      | Some ("L"|"l") -> !Config.size_of_long
+      | Some "LL" -> !Config.size_of_longlong
       | _ -> 
 	  Npkcontext.report_error "Csyntax.int_cst_of_lexeme" 
 	    "unreachable statement"
@@ -226,6 +220,12 @@ let int_cst_of_lexeme (base, x, sign, min_sz) =
       && (List.mem sign possible_signs)
       && (Newspeak.belongs x (Newspeak.domain_of_typ (sign, sz))))
   in
+  let ikind_tbl =
+    [(Signed, !Config.size_of_int); (Unsigned, !Config.size_of_int); 
+     (Signed, !Config.size_of_long); (Unsigned, !Config.size_of_long); 
+     (Signed, !Config.size_of_longlong); (Unsigned, !Config.size_of_longlong)
+    ]    
+  in
   let k = 
     try List.find is_kind ikind_tbl 
     with Not_found -> 
@@ -234,7 +234,7 @@ let int_cst_of_lexeme (base, x, sign, min_sz) =
   in
     (Cir.CInt x, Int k)
 
-let char_cst_of_lexeme x = (Cir.CInt (Nat.of_int x), char_typ)
+let char_cst_of_lexeme x = (Cir.CInt (Nat.of_int x), char_typ ())
 
 (* ANSI C: 6.4.4.2 *)
 let float_cst_of_lexeme (value, suffix) =
@@ -249,9 +249,9 @@ let float_cst_of_lexeme (value, suffix) =
    the float??? *)
   let (lexeme, sz) = 
     match suffix with
-	None -> (value, Config.size_of_double)
-      | Some 'F' -> (value^"F", Config.size_of_float)
-      | Some 'L' | Some 'l' -> (value^"L", Config.size_of_longdouble)
+	None -> (value, !Config.size_of_double)
+      | Some 'F' -> (value^"F", !Config.size_of_float)
+      | Some 'L' | Some 'l' -> (value^"L", !Config.size_of_longdouble)
       | _ -> 
 	  Npkcontext.report_error "Csyntax.float_cst_of_lexeme" 
 	    "unknown suffix for float"

@@ -28,51 +28,41 @@
   email: sarah(dot)zennou(at)eads(dot)net
 *)
 
-type t = {
-  size_of_byte	    : int;
-  max_sizeof	    : int;
-  max_array_length  : int;
-  size_of_char	    : int;
-  size_of_short	    : int;
-  size_of_int	    : int;
-  size_of_long	    : int;
-  size_of_longlong  : int;
-  size_of_ptr	    : int;
-  size_of_float	    : int;
-  size_of_double    : int;
-  size_of_longdouble: int;
-}
-
 let byte = 8 
-let max_sizeof = 1073741823 
-let c 	 = {
-    size_of_byte       = byte;
-    max_sizeof 	       = max_sizeof;
-    max_array_length   = max_sizeof / byte;
-    size_of_char       = 1* byte;
-    size_of_short      = 2* byte;
-    size_of_int        = 4* byte;
-    size_of_long       = 4*byte;
-    size_of_longlong   = 8*byte;
-    size_of_ptr        = 4*byte;
-    size_of_float      = 4*byte;
-    size_of_double     = 8*byte;
-    size_of_longdouble = 12*byte;
-  }
 
-let get () =  c
+let is_char_type_signed = ref true
 
-let is_char_type_signed = true
 (* only defined in gnuc mode *)
-let size_of_void 	= 1*byte
-let size_of_char 	= c.size_of_char
-let size_of_ptr 	= c.size_of_ptr
-let size_of_int 	= c.size_of_int
-let size_of_long 	= c.size_of_long
-let size_of_longlong 	= c.size_of_longlong
-let size_of_double 	= c.size_of_double
-let size_of_float 	= c.size_of_float
-let size_of_longdouble 	= c.size_of_longdouble
-let size_of_short 	= c.size_of_short
-let size_of_byte 	= c.size_of_byte
-let max_array_length 	= c.max_array_length
+let size_of_void 	= ref (1*byte)
+
+let size_of_ptr 	= ref (4* byte)
+let size_of_byte 	= ref byte
+
+let size_of_char 	= ref (1* byte)
+let size_of_short 	= ref (2* byte)
+let size_of_int 	= ref (4* byte)
+let size_of_long 	= ref (4* byte)
+let size_of_longlong 	= ref (8* byte)
+
+let size_of_float 	= ref (4* byte) 
+let size_of_double 	= ref (8* byte) 
+let size_of_longdouble 	= ref (12*byte) 
+
+
+let max_sizeof = ref max_int
+let max_array_length 	= ref (max_int / byte)
+
+let is_little_endian = ref true
+let arithmetic_in_structs_allowed = ref true
+let unaligned_ptr_deref_allowed = ref true
+
+let align_of_void       = ref (!size_of_void)
+let align_of_char       = ref (!size_of_char)
+let align_of_ptr        = ref (!size_of_ptr)
+let align_of_int        = ref (!size_of_int)
+let align_of_long       = ref (!size_of_long)
+let align_of_longlong   = ref (!size_of_longlong)
+let align_of_double     = ref (!size_of_double)
+let align_of_float      = ref (!size_of_float)
+let align_of_longdouble = ref (!size_of_longdouble)
+let align_of_short      = ref (!size_of_short)

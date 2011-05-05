@@ -103,6 +103,9 @@ val handle_cmdline_options : string -> string -> unit
 (** Name of the xml output file *)
 val xml_output : string ref 
 
+(** Name of ABI description file *)
+val abi_file : string ref
+
 (** {1 Location handling } *)
 
 (** [set_loc cil_loc] translates a Cil.location cil_loc into a

@@ -642,24 +642,24 @@ types may be designated in several additional ways, as described in
 6.7.2.)
 */
 ityp:
-| SHORT INT                              { Config.size_of_short }
-| INT                                    { Config.size_of_int }
-| LONG INT                               { Config.size_of_long }
-| LONG LONG INT                          { Config.size_of_longlong }
+| SHORT INT                              { !Config.size_of_short }
+| INT                                    { !Config.size_of_int }
+| LONG INT                               { !Config.size_of_long }
+| LONG LONG INT                          { !Config.size_of_longlong }
 | SHORT                                  { 
     Npkcontext.report_strict_warning "Parser.ityp" 
       "'short' is not normalized: use 'short int' instead";
-    Config.size_of_short 
+    !Config.size_of_short
   }
 | LONG                                   { 
     Npkcontext.report_strict_warning "Parser.ityp" 
       "'long' is not normalized: use 'long int' instead";
-    Config.size_of_long 
+    !Config.size_of_long
   }
 | LONG LONG                              { 
     Npkcontext.report_strict_warning "Parser.ityp" 
       "'long long' is not standard: use 'long long int' instead";
-    Config.size_of_longlong 
+    !Config.size_of_longlong
   }
 ;;
 
@@ -701,89 +701,89 @@ field_blk:
 ;;
 
 ftyp:
-  FLOAT                                   { Config.size_of_float }
-| DOUBLE                                  { Config.size_of_double }
-| LONG DOUBLE                             { Config.size_of_longdouble }
+  FLOAT                                   { !Config.size_of_float }
+| DOUBLE                                  { !Config.size_of_double }
+| LONG DOUBLE                             { !Config.size_of_longdouble }
 ;;
 
 type_specifier:
   VOID                                    { Void }
-| CHAR                                    { Integer (Newspeak.char_kind) }
+| CHAR                                    { Integer (Newspeak.char_kind ()) }
 | ityp                                    { Integer (Newspeak.Signed, $1) }
-| SIGNED CHAR                             { Integer (Newspeak.Signed, Config.size_of_char ) }
+| SIGNED CHAR                             { Integer (Newspeak.Signed, !Config.size_of_char) }
 | SIGNED ityp                             {
     Npkcontext.report_strict_warning "Parser.type_specifier" 
       "signed specifier not necessary";
     Integer (Newspeak.Signed, $2)
   }
-| UNSIGNED CHAR                           { Integer (Newspeak.Unsigned, Config.size_of_char ) }
+| UNSIGNED CHAR                           { Integer (Newspeak.Unsigned, !Config.size_of_char) }
 | LONG LONG UNSIGNED INT                  {
     Npkcontext.report_strict_warning "Parser.type_specifier"
       ("'long long unsigned int' is not normalized : "
       ^"use 'unsigned long long int' instead");
-    Integer (Newspeak.Unsigned, Config.size_of_longlong)
+    Integer (Newspeak.Unsigned, !Config.size_of_longlong)
   }
 | UNSIGNED ityp                           { Integer (Newspeak.Unsigned, $2) }
 | UNSIGNED                                { 
     Npkcontext.report_strict_warning "Parser.type_specifier"
       "unspecified integer kind";
-    Integer (Newspeak.Unsigned, Config.size_of_int) 
+    Integer (Newspeak.Unsigned, !Config.size_of_int)
   }
 
 | LONG SIGNED INT                         {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long signed int' is not normalized: "
        ^"use 'signed long int' instead");
-    Integer (Newspeak.Signed, Config.size_of_long)
+    Integer (Newspeak.Signed, !Config.size_of_long)
   }
 
 | LONG SIGNED                             {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long signed' is not normalized: "
        ^"use 'signed long int' instead");
-    Integer (Newspeak.Signed, Config.size_of_long)
+    Integer (Newspeak.Signed, !Config.size_of_long)
   }
 
 | LONG UNSIGNED INT                        {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long unsigned int' is not normalized: "
        ^"use 'unsigned long int' instead");
-    Integer (Newspeak.Unsigned, Config.size_of_long)
+    Integer (Newspeak.Unsigned, !Config.size_of_long)
   }
 
 | LONG UNSIGNED                            {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long unsigned' is not normalized: "
        ^"use 'unsigned long int' instead");
-    Integer (Newspeak.Unsigned, Config.size_of_long)
+    Integer (Newspeak.Unsigned, !Config.size_of_long)
   }
 
 | SHORT SIGNED INT                         {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short signed int' is not normalized: "
        ^"use 'signed short int' instead");
-    Integer (Newspeak.Signed, Config.size_of_short)
+    Integer (Newspeak.Signed, !Config.size_of_short)
   }
 
 | SHORT SIGNED                             {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short signed' is not normalized: "
        ^"use 'signed short int' instead");
-    Integer (Newspeak.Signed, Config.size_of_short)
+    Integer (Newspeak.Signed, !Config.size_of_short)
   }
 
 | SHORT UNSIGNED INT                       {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short unsigned int' is not normalized: "
        ^"use 'unsigned short int' instead");
-    Integer (Newspeak.Unsigned, Config.size_of_short)
+    Integer (Newspeak.Unsigned, !Config.size_of_short)
   }
 
 | SHORT UNSIGNED                           {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short unsigned' is not normalized: "
        ^"use 'unsigned short int' instead");
-    Integer (Newspeak.Unsigned, Config.size_of_short)
+    Integer (Newspeak.Unsigned, !Config.size_of_short)
   }
 
 | ftyp                                     { Float $1 }
@@ -974,10 +974,10 @@ attribute_name:
     if $1 <> "__mode__" then raise Parsing.Parse_error;
     let imode =
       match $3 with
-	  "__QI__" -> Config.size_of_byte
-	| "__HI__" -> Config.size_of_byte*2
-	| "__SI__" | "__word__" -> Config.size_of_byte*4
-	| "__DI__" -> Config.size_of_byte*8
+          "__QI__" -> !Config.size_of_byte
+	| "__HI__" -> !Config.size_of_byte*2
+	| "__SI__" | "__word__" -> !Config.size_of_byte*4
+	| "__DI__" -> !Config.size_of_byte*8
 	| _ -> raise Parsing.Parse_error
     in
       imode::[]

@@ -94,6 +94,7 @@ type t = {
   fundecs: (fid, fundec) Hashtbl.t; (** table of all declared functions *)
   ptr_sz: size_t;                   (** size of pointers in number of bits *)
   src_lang: src_lang;
+  abi: abi_t;
 }
 
 and fundec = {
@@ -209,6 +210,43 @@ and length = int
 and bounds = (Nat.t * Nat.t)
 
 and location = string * int * int
+
+and abi_t = {
+  endianness: endianness;
+  arithmetic_in_structs_allowed: bool;
+  unaligned_ptr_deref_allowed: bool;
+  types: type_conf;
+  max_sizeof: int; (* in bits *)
+  max_array_length: int; (* in bytes *)
+}
+
+and endianness =
+  | BigEndian
+  | LittleEndian
+
+and type_conf = {
+  char_signedness: sign_t;
+  size_of_byte: int;
+
+  sa_ptr:        size_align;
+
+  sa_char:       size_align;
+  sa_short:      size_align;
+  sa_int:        size_align;
+  sa_long:       size_align;
+  sa_longlong:   size_align;
+
+  sa_float:      size_align;
+  sa_double:     size_align;
+  sa_longdouble: size_align;
+
+  sa_void:       size_align; (* for arithmetic on void* *)
+}
+
+and size_align = {
+  size: int;  (* in bits *)
+  align: int; (* in bits *)
+}
 
 let belongs c (l, u) = (Nat.compare l c <= 0) && (Nat.compare c u <= 0)
 
@@ -1538,14 +1576,12 @@ let exp_of_int x = Const (CInt (Nat.of_int x))
 
 let return_value = Temps.return_value
 
-let char_kind =
+let char_kind () =
   let char_signedness =
-   if Config.is_char_type_signed then Signed else Unsigned
+   if !Config.is_char_type_signed then Signed else Unsigned
   in
-    char_signedness, Config.size_of_char
+    (char_signedness, !Config.size_of_char)
 
-let char_typ = Int char_kind
+let char_typ () = Int (char_kind ())
   
 let is_generic_temp name = Temps.is_generic_temp name
-
-let get_config () = Config.get ()

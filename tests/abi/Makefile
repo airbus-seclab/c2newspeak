@@ -1,7 +1,6 @@
-#
 # C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
 # well-suited for static analysis.
-# Copyright (C) 2007, 2011  Charles Hymans, Olivier Levillain, Sarah Zennou
+# Copyright (C) 2007  Charles Hymans, Olivier Levillain
 # 
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -19,26 +18,16 @@
 #
 #
 # Charles Hymans
+# EADS Innovation Works - SE/CS
+# 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
 # email: charles.hymans@penjili.org
 #
-# Sarah Zennou
-# EADS Innovation Works - SE/IT
-# 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
-# email: sarah(dot)zennou(at)eads(dot)net
-#
 
-DIR=c2newspeak mult-files lowspeak npkstats mem_opt npkcheck \
-    newspeak npkstrip ada2newspeak options \
-    simpleai npksolver npkmerger ulimit abi
+COMMAND= $(C2NEWSPEAK) --print-newspeak --abi $*.abi `[ -e $*.in ] && cat $*.in` $*.c
 
-.PHONY: $(DIR)
+TESTS = 000
 
-all: $(DIR)
+PREREQ=%.c
 
-clean: $(DIR)
-
-#WARNING: do not remove the $(MAKCMDGOALS) variable, it is useful to propagate
-#the exact rule
-$(DIR):
-	@$(MAKE) -s -C $@ $(MAKECMDGOALS)
+include ../common.Makefile
 

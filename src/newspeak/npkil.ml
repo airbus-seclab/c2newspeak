@@ -411,10 +411,10 @@ let cast t e t' =
     match (t, t') with
       _ when t = t' -> e
     | (Int _, (Ptr|FunPtr)) when e = zero -> Const Nil
-    | (Ptr, Int ((_, n) as k)) when (n = Config.size_of_ptr) -> 
+    | (Ptr, Int ((_, n) as k)) when (n = !Config.size_of_ptr) -> 
 	print_castor_err t t';
 	UnOp (PtrToInt k, e)
-    | (Int ((_, n) as k), Ptr) when (n = Config.size_of_ptr) -> 
+    | (Int ((_, n) as k), Ptr) when (n = !Config.size_of_ptr) -> 
 	print_castor_err t t';
 	UnOp (IntToPtr k, e)
     | (FunPtr, Ptr) ->
@@ -431,7 +431,7 @@ let cast t e t' =
 	      ^"sign may be lost: "^(string_of_cast t t'))
 	end;
 	UnOp (Cast (t, t'), e)
-    | (Int (_, n), FunPtr) when (n = Config.size_of_ptr) -> 
+    | (Int (_, n), FunPtr) when (n = !Config.size_of_ptr) -> 
 	print_castor_err t t';
 	UnOp (Cast (t, t'), e)
     | _ -> 

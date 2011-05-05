@@ -49,6 +49,7 @@ type t = {
   fundecs: (N.fid, fundec) Hashtbl.t;
   ptr_sz: N.size_t;
   src_lang: N.src_lang;
+  abi: N.abi_t;
 }
 
 and fundec = {

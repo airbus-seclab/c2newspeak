@@ -173,18 +173,17 @@ and offset_exp =
   | OField of aux_offset_exp * string
   | OArray of aux_offset_exp * string * typ_exp
 
-let char_typ = Int (Newspeak.char_kind)
+let char_typ () = Int (Newspeak.char_kind ())
 
-let uint_typ = Int (Newspeak.Unsigned, Config.size_of_int)
+let int_kind () = (Newspeak.Signed, !Config.size_of_int)
 
-let int_kind = (Newspeak.Signed, Config.size_of_int)
-
-let int_typ = Int int_kind
+let uint_typ () = Int (Newspeak.Unsigned, !Config.size_of_int)
+let int_typ () = Int (int_kind ())
 
 (* TODO: put in cir *)
-let exp_of_char c = Cst (Cir.CInt (Nat.of_int (Char.code c)), char_typ)
+let exp_of_char c = Cst (Cir.CInt (Nat.of_int (Char.code c)), char_typ ())
 
-let exp_of_int i = Cst (Cir.CInt (Nat.of_int i), int_typ)
+let exp_of_int i = Cst (Cir.CInt (Nat.of_int i), int_typ ())
 
 let comp_of_typ t =
   match t with
@@ -334,5 +333,5 @@ let rec min_typ t1 t2 =
 	
 let promote k = 
   match k with
-      (_, n) when n < Config.size_of_int -> int_kind
+      (_, n) when n < !Config.size_of_int -> int_kind ()
     | _ -> k

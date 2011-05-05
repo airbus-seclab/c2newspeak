@@ -78,7 +78,7 @@ let process (fname, globals) =
       match (x, t) with
 (* TODO: find a way to simplify/remove this case?? *)
 	  ((Data (Str str)|Sequence ([(None, Data (Str str))])), 
-	   C.Array (C.Int (_, n), _)) when n = Config.size_of_char ->
+	   C.Array (C.Int (_, n), _)) when n = !Config.size_of_char ->
 	    let seq = seq_of_string str in
 	      process (Sequence seq, t)
 
@@ -141,7 +141,7 @@ let process (fname, globals) =
       Npkcontext.report_accept_warning "Csyntax2TypedC.process.find_symb" 
 	("unknown identifier "^x^", maybe a function without prototype") 
 	Npkcontext.MissingFunDecl;
-      let info = (C.Global x, C.Fun (None, C.int_typ)) in
+      let info = (C.Global x, C.Fun (None, C.int_typ ())) in
 	(* TODO: clean up find_compdef + clean up accesses to Symbtbl *)
 	Hashtbl.add symbtbl x info;
 	info
@@ -279,8 +279,8 @@ let process (fname, globals) =
 
   let translate_unop x t = 
     match (x, t) with
-	(Not, C.Int _) -> (C.Not, C.int_typ)
-      | (Not, C.Ptr _) -> (C.Not, C.int_typ)
+	(Not, C.Int _) -> (C.Not, C.int_typ ())
+      | (Not, C.Ptr _) -> (C.Not, C.int_typ ())
       | (BNot, C.Int k) -> 
 (* TODO: function promote should be in CoreC, not in Cir 
    (or even in Csyntax rather?) Or even better in Csyntax2CoreC??? *)
@@ -294,7 +294,7 @@ let process (fname, globals) =
   let translate_binop op t1 t2 = 
     let t_in = 
       match (op, t1, t2) with
-	  (Minus, C.Ptr _, C.Ptr _) -> C.int_typ
+	  (Minus, C.Ptr _, C.Ptr _) -> C.int_typ ()
 
 	| ((Mult|Plus|Minus|Div|Mod|BAnd|BXor|BOr|Gt|Eq), 
 	   C.Int k1, C.Int k2) -> 
@@ -319,7 +319,7 @@ let process (fname, globals) =
     in
     let t_out =
       match op with
-	  Gt|Eq -> C.int_typ
+	  Gt|Eq -> C.int_typ ()
 	| _ -> t_in
     in
     let op =
@@ -410,16 +410,16 @@ let process (fname, globals) =
 	  let ft 	      = refine_ftyp f ft actuals in
 	  let (_, ret_t)      = ft in
 	    (C.Call (f, ft, args), ret_t)
-      | Sizeof t -> (C.Sizeof (translate_typ t), C.uint_typ)
+      | Sizeof t -> (C.Sizeof (translate_typ t), C.uint_typ ())
       | SizeofE e -> 
 	  let (_, t) = translate_lv e in
-	    (C.Sizeof t, C.uint_typ)
+	    (C.Sizeof t, C.uint_typ ())
       | Offsetof (t, e) -> 
 	  let e' = translate_offset_exp e in
-	  (C.Offsetof (translate_typ t, e'), C.uint_typ)
+	  (C.Offsetof (translate_typ t, e'), C.uint_typ ())
       | Str x -> 
 	  let len = C.exp_of_int ((String.length x) + 1) in
-	    (C.Str x, C.Array (C.char_typ, Some len))
+	    (C.Str x, C.Array (C.char_typ (), Some len))
       | FunName -> translate_exp (Str !current_fun)
       | Cast (e, t) -> 
 	  let e = translate_exp e in
@@ -438,7 +438,7 @@ let process (fname, globals) =
 	    (C.Set ((lv, t1), op, (e, t2)), t1)
       | OpExp (op, e, is_after) -> 
 	  let (e, t) = translate_exp e in
-	  let (op, t_in, t_out) = translate_binop op t C.int_typ in
+	  let (op, t_in, t_out) = translate_binop op t (C.int_typ ()) in
 	    (C.OpExp ((op, t_in), (e, t), is_after), t_out)
 
       | BlkExp blk -> 
@@ -450,7 +450,7 @@ let process (fname, globals) =
     let (e, t) = translate_lv e in
       match t with
 	  C.Array (t, len) -> 
-	    (C.AddrOf (C.Index (e, (t, len), (C.exp_of_int 0, C.int_typ)), t), 
+	    (C.AddrOf (C.Index (e, (t, len), (C.exp_of_int 0, C.int_typ ())), t), 
 		       C.Ptr t)
 	| C.Fun _ -> (C.AddrOf (e, t), C.Ptr t)
 	| _ -> (e, t)
@@ -721,7 +721,7 @@ let process (fname, globals) =
     match (x, t) with
 (* TODO: redundant code with complete_init?? *)
 	((Data (Str str)|Sequence ([(None, Data (Str str))])), 
-	 C.Array (C.Int (_, n), _)) when n = Config.size_of_char ->
+	 C.Array (C.Int (_, n), _)) when n = !Config.size_of_char ->
 	  let seq = seq_of_string str in
 	    translate_init t (Sequence seq)
 	      

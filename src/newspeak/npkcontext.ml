@@ -88,6 +88,7 @@ let output_file = ref ""
 let accept_partial_fdecl = ref true
 let accept_missing_fdecl = ref true
 let xml_output = ref ""
+let abi_file = ref ""
 
 type error =
     Asm
@@ -276,6 +277,9 @@ let argslist = [
 
   ("--ansi", Arg.Unit set_ansi,
    "accept only ANSI C + some common rules in embedded software");
+
+  ("--abi", Arg.Set_string abi_file,
+   "gives the name of ABI description file\n");
 
 ]
 

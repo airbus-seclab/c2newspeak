@@ -96,22 +96,22 @@ and add_glb_cstr str =
     if not (Hashtbl.mem globals name) then begin
       let loc = Npkcontext.get_loc () in
       let len = String.length str in	  
-      let t = N.Array (N.Scalar N.char_typ, len + 1) in
+      let t = N.Array (N.Scalar (N.char_typ ()), len + 1) in
 	Hashtbl.add globals name t;
 	(* TODO: think about it, this code is 
 	   redundant with initialization in typedC2Cir *)
 	let offset = ref 0 in
-	let size = Config.size_of_char in
+	let size = !Config.size_of_char in
 	  for i = 0 to len - 1 do
 	    let e = exp_of_char str.[i] in
 (* TODO: factor creation of lv *)
 	    let lv = N.Shift (N.Global name, exp_of_int !offset) in
-	      cstr_init := (N.Set (lv, e, N.char_typ), loc)::!cstr_init;
+	      cstr_init := (N.Set (lv, e, N.char_typ ()), loc)::!cstr_init;
 	      offset := !offset + size
 	  done;
 	  let lv = N.Shift (N.Global name, exp_of_int !offset) in
 	    cstr_init := 
-	      (N.Set (lv, exp_of_char '\x00', N.char_typ), loc)::!cstr_init
+	      (N.Set (lv, exp_of_char '\x00', N.char_typ ()), loc)::!cstr_init
     end;
     N.Global name
     
@@ -125,7 +125,7 @@ and generate_exp e =
 	  generate_addr_of lv (Nat.to_int (generate_tmp_nat sz))
           with 
 	      Invalid_argument "Newspeak.Nat.to_int" -> 
-		generate_addr_of lv Config.max_sizeof
+		generate_addr_of lv !Config.max_sizeof
 	    | Failure "generate_tmp_nat" -> N.AddrOf (generate_lv lv)
       end
     | UnOp (o, e) -> N.UnOp (generate_unop o, generate_exp e)
@@ -162,10 +162,10 @@ and generate_tmp_nat x =
           Nat.mul_int n i
 
 and generate_addr_of lv sz =
-  if (sz > Config.max_sizeof) then begin
+  if (sz > !Config.max_sizeof) then begin
     Npkcontext.report_error "Link.generate_exp" 
       ("size too large: maximum allowed is "
-       ^(string_of_int Config.max_sizeof)^" bits")
+       ^(string_of_int !Config.max_sizeof)^" bits")
   end;
   N.UnOp (N.Focus sz, N.AddrOf (generate_lv lv))
 	    
@@ -401,6 +401,39 @@ let reject_backward_gotos prog =
     reject_blk prog.N.init;
     Hashtbl.iter (fun _ fundec -> reject_blk fundec.N.body) prog.N.fundecs
 
+let make_abi () = {
+  N.endianness =
+    if !Config.is_little_endian then
+      N.LittleEndian
+    else
+      N.BigEndian;
+
+  N.arithmetic_in_structs_allowed = !Config.arithmetic_in_structs_allowed;
+  N.unaligned_ptr_deref_allowed = !Config.unaligned_ptr_deref_allowed;
+  N.max_sizeof = !Config.max_sizeof;
+  N.max_array_length = !Config.max_array_length;
+  N.types = {
+    N.char_signedness =
+      if !Config.is_char_type_signed then
+        N.Signed
+      else
+        N.Unsigned;
+    N.size_of_byte = !Config.size_of_byte;
+    N.sa_void       = {N.size = !Config.size_of_void      ; N.align = !Config.align_of_void      };
+    N.sa_char       = {N.size = !Config.size_of_char      ; N.align = !Config.align_of_char      };
+    N.sa_ptr        = {N.size = !Config.size_of_ptr       ; N.align = !Config.align_of_ptr       };
+    N.sa_short      = {N.size = !Config.size_of_short     ; N.align = !Config.align_of_short     };
+    N.sa_int        = {N.size = !Config.size_of_int       ; N.align = !Config.align_of_int       };
+    N.sa_long       = {N.size = !Config.size_of_long      ; N.align = !Config.align_of_long      };
+    N.sa_longlong   = {N.size = !Config.size_of_longlong  ; N.align = !Config.align_of_longlong  };
+    N.sa_float      = {N.size = !Config.size_of_float     ; N.align = !Config.align_of_float     };
+    N.sa_double     = {N.size = !Config.size_of_double    ; N.align = !Config.align_of_double    };
+    N.sa_longdouble = {N.size = !Config.size_of_longdouble; N.align = !Config.align_of_longdouble};
+
+  }
+}
+
+
 let link npkos =
   Npkcontext.forget_loc ();
     
@@ -421,8 +454,9 @@ let link npkos =
       N.globals = globals;
       N.init = init;
       N.fundecs = fundecs;
-      N.ptr_sz = Config.size_of_ptr;
+      N.ptr_sz = !Config.size_of_ptr;
       N.src_lang = src_lang;
+      N.abi = make_abi ();
     } 
     in
       

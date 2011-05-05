@@ -1,0 +1,28 @@
+
+arithmetic_in_structs_allowed = true
+unaligned_ptr_deref_allowed = true
+is_char_type_signed = true
+is_little_endian = true
+
+size_of_byte = 8
+
+size_of_char = 1
+align_of_char = 8
+size_of_short = 3
+align_of_short = 16
+size_of_int = 5
+align_of_int = 32
+size_of_long = 7
+align_of_long = 32
+size_of_longlong = 9
+align_of_longlong = 64
+size_of_ptr = 11
+align_of_ptr = 32
+
+size_of_float = 13
+align_of_float = 32
+size_of_double = 15
+align_of_double = 64
+size_of_longdouble = 17
+align_of_longdouble = 96
+

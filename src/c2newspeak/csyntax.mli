@@ -154,9 +154,9 @@ val exp_of_int: int -> exp
 
 val exp_of_char: char -> exp
 
-val uint_typ: typ
+val uint_typ: unit -> typ
 
-val long_typ: typ
+val long_typ: unit -> typ
 
 val int_cst_of_lexeme: 
   (string option * string * char option * string option) -> cst

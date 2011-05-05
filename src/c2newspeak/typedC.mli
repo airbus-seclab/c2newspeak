@@ -165,9 +165,9 @@ and offset_exp =
   | OField of aux_offset_exp * string
   | OArray of aux_offset_exp * string * typ_exp
 
-val char_typ	 : typ
-val uint_typ	 : typ
-val int_typ	 : typ
+val char_typ	 : unit -> typ
+val uint_typ	 : unit -> typ
+val int_typ	 : unit -> typ
 
 val exp_of_char	 : char -> exp
 

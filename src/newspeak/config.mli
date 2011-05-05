@@ -28,36 +28,34 @@
   email: sarah(dot)zennou(at)eads(dot)net
 *)
 
-(* sizes in number of bits *)
-type t = {
-  size_of_byte	    : int;
-  max_sizeof	    : int;
-  max_array_length  : int;
-  size_of_char	    : int;
-  size_of_short	    : int;
-  size_of_int	    : int;
-  size_of_long	    : int;
-  size_of_longlong  : int;
-  size_of_ptr	    : int;
-  size_of_float	    : int;
-  size_of_double    : int;
-  size_of_longdouble: int;
-}
-
-val get: unit -> t
-
-val is_char_type_signed: bool
+val is_char_type_signed: bool ref
 (* only defined in gnuc mode *)
-val size_of_void: int
-val size_of_char: int
-val size_of_ptr: int
-val size_of_int: int
-val max_sizeof: int
-val size_of_long: int
-val size_of_longlong: int
-val size_of_double: int
-val size_of_float: int
-val size_of_longdouble: int
-val size_of_short: int
-val size_of_byte: int
-val max_array_length: int
+val size_of_void: int ref
+val size_of_char: int ref
+val size_of_ptr: int ref
+val size_of_int: int ref
+val max_sizeof: int ref
+val size_of_long: int ref
+val size_of_longlong: int ref
+val size_of_double: int ref
+val size_of_float: int ref
+val size_of_longdouble: int ref
+val size_of_short: int ref
+val size_of_byte: int ref
+val max_array_length: int ref
+
+val align_of_void: int ref
+val align_of_char: int ref
+val align_of_ptr: int ref
+val align_of_int: int ref
+val align_of_long: int ref
+val align_of_longlong: int ref
+val align_of_double: int ref
+val align_of_float: int ref
+val align_of_longdouble: int ref
+val align_of_short: int ref
+
+
+val is_little_endian: bool ref
+val arithmetic_in_structs_allowed: bool ref
+val unaligned_ptr_deref_allowed: bool ref

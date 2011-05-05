@@ -121,10 +121,10 @@ and cst =
     | CFloat of (float * string)
 
 (** kind of C int type *)
-val int_kind: Newspeak.ikind
+val int_kind: unit -> Newspeak.ikind
 
 (** type of C int type *)
-val int_typ: typ
+val int_typ: unit -> typ
 
 val exp_of_int: int -> exp
 

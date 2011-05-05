@@ -78,7 +78,7 @@ let rec normalize_base_typ t =
       | Name x -> Hashtbl.find typedefs x
       | Composite (_, (n, _)) -> T.Comp n
       | Typeof v -> T.Typeof (T.Var v)
-      | Enum _ -> T.Int Cir.int_kind
+      | Enum _ -> T.Int (Cir.int_kind ())
   in
     (sdecls, t)
 

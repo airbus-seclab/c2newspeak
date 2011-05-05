@@ -101,6 +101,7 @@ type t = {
   src_lang: src_lang;
                                     (** source language from the program 
 					was compiled *)
+  abi: abi_t;                       (** ABI the program was compiled with *)
 }
 
 and fundec = {
@@ -218,6 +219,43 @@ and bounds = (Nat.t * Nat.t)
 
 and location = string * int * int
 
+and abi_t = {
+  endianness: endianness;
+  arithmetic_in_structs_allowed: bool;
+  unaligned_ptr_deref_allowed: bool;
+  types: type_conf;
+  max_sizeof: int; (* in bits *)
+  max_array_length: int; (* in bytes *)
+}
+
+and endianness =
+  | BigEndian
+  | LittleEndian
+
+and type_conf = {
+  char_signedness: sign_t;
+  size_of_byte: int;
+
+  sa_ptr:        size_align;
+
+  sa_char:       size_align;
+  sa_short:      size_align;
+  sa_int:        size_align;
+  sa_long:       size_align;
+  sa_longlong:   size_align;
+
+  sa_float:      size_align;
+  sa_double:     size_align;
+  sa_longdouble: size_align;
+
+  sa_void:       size_align; (* for arithmetic on void* *)
+}
+
+and size_align = {
+  size: int;  (* in bits *)
+  align: int; (* in bits *)
+}
+
 val unknown_loc: location
 val dummy_loc: string -> location
 
@@ -228,8 +266,8 @@ val one: exp
 val zero_f: exp
 
 (* {1 Manipulation and Simplifications} *)
-val char_kind : ikind
-val char_typ  : scalar_t
+val char_kind : unit -> ikind
+val char_typ  : unit -> scalar_t
 
 (* Given the characteristics of an integer type, [domain_of_typ]
     returns the bounds of the type. *)
@@ -394,6 +432,3 @@ val return_value: string
 (** returns true whenever the parameter is a name of variable
 introduced by Newspeak *)
 val is_generic_temp: string -> string option
-
-(** returns the configuration used to compile to newspeak *)
-val get_config: unit -> Config.t
