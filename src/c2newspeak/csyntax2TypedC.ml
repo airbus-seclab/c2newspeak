@@ -352,7 +352,7 @@ let process (fname, globals) =
 	  let (e, t) = translate_exp e in
 	  let (r, _) = C.comp_of_typ t in
 	  let f_t = find_field f r in
-	    (C.Field ((e, t), f), f_t)
+	    (C.Field ((e, (t)), f), f_t)
 	      (* TODO: should merge Index and Deref in Csyntax, only have one of them!! *)
       | Index (a, idx) -> 
 	  let (a, t) = translate_lv a in

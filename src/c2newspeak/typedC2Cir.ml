@@ -483,7 +483,9 @@ let translate prog =
 	    let access  = translate_exp is_sz e in
 	      check_index_type access (snd e);
 	      translate (Binop ((Plus, Ptr t), (base, Ptr t), e))
-		
+
+	| AddrOf (Field ((_e, t), _f) as lv, _) -> addr_of (translate_lv lv, t)
+
 	| AddrOf (lv, t) -> addr_of (translate_lv lv, t)
 
 	| Unop x -> C.Unop (translate_unop x)

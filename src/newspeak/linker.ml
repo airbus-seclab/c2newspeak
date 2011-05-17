@@ -123,10 +123,8 @@ and generate_exp e =
     | AddrOf (lv, sz) -> begin
         try 
 	  generate_addr_of lv (Nat.to_int (generate_tmp_nat sz))
-          with 
-	      Invalid_argument "Newspeak.Nat.to_int" -> 
-		generate_addr_of lv !Config.max_sizeof
-	    | Failure "generate_tmp_nat" -> N.AddrOf (generate_lv lv)
+        with 
+	    Failure "generate_tmp_nat" -> N.AddrOf (generate_lv lv)
       end
     | UnOp (o, e) -> N.UnOp (generate_unop o, generate_exp e)
     | BinOp (o, e1, e2) -> N.BinOp (o, generate_exp e1, generate_exp e2)
