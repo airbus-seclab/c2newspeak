@@ -25,7 +25,7 @@
 
 COMMAND= $(C2NEWSPEAK) --print-newspeak --abi $*.abi `[ -e $*.in ] && cat $*.in` $*.c
 
-TESTS = 000 001
+TESTS = 000 001 002
 
 PREREQ=%.c
 

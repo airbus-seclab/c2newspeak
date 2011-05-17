@@ -484,7 +484,9 @@ let translate prog =
 	      check_index_type access (snd e);
 	      translate (Binop ((Plus, Ptr t), (base, Ptr t), e))
 
-	| AddrOf (Field ((_e, t), _f) as lv, _) -> addr_of (translate_lv lv, t)
+	| AddrOf (Field ((_e, t), _f) as lv, _)
+               when !Config.arithmetic_in_structs_allowed ->
+            addr_of (translate_lv lv, t)
 
 	| AddrOf (lv, t) -> addr_of (translate_lv lv, t)
 
