@@ -83,66 +83,58 @@ let rec hastype t e =
     | (BinOp (N.Mod, _, _), N.Int _) -> true
     | _ -> false
 
-class checker ptr_sz =
-object (self)
-  inherit Lowspeak.visitor
-
-  method process_length x =
-    if x < 0 
-    then self#raise_error "invalid length for array"
-
-  method process_lval x =
-    let _ =
-      match x with
-	  Shift (_, BinOp (N.MultI, _, Const N.CInt _)) -> ()
-	| Shift (_, Const N.CInt _) -> ()
-	| Shift (_, _) -> self#raise_error "unexpected expression in shift"
-	| _ -> ()
-    in
-      true
-
-  method process_bexp x =
-    let rec check x =
-      match x with
-	  BinOp ((N.Gt _|N.Eq _), _, _) 
-	| UnOp (N.Not, BinOp ((N.Gt _|N.Eq _), _, _)) -> ()
-	| _ -> self#raise_error "unexpected expression as guard"
-    in
-      check x
-
-  method process_stmt (x, _) =
-    let _ = 
-      match x with
-	  Set (_, e, t) ->
-	    if not (hastype t e)
-	    then self#raise_error ("expression of type "^(N.string_of_scalar t)
-				    ^" expected in assignment")
-	| _ -> ()
-    in
-      true
-
-  method process_typ t =
-    let rec check_size t =
+let checker ptr_sz =
+  { Lowspeak.visit_nop with
+    length = (fun x ->
+      if x < 0 
+      then failwith "invalid length for array")
+  ; lval = (fun x ->
+      let _ =
+        match x with
+            Shift (_, BinOp (N.MultI, _, Const N.CInt _)) -> ()
+          | Shift (_, Const N.CInt _) -> ()
+          | Shift (_, _) -> failwith "unexpected expression in shift"
+          | _ -> ()
+      in
+        true)
+  ; bexp = (fun x ->
+      let rec check x =
+        match x with
+            BinOp ((N.Gt _|N.Eq _), _, _) 
+          | UnOp (N.Not, BinOp ((N.Gt _|N.Eq _), _, _)) -> ()
+          | _ -> failwith "unexpected expression as guard"
+      in
+        check x)
+  ; stmt = (fun (x, _) ->
+      let _ = 
+        match x with
+            Set (_, e, t) ->
+              if not (hastype t e)
+              then failwith ("expression of type "^(N.string_of_scalar t)
+          		    ^" expected in assignment")
+          | _ -> ()
+      in
+        true)
+  ; typ = (let rec check_size t =
       match t with
 	  N.Scalar t -> Newspeak.size_of_scalar ptr_sz t
 	| N.Array (t, len) -> 
 	    let n = check_size t in
 	      if len <> 0 && n > max_int/len then begin
-		self#raise_error ("size of type not representable as an int")
+		failwith "size of type not representable as an int"
 	      end;
 	      n * len
 	| N.Region (fields, n) -> 
 	    List.iter (fun (_, t) -> ignore (check_size t)) fields;
 	    n
     in
-    let _ = check_size t in
-      ()
-end
+    fun t -> let _ = check_size t in ())
+  }
 
 let check_file fname =
     let prog = Npk2lpk.translate (Newspeak.read fname) in
-    let checker = new checker prog.Lowspeak.ptr_sz in
-      Lowspeak.visit (checker :> Lowspeak.visitor) prog
+    let checker = checker prog.Lowspeak.ptr_sz in
+      Lowspeak.visit checker prog
 
 let process () = List.iter check_file !inputs
 

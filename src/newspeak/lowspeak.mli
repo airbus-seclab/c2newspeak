@@ -99,6 +99,26 @@ val dump_fundec : string -> fundec -> unit
 
 
 (* Visitor *)
+
+type visitor_t =
+    { mutable loc : Newspeak.location
+    ; gdecl      : string -> Newspeak.typ -> bool
+    ; func       : Newspeak.fid -> fundec -> bool
+    ; func_after : unit -> unit
+    ; stmt       : stmt -> bool
+    ; funexp     : funexp -> bool
+    ; exp        : Newspeak.location -> exp -> bool
+    ; bexp       : exp -> unit
+    ; lval       : lval -> bool
+    ; unop       : Newspeak.unop -> unit
+    ; binop      : Newspeak.binop -> unit
+    ; size_t     : Newspeak.size_t -> unit
+    ; length     : Newspeak.length -> unit
+    ; typ        : Newspeak.typ -> unit
+    }
+
+val visit_nop : visitor_t
+
 class visitor:
 object
   method process_gdecl: string -> Newspeak.typ -> bool
@@ -126,12 +146,7 @@ object
   method raise_error: string -> unit
 end
 
-val visit_assertion: visitor -> assertion -> unit
-val visit_exp: visitor -> exp -> unit
-val visit_blk: visitor -> blk -> unit
-val visit_fun: visitor -> Newspeak.fid -> fundec -> unit
-val visit_glb: visitor -> string -> Newspeak.typ -> unit
-val visit: visitor -> t -> unit
+val visit: visitor_t -> t -> unit
 
 val collect_fid_addrof: t -> Newspeak.fid list
 
