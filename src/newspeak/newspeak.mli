@@ -431,4 +431,4 @@ val return_value: string
 
 (** returns true whenever the parameter is a name of variable
 introduced by Newspeak *)
-val is_generic_temp: string -> string option
+val is_generic_temp: string -> bool
