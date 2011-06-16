@@ -112,7 +112,7 @@ let compile (fname: string): Npkil.t =
     let updated_clauses =   
       List.append clauses (List.rev added_clauses ) in
     let n_ast = ( updated_clauses, libs, locat ) in
-
+      
     let norm_tree = normalization fname n_ast in
     let prog = firstpass_translate fname norm_tree in
     let tr_prog = translate prog in
@@ -146,8 +146,8 @@ let execute () =
      
   let nos = List.map extract_no !Npkcontext.input_files in
     
-    let bods = Normalize.bodies_to_add() in
-
+    let bods =  Normalize.bodies_to_add() in
+		     
     let bods_less_files = List.filter (fun x -> not (
 	 List.mem x !Npkcontext.input_files)) bods 
     in

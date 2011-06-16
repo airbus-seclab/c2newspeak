@@ -48,15 +48,18 @@ let translate_cst c =
       CInt i -> N.CInt i
     | CFloat f -> N.CFloat f
 
+
+
+
 let translate src_lang prog =
-  let glbdecls = Hashtbl.create 100 in
+ 
+ let glbdecls = Hashtbl.create 100 in
   let fundefs = Hashtbl.create 100 in
 
   let used_glbs = ref Set.empty in
 
   (* Hashtbl of already translated types, to as to have some sharing *)
   let translated_typ = Hashtbl.create 100 in
-
   let rec translate_typ t =
     try Hashtbl.find translated_typ t 
     with Not_found ->

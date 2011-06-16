@@ -96,6 +96,7 @@ let normalize_ptr_shift prog =
     L.build builder prog
 
 let translate prog = 
+  
   let fundecs = Hashtbl.create 100 in
   let globals = Hashtbl.create 100 in
 
@@ -138,7 +139,7 @@ let translate prog =
     match (t, e) with
 	(Scalar t, _) -> 
 	  let tr_lv = translate_lval lv in
-	  let tr_ex =  translate_exp e in
+	  let tr_ex = translate_exp e in
 	    (*cast introduce for cast arguments => cast back
 	      let tr_ex_cast = 
 	      L.UnOp (---, translate_exp etr_ex)
@@ -240,7 +241,7 @@ let translate prog =
               pop tmp_var;
 	      L.Decl (x, t, (call, loc)::(set, loc)::[])
         | [] -> prefix_args loc f args args_ids ft
-	    (*BEFORE titi	
+	    (*BEFORE 
 	      | _ -> Npkcontext.report_error "Npk2lpk.suffix_rets" 
 	      "case not implemented yet"
 	    *)
