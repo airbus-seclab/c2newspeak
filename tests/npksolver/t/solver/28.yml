@@ -1,5 +1,0 @@
-  - {id: "main:0", value: {a: "{0}"}}
-  - {id: "main:1", value: {a: "{0}", z: "{0}"}}
-  - {id: "main:2", value: {a: "{0}", y: "{0}", z: "{0}"}}
-  - {id: "main:3", value: {a: "{0}", x: "{0}", y: "{0}", z: "{0}"}}
-  - {id: "main:4", value: {}}

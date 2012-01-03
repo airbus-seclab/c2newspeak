@@ -1,9 +1,0 @@
-  - {id: "main:0", value: {i: "[3;8]"}}
-  - {id: "main:1", value: {i: "[3;8]"}}
-  - {id: "main:2", value: {i: "{0}"}}
-  - {id: "main:3", value: {i: "{0}"}}
-  - {id: "main:4", value: {i: "{0}"}}
-  - {id: "main:5", value: {i: "{0}"}}
-  - {id: "main:6", value: {i: "{0}"}}
-  - {id: "main:7", value: {i: "{0}"}}
-  - {id: "main:8", value: {}}

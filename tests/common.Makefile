@@ -32,7 +32,6 @@ NPKSTATS=../../bin/npkstats
 NPKSTRIP=../../bin/npkstrip
 NPKCHECK=../../bin/npkcheck
 SIMPLEAI=../../bin/simpleai
-NPKSOLVER=../../bin/npksolver
 NPKMERGER=../../bin/npkmerger
 
 ifeq ($(strip $(DIFF)),)
