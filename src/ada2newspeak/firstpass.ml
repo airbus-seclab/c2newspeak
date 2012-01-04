@@ -556,7 +556,8 @@ let translate compil_unit =
 	  curpkg := Some name;
           (match package_spec with
              | None -> ()
-             | Some(_, basic_decls) ->	  
+             | Some(_, basic_decls) ->
+		 (*TODO check if this case does happen *) 
 	         List.iter 
 		   translate_global_basic_declaration 
 		   basic_decls;

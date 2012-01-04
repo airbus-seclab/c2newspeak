@@ -87,13 +87,13 @@ let is_string_litteral s =
   * Takes a regexp description **with a grouping pattern** and
   * extracts the matching part.
   *)
-let extract_group (re:string) (s:string) :string option =
+let extract_group (re:string) (s:string) :bool =
   if Str.string_match (Str.regexp re) s 0 then
     try
-      Some (Str.matched_group 1 s)
-    with Not_found -> None
+      let _ = Str.matched_group 1 s in true
+    with Not_found -> false
   else
-  None
+    false
 
 let is_value_of =
   extract_group ( "^"
@@ -121,3 +121,8 @@ let is_generic_temp =
                 ^ Str.quote sep ^ "[0-9]+"
                 ^ "$"
                 )
+
+let is_fun_arg =
+  extract_group ( "arg" ^ Str.quote sep ^ "[0-9]+"
+		  ^ "$"
+		)

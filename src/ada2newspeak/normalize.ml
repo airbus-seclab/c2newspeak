@@ -168,9 +168,9 @@ let rec resolve_selected ?expected_type n =
    match n with
      | SName (Var pfx, fld) -> begin
          try
-           let (_, (act_id, t, _)) = Sym.find_variable gtbl (None, pfx) in
+           let (sc, (act_id, t, _)) = Sym.find_variable gtbl (None, pfx) in
            let (off, tf) = T.record_field t fld in
-           let lv = Ast.Var (Sym.Lexical, act_id, t) in
+           let lv = Ast.Var (sc, act_id, t) in
              SelectedRecord (lv , off, tf)
      	 with Not_found -> resolve_variable (Some pfx) fld
        end
@@ -272,10 +272,14 @@ let parse_specification name =
   let spec_ast =
     if Sys.file_exists spec_name
     then begin
+      
+      (*>useless except from procedure BODIES  *)
       if ((Sys.file_exists body_name) && 
 	    (not ( List.mem body_name !body_tbl))) 
       then body_tbl := body_name::!body_tbl
-      ;
+      ;      
+      (*<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*)
+
 
       let res = File_parse.parse spec_name in
 	if (!Npkcontext.verb_ast) then begin
@@ -1071,6 +1075,11 @@ and add_representation_clause id aggr loc =
   
 and parse_extern_specification name =
   Npkcontext.print_debug "Parsing extern specification file";
+  (*TODO CHECK
+    print_endline (if   (Hashtbl.mem spec_tbl name)  
+		 then (name^" deja inclus") else "--"
+		); 
+  *)
   let spec_ast = parse_specification name in
     let norm_spec = normalization spec_ast in
       Npkcontext.print_debug "Done parsing extern specification file";
@@ -2222,19 +2231,58 @@ and normalize_body body  = match body with
 	      Ast.SubProgramBody (norm_subprog_decl, block)
 
   | PackageBody(name, package_spec, decl_part) ->
-      let (nname,nspec) = normalize_package_spec
-        (with_default package_spec
-           (parse_package_specification name)
-        )
-      in
-	Sym.set_current gtbl name;
-        Sym.enter_context ~name ~desc:"Package body" gtbl;
-        let ndp = normalize_decl_part decl_part in
-        let norm_spec = (nname,nspec) in
-        check_package_body_against_spec ~body:ndp ~spec:norm_spec;
-        Sym.reset_current gtbl;
-        Sym.exit_context gtbl;
-	Ast.PackageBody (name, Some norm_spec, ndp)
+      if (Hashtbl.mem spec_tbl name)  then  
+	begin
+	  Sym.set_current gtbl name;
+	  Sym.enter_context ~name ~desc:"Package body" gtbl;
+	  let (nname,nspec) = 
+	    let rec normalize_decls decls =
+	    List.flatten (List.map (fun (decl, loc) ->
+				      Npkcontext.set_loc loc;
+				      List.map (fun x -> (x,loc))
+					(normalize_basic_decl decl loc)
+				   ) decls)
+	    in
+	      match package_spec with
+		| None ->  begin 
+		    let (_ ,sp,_) =  Hashtbl.find spec_tbl name in
+		      match sp with 
+			  Ast.PackageSpec (_, n_spec) -> (name, n_spec)
+			|  _ ->   Npkcontext.report_error "Normalize"
+			     ("unexpected format for "^
+				"specification found in table")
+			      
+		  end
+		    
+		| Some (_n, ds) -> 
+		    let n_spec = normalize_decls ds in
+		      (name,  n_spec)			
+	  in
+	  let ndp = normalize_decl_part decl_part in
+          let norm_spec = (nname,nspec) in
+            check_package_body_against_spec ~body:ndp ~spec:norm_spec;
+            Sym.reset_current gtbl;
+            Sym.exit_context gtbl;
+	    Ast.PackageBody (name, Some norm_spec , ndp)
+	end    
+	  
+      else
+	let (nname,nspec) = 
+	  normalize_package_spec
+	    (with_default package_spec 
+	       (parse_package_specification name)
+	    )
+	in
+	  Sym.set_current gtbl name;
+          Sym.enter_context ~name ~desc:"Package body" gtbl;
+          let ndp = normalize_decl_part decl_part in
+          let norm_spec = (nname,nspec) in
+            check_package_body_against_spec ~body:ndp ~spec:norm_spec;
+            Sym.reset_current gtbl;
+            Sym.exit_context gtbl;
+	    Ast.PackageBody (name, Some norm_spec, ndp)
+	      
+
 
 and normalize_lib_item lib_item loc =
   Npkcontext.set_loc loc;
@@ -2247,7 +2295,6 @@ and normalize_lib_item lib_item loc =
 	      (SubprogramBody ( Subprogram(n,_,_), _, _)) -> 
 		set_package:=Some n;
 	    | _ -> ()
-		
 	end;
 	let tmp = Ast.Body (normalize_body body) in
 	  set_package:=previous_val
@@ -2299,7 +2346,7 @@ and normalize_context context =
 		in
 		  add_extern_spec norm_spec; 
 		  (*Only add b_decls that are not in spec_tbl? *)
-		  Hashtbl.add spec_tbl nom (b_decls, norm_spec, loc);
+		  Hashtbl.add spec_tbl nom (b_decls, norm_spec, loc);	
 		  (b_decls)@((norm_spec, loc)::ctx)
 	      end
 	    else 	
@@ -2330,8 +2377,11 @@ and normalization compil_unit =
   let cu_name = compilation_unit_name compil_unit in
     Npkcontext.print_debug ("Semantic checking " ^ cu_name ^ "...");
     let (context, lib_item,loc) = compil_unit in
+
     let norm_context = normalize_context context in
+     
     let norm_lib_item = normalize_lib_item lib_item loc in 
+
       Npkcontext.forget_loc ();
       Npkcontext.print_debug ("Done semantic checking " ^ cu_name);
        (norm_context, norm_lib_item, loc)

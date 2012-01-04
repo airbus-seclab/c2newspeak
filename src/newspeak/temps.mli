@@ -84,41 +84,32 @@ val is_special : string -> bool
 val is_string_litteral : string -> bool
 
 (**
-  * Return values, inside the function.
-  *
-  *   is_return_value (Temps.to_string _ Return) = true
+  * Returns true if the parameter is a return value inside the function
   *)
 val is_return_value : string -> bool
 
 (**
-  * Return values, in the caller.
-  * Returns `Some function_name` for a return value, `None` otherwise.
-  *
-  *   is_value_of (Temps.to_string _ (Value_of s)) = Some s
-  *)
-val is_value_of : string -> string option
+  * Returns true if the parameter is a return value in the caller
+*)
+val is_value_of : string -> bool
 
 (**
-  * Generic values.
-  * Each generic value has a domain. Returns `Some domain` for those variables,
-  * `None` otherwise.
-  *
-  *   is_generic_temp (Temps.to_string _ (Misc s)) = Some s
-  *)
-val is_generic_temp : string -> string option
+  * Returns true if the parameter is a generic values
+*)
+val is_generic_temp : string -> bool
 
 (**
-  * Goto labels created during goto elimination pass.
-  * Return `Some label` for those variables, `None` otherwise.
-  *
-  *   is_goto_label (Temps.to_string _ (Goto_label s)) = Some s
-  *)
-val is_goto_label : string -> string option
+   * Returns true if the parameter is a function argument
+*)
+val is_fun_arg : string -> bool
+
+(** 
+    * Returns true if the parameter is a goto label created during 
+    * goto elimination pass 
+*)
+val is_goto_label : string -> bool
 
 (**
-  * Ada overloaded operators.
-  * Return `Some op_name` for those variables, `None` otherwise.
-  *
-  *   is_ada_operator (Temps.to_string _ (Ada_operator op)) = Some op
-  *)
-val is_ada_operator : string -> string option
+   * Returns true if the parameter is a Ada overloaded operators
+*)
+val is_ada_operator : string -> bool
