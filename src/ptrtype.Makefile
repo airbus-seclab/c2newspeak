@@ -21,10 +21,13 @@
 # 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
 
 TARGET=ptrtype
-DIRS=newspeak/ utils/ npkcheck/
+DIRS=newspeak/ utils/ ptrtype/
+
+MODS=tyspeak npk2tpk ptrtype
+
 FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
      newspeak/newspeak utils/standardApplication newspeak/npkcontext \
-     newspeak/lowspeak  newspeak/npk2lpk ptrtype/ptrtype
+     newspeak/lowspeak  newspeak/npk2lpk $(addprefix ptrtype/, $(MODS))
 LIBX=nums.cmxa str.cmxa
 
 include common.Makefile
