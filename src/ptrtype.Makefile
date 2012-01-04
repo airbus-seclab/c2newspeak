@@ -21,7 +21,7 @@
 # 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
 
 TARGET=ptrtype
-DIRS=newspeak/ ptrtype/
+DIRS=newspeak/ utils/ npkcheck/
 FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
      newspeak/newspeak utils/standardApplication newspeak/npkcontext \
      newspeak/lowspeak  newspeak/npk2lpk ptrtype/ptrtype

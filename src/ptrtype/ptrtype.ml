@@ -21,7 +21,33 @@
  * 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
  *)
 
+let process_npk npk =
+  Newspeak.dump npk
+
+let exit_error msg =
+  print_endline msg;
+  print_endline "Exiting.";
+  exit 1
+
+let with_npk f fname =
+  try
+    f (Newspeak.read fname)
+  with Sys_error e -> exit_error e
+
+let process_file =
+  with_npk process_npk
+
 let main () =
-  print_endline "ptrtype"
+  let speclist = [] in
+  let inputs = ref [] in
+  let add_file file =
+    inputs := file::!inputs
+  in
+  let usage_msg = "ptrtype file.npk" in
+  let process () =
+    let files = List.rev (!inputs) in
+    List.iter process_file files
+  in
+  StandardApplication.launch speclist add_file usage_msg process
 
 let _ = main ()
