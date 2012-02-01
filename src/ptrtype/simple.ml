@@ -81,23 +81,58 @@ end = struct
     List.mem lbl env.lbls
 end
 
-let rec check_exp env (be, _te) =
+let const_compatible cst ty =
+  match (cst, ty) with
+  | (N.CInt _, Int) -> true
+  | (N.Nil, Ptr _) -> true
+  | _ -> false
+
+let binop_compatible ret op a b =
+  match (ret, op, a, b) with
+  | (Int, (N.PlusI|N.MinusI
+          |N.MultI|N.DivI|N.Mod), Int, Int) -> true
+  | (Int, N.Eq st, _, _) -> (a = b) && scalar_compatible st a
+  | (Int, N.Gt st, Int, Int) -> scalar_compatible st Int
+  | (Int, (N.BOr _|N.BAnd _|N.BXor _|N.Shiftlt|N.Shiftrt), Int, Int) -> true
+  | (Ptr tr, N.PlusPI, Ptr ta, Int) -> tr = ta
+  | (Int, N.MinusPP, Ptr ta, Ptr tb) -> ta = tb
+  | _ -> false
+
+let unop_compatible ret op e =
+  match (ret, op, e) with
+  | (_, (N.Belongs _|N.Coerce _|N.Focus _), _) -> ret = e
+  | (Int, (N.Not|N.BNot _), Int) -> true
+  | (Int, N.PtrToInt _, Ptr _) -> true
+  | (Ptr _, N.IntToPtr _, Int) -> true
+  | (_, N.Cast (sret, se), _) ->
+      (scalar_compatible sret ret && scalar_compatible se e)
+  | _ -> false
+
+let rec check_exp env (be, te) =
   (*
    * General idea :
-   *   - check subexps
-   *   - check result <- TODO
+   *   - check subexps (generic)
+   *   - check result (specific)
    *)
   match be with
-  | T.Const _ -> ()
+  | T.Const c -> tc_assert (const_compatible c te)
   | T.Lval (lv, ty) ->
       let t_lv = Env.get env lv in
-      same_type t_lv ty
-  | T.AddrOf _ -> ()
-  | T.BinOp (_op, a, b) ->
+      same_type t_lv ty;
+      same_type te ty;
+  | T.AddrOf lv ->
+      let t_lv = Env.get env lv in
+      same_type te (Ptr t_lv)
+  | T.BinOp (op, a, b) ->
+      let (_, ta) = a in
+      let (_, tb) = b in
       check_exp env a;
-      check_exp env b
-  | T.UnOp (_op, e) ->
-      check_exp env e
+      check_exp env b;
+      tc_assert (binop_compatible te op ta tb)
+  | T.UnOp (op, e) ->
+      let (_, top) = e in
+      check_exp env e;
+      tc_assert (unop_compatible te op top)
   | T.AddrOfFun (_fid, _ftyp) -> assert false
 
 (*
