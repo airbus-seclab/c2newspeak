@@ -23,7 +23,7 @@
 TARGET=ptrtype
 DIRS=newspeak/ utils/ ptrtype/
 
-MODS=tyspeak npk2tpk ptrtype
+MODS=simple tyspeak npk2tpk ptrtype
 
 FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
      newspeak/newspeak utils/standardApplication newspeak/npkcontext \
