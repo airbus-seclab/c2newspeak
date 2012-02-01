@@ -47,19 +47,19 @@ let same_type (x:simple) y =
   tc_assert (x = y)
 
 module Env : sig
-  type t
+  type ('a, 'b) t
 
-  val empty : t
+  val empty : ('a, 'b) t
 
-  val get : t -> simple T.lval -> simple
-  val add : simple T.lval -> simple -> t -> t
+  val get : ('a, 'b) t -> 'a -> 'b
+  val add : 'a -> 'b -> ('a, 'b) t -> ('a, 'b) t
 
-  val add_lbl : Newspeak.lbl -> t -> t
-  val has_lbl : Newspeak.lbl -> t -> bool
+  val add_lbl : Newspeak.lbl -> ('a, 'b) t -> ('a, 'b) t
+  val has_lbl : Newspeak.lbl -> ('a, 'b) t -> bool
 end = struct
 
-  type t =
-    { lvals : (simple T.lval * simple) list
+  type ('a, 'b) t =
+    { lvals : ('a * 'b) list
     ; lbls  : Newspeak.lbl list
     }
 
