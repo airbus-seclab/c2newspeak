@@ -113,7 +113,9 @@ and 'ty lval =
   | Deref  of ('ty exp * Newspeak.size_t)
   | Shift  of ('ty lval * 'ty exp)
 
-and 'ty exp =
+and 'ty exp = ('ty bexp * 'ty)
+
+and 'ty bexp =
     Const     of Newspeak.cst
   | Lval      of ('ty lval * 'ty)
   | AddrOf    of 'ty lval

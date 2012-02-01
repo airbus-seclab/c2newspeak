@@ -22,7 +22,7 @@
  *)
 
 let process_npk npk =
-  let tpk = Npk2tpk.convert ignore npk in
+  let tpk = Npk2tpk.convert ignore () npk in
   Tyspeak.dump (fun () -> "TTTT") tpk
 
 let exit_error msg =

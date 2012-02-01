@@ -21,4 +21,4 @@
  * 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
  *)
 
-val convert : (Newspeak.typ -> 'a) -> Newspeak.t -> 'a Tyspeak.t
+val convert : (Newspeak.typ -> 'a) -> 'a -> Newspeak.t -> 'a Tyspeak.t

@@ -31,7 +31,13 @@ let hashtbl_map
     Hashtbl.iter (fun k v -> Hashtbl.add h' k (f v)) h;
     h'
 
-let convert to_ty npk =
+(*
+ * Tyspeak builder.
+ *
+ * to_ty will be applied for every Newspeak.ty.
+ * nil_ty will be added as a label for exery 'ty T.exp.
+ *)
+let convert to_ty nil_ty npk =
   let c_globals =
     hashtbl_map to_ty
   in
@@ -47,13 +53,14 @@ let convert to_ty npk =
     | N.Global s -> T.Global s
     | N.Deref (e, sz) -> T.Deref (c_exp e, sz)
     | N.Shift (lv, e) -> T.Shift (c_lv lv, c_exp e)
-  and c_exp = function
+  and c_bexp = function
     | N.Const c -> T.Const c
     | N.Lval (lv, ty) -> T.Lval (c_lv lv, to_ty ty)
     | N.AddrOf lv -> T.AddrOf (c_lv lv)
     | N.AddrOfFun (s, fty) -> T.AddrOfFun (s, c_fty fty)
     | N.UnOp (op, e) -> T.UnOp (op, c_exp e)
     | N.BinOp (op, e1, e2) -> T.BinOp (op, c_exp e1, c_exp e2)
+  and c_exp e = (c_bexp e, nil_ty)
   in
 
   let c_args =

@@ -80,7 +80,9 @@ and 'ty lval =
   | Deref  of ('ty exp * Newspeak.size_t)
   | Shift  of ('ty lval * 'ty exp)
 
-and 'ty exp =
+and 'ty exp = ('ty bexp * 'ty)
+
+and 'ty bexp =
     Const     of Newspeak.cst
   | Lval      of ('ty lval * 'ty)
   | AddrOf    of 'ty lval
@@ -191,7 +193,10 @@ let rec string_of_lval sty lv =
 
 and string_of_args sty args = string_of_list (string_of_exp sty) args
 
-and string_of_exp sty e =
+and string_of_exp sty (e, ty) =
+  "(" ^ string_of_bexp sty e ^ " : " ^ sty ty ^ ")"
+
+and string_of_bexp sty e =
   match e with
       Const c 		  -> string_of_cst c
     | Lval (lv, t) 	  -> (string_of_lval sty lv)^"_"^(sty t)
@@ -383,13 +388,6 @@ let read name =
   with Failure "input_value: bad object" -> 
     invalid_arg ("Newspeak.read: "^name^" is not an .npk file")
 
-
-let rec addr_of_deref lv = 
-  match lv with
-      Deref (e, _) -> e
-    | Shift (lv, i) -> BinOp (PlusPI, addr_of_deref lv, i)
-    | _ -> raise Not_found
-
 let nat_op op =
   match op with
       PlusI -> Nat.add
@@ -404,8 +402,6 @@ struct
 end
 
 module LblSet = Set.Make(Lbl)
-(* TODO: try to implement it with a builder
-   or propose a different kind of builder? *)
 
 let has_goto lbl x =
   let rec blk_has_goto x = List.exists has_goto x
@@ -439,371 +435,6 @@ let rec normalize_loop blk =
     | hd::tl -> hd::(normalize_loop tl)
     | [] -> []
 
-let rec build builder prog = 
-  let globals' = Hashtbl.create 100 in
-  let fundecs' = Hashtbl.create 100 in
-  let build_global x gdecl = 
-    let gdecl = build_gdecl builder gdecl in
-    let gdecl = builder#process_global x gdecl in
-      Hashtbl.add globals' x gdecl
-  in
-  let build_fundec f fundec =
-    builder#set_curloc unknown_loc;
-    let fundec = build_fundec builder fundec in
-      Hashtbl.add fundecs' f fundec
-  in
-    Hashtbl.iter build_global prog.globals;
-    Hashtbl.iter build_fundec prog.fundecs;
-    { prog with globals = globals'; fundecs = fundecs' }
-
-and build_gdecl builder t =
-  build_typ builder t
-
-and build_fundec builder fd = 
-  let (args_t, ret_t) = build_formal_ftyp builder (fd.args, fd.rets) in
-    { args = args_t;
-      rets = ret_t;
-      body = build_blk builder fd.body;
-      position = fd.position;
-    }
-
-and build_typ builder t =
-  match t with
-      Scalar t 		  -> Scalar (build_scalar_t builder t)
-    | Array (t, n) 	  ->
-        let t = build_typ builder t in
-          Array (t, n)
-    | Region (fields, sz) ->
-        let fields = List.map (build_field builder) fields in
-        let sz = build_size_t builder sz in
-          Region (fields, sz)
-
-and build_scalar_t builder t =
-  match t with
-      Int k ->
-        let k = build_ikind builder k in
-          Int k
-    | Float sz ->
-        let sz = build_size_t builder sz in
-          Float sz
-    | Ptr -> t
-    | FunPtr -> t
-
-and build_field builder (o, t) =
-  let o = build_offset builder o in
-  let t = build_typ builder t in
-    (o, t)
-
-and build_ikind builder (sign, sz) =
-  let sz = build_size_t builder sz in
-    (sign, sz)
-
-and build_formal_ftyp builder (args, ret) =
-  let build_arg (x, t) = (x, build_typ builder t) in
-  let args 	       = List.map build_arg args in
-  let ret 	       = List.map build_arg ret in
-    (args, ret)
-
-and build_ftyp builder (args, ret) =
-  let args = List.map (build_typ builder) args in
-  let ret  = List.map (build_typ builder) ret in
-    (args, ret)
-
-and build_cell builder (o, t, e) =
-  let o = build_size_t builder o in
-  let t = build_scalar_t builder t in
-  let e = build_exp builder e in
-    (o, t, e)
-
-and build_offset builder o = builder#process_offset o
-
-and build_size_t builder sz = builder#process_size_t sz
-
-and build_blk builder blk = 
-  let blk =
-    match blk with
-        hd::tl -> 
-          let hd = build_stmt builder hd in
-          let tl = build_blk builder tl in
-            hd::tl
-      | [] -> []
-  in
-    builder#process_blk blk
-
-and build_stmt builder (x, loc) =
-  builder#set_curloc loc;
-  let x = build_stmtkind builder x in
-    (x, loc)
-
-and build_stmtkind builder x =
-  builder#enter_stmtkind x; 
-  let x = 
-    match x with
-        Set (lv, e, t) ->
-          let lv = build_lval builder lv in
-          let e = build_exp builder e in
-          let t = build_scalar_t builder t in
-            Set (lv, e, t)
-              
-      | Copy (lv1, lv2, n) ->
-          let lv1 = build_lval builder lv1 in
-          let lv2 = build_lval builder lv2 in
-          let n = build_size_t builder n in
-            Copy (lv1, lv2, n)
-              
-      | Guard b -> Guard (build_exp builder b)
-
-      | Decl (x, t, body) ->
-          let t = build_typ builder t in
-          let body = build_blk builder body in
-            Decl (x, t, body)
-              
-      | Select (body1, body2) -> 
-          Select (build_blk builder body1, build_blk builder body2)
-              
-      | InfLoop body -> InfLoop (build_blk builder body)
-              
-      | DoWith (body, lbl) -> DoWith (build_blk builder body, lbl)
-              
-      | Goto lbl -> Goto lbl
-          
-      | Call (args, fn, ret_vars) -> 
-          let args' = List.map (fun (x, t) -> (build_exp builder x, t)) args in
-	  let ret_vars = 
-	    List.map (fun (x, t) -> (build_lval builder x, t)) ret_vars 
-	  in
-          let fn' = build_funexp builder fn in
-            Call (args', fn', ret_vars)
-
-      | UserSpec assertion -> 
-          let assertion = List.map (build_token builder) assertion in
-            UserSpec assertion
-  in
-    builder#process_stmtkind x
-
-and build_token builder x =
-  match x with
-      LvalToken (lv, t) -> LvalToken ((build_lval builder lv), t)
-    | _ -> x
-
-and build_choice builder (cond, body) =
-  let cond = List.map (build_exp builder) cond in
-  let body = build_blk builder body in
-    (cond, body)
-
-and build_funexp builder fn =
-  match fn with
-      FunId f -> FunId f
-    | FunDeref e -> FunDeref (build_exp builder e)
-
-and build_lval builder lv =
-  let lv =
-    match lv with
-        Local x -> Local x
-      | Global str -> Global str
-      | Deref (e, sz) -> 
-          let e = build_exp builder e in
-          let sz = build_size_t builder sz in
-            Deref (e, sz)
-      | Shift (lv, e) ->
-          let lv = build_lval builder lv in
-          let e = build_exp builder e in
-            Shift (lv, e)
-  in
-    builder#process_lval lv
-
-and build_exp builder e =
-  let e =
-    match e with
-        Const c -> Const c
-      | Lval (lv, s) ->
-          let lv' = build_lval builder lv in
-          let s' = build_typ builder s in
-            Lval (lv', s')
-      | AddrOf lv -> 
-          let lv' = build_lval builder lv in
-            AddrOf lv'
-      | AddrOfFun f -> AddrOfFun f
-      | UnOp (op, e) ->
-          let op = build_unop builder op in
-          let e = build_exp builder e in
-            UnOp (op, e)
-      | BinOp (op, e1, e2) ->
-          let op = build_binop builder op in
-          let e1 = build_exp builder e1 in
-          let e2 = build_exp builder e2 in
-            BinOp (op, e1, e2)
-  in
-    builder#process_exp e
-
-and build_unop builder op =
-  match op with
-      PtrToInt k ->
-        let k = build_ikind builder k in
-          PtrToInt k
-    | IntToPtr k ->
-        let k = build_ikind builder k in
-          IntToPtr k
-    | Cast (t1, t2) ->
-        let t1 = build_scalar_t builder t1 in
-        let t2 = build_scalar_t builder t2 in
-          Cast (t1, t2)
-    | Focus sz -> Focus (build_size_t builder sz)
-    | Belongs _ | Coerce _ | Not | BNot _-> op
-
-and build_binop builder op =
-  match op with
-      PlusF sz -> PlusF (build_size_t builder sz)
-    | MinusF sz -> MinusF (build_size_t builder sz)
-    | MultF sz -> MultF (build_size_t builder sz)
-    | DivF sz -> DivF (build_size_t builder sz)
-    | MinusPP -> MinusPP
-    | Gt t -> Gt (build_scalar_t builder t)
-    | Eq t -> Eq (build_scalar_t builder t)
-    | PlusI | MinusI | MultI | DivI | Mod
-    | BOr _ | BAnd _ | BXor _ | Shiftlt | Shiftrt | PlusPI -> op
-
-let visit_size_t visitor x = visitor#process_size_t x
-
-let visit_length visitor x = visitor#process_length x
-
-let visit_ikind visitor (_, sz) = visit_size_t visitor sz
-
-let visit_scalar_t visitor t =
-  match t with
-      Int k -> visit_ikind visitor k
-    | Float sz -> visit_size_t visitor sz
-    | Ptr -> ()
-    | FunPtr -> ()
-
-let visit_typ visitor t = 
-  visitor#process_typ t;
-  let rec visit_typ t =
-    match t with
-        Scalar t -> visit_scalar_t visitor t
-      | Array (t, n) -> 
-          visit_typ t;
-          visit_length visitor n
-      | Region (fields, sz) ->
-          List.iter (fun (_, t) -> visit_typ t) fields;
-          visit_size_t visitor sz
-  in
-    visit_typ t
-
-let visit_ftyp visitor (args, ret) =
-  List.iter (visit_typ visitor) args;
-  List.iter (visit_typ visitor) ret
-
-let rec visit_lval visitor x =
-  let continue = visitor#process_lval x in
-    match x with
-        Deref (e, sz) when continue -> 
-          visit_exp visitor e;
-          visit_size_t visitor sz
-      | Shift (lv, e) when continue ->
-          visit_lval visitor lv;
-          visit_exp visitor e
-      | _ -> ()
-  
-and visit_exp visitor x =
-  let continue = visitor#process_exp x in
-    if continue then begin
-      match x with
-          Lval (lv, _) -> visit_lval visitor lv
-        | AddrOf lv -> visit_lval visitor lv
-        | UnOp (op, e) -> 
-            visitor#process_unop op;
-            visit_exp visitor e
-        | BinOp (bop, e1, e2) ->
-            visitor#process_binop bop;
-            visit_binop visitor bop;
-            visit_exp visitor e1;
-            visit_exp visitor e2
-        | _ -> ()
-    end
-
-and visit_binop visitor op =
-  match op with
-      PlusF sz | MinusF sz | MultF sz | DivF sz -> visit_size_t visitor sz
-    | _ -> ()
-
-let visit_funexp visitor x =
-  let continue = visitor#process_funexp x in
-    match x with
-        FunDeref e when continue -> visit_exp visitor e
-      | _ -> ()
-
-let rec visit_blk visitor x = List.iter (visit_stmt visitor) x
-    
-and visit_stmt visitor (x, loc) =
-  visitor#set_loc loc;
-  let continue = visitor#process_stmt (x, loc) in
-    if continue then begin
-      match x with
-          Set (lv, e, _) -> 
-            visit_lval visitor lv;
-            visit_exp visitor e
-        | Copy (lv1, lv2, sz) ->
-            visit_lval visitor lv1;
-            visit_lval visitor lv2;
-            visit_size_t visitor sz
-        | Guard b -> 
-            visitor#process_bexp b;
-            visit_exp visitor b
-        | Decl (_, t, body) -> 
-            visit_typ visitor t;
-            visit_blk visitor body
-        | Call (args, fn, ret_vars) ->
-	    let visit_arg (x, t) = 
-	      visit_exp visitor x;
-	      visit_typ visitor t
-	    in
-	    let visit_ret (x, t) =
-	      visit_lval visitor x;
-	      visit_typ visitor t
-	    in
-              List.iter visit_arg args;
-	      List.iter visit_ret ret_vars;
-              visit_funexp visitor fn
-        | Select (body1, body2) -> 
-            visitor#set_loc loc;
-            visit_blk visitor body1;
-            visitor#set_loc loc;
-            visit_blk visitor body2
-        | InfLoop x -> visit_blk visitor x
-        | DoWith (body, _) -> visit_blk visitor body
-        | Goto _ -> ()
-        | UserSpec assertion -> visit_assertion visitor assertion
-    end else ()
-
-and visit_assertion visitor x = List.iter (visit_token visitor) x
-
-and visit_token builder x =
-  match x with
-      LvalToken (lv, t) -> 
-        visit_lval builder lv;
-        visit_typ builder t
-    | _ -> ()
-
-let visit_fun visitor fid ft =
-  let continue = visitor#process_fun fid ft in
-  if continue then begin
-    visit_ftyp visitor ((List.map snd ft.args), List.map snd ft.rets);
-    visit_blk visitor ft.body;
-    visitor#process_fun_after ()
-  end
-
-let visit_init visitor (_, _, e) = visit_exp visitor e
-
-let visit_glb visitor id t =
-  let continue = visitor#process_gdecl id t in
-    if continue then visit_typ visitor t
-
-let visit visitor prog =
-  Hashtbl.iter (visit_glb visitor) prog.globals;
-  visit_blk visitor prog.init;
-  Hashtbl.iter (visit_fun visitor) prog.fundecs
-
 let max_ikind = max
 
 let rec equal_stmt (x1, _) (x2, _) =
@@ -818,25 +449,6 @@ let rec equal_stmt (x1, _) (x2, _) =
     | _ -> x1 = x2
   
 and equal_blk x1 x2 = List.for_all2 equal_stmt x1 x2
-
-let rec belongs_of_exp x =
-  match x with
-      Lval (lv, _) | AddrOf lv -> belongs_of_lval lv
-    | UnOp (Belongs b, e)      -> (b, e)::(belongs_of_exp e)
-    | UnOp (_, e) 	       -> belongs_of_exp e 
-    | BinOp (_, e1, e2)        -> (belongs_of_exp e1)@(belongs_of_exp e2)
-    | _ 		       -> []
-
-and belongs_of_lval x =
-  match x with
-      Deref (e, _) -> belongs_of_exp e
-    | Shift (lv, e) -> (belongs_of_lval lv)@(belongs_of_exp e)
-    | _ -> []
-
-let belongs_of_funexp x =
-  match x with
-      FunDeref e -> belongs_of_exp e
-    | _ -> []
 
 let exp_of_int x = Const (CInt (Nat.of_int x))
 
