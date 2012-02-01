@@ -53,20 +53,37 @@ let check_exp (_be, _te) =
 
 module Env : sig
   type t
+
   val empty : t
+
   val get : t -> simple T.lval -> simple
   val add : simple T.lval -> simple -> t -> t
+
+  val add_lbl : Newspeak.lbl -> t -> t
+  val has_lbl : Newspeak.lbl -> t -> bool
 end = struct
 
-  type t = (simple T.lval * simple) list
+  type t =
+    { lvals : (simple T.lval * simple) list
+    ; lbls  : Newspeak.lbl list
+    }
 
-  let empty = []
+  let empty =
+    { lvals = []
+    ; lbls  = []
+    }
 
   let get env k =
-    List.assoc k env
+    List.assoc k env.lvals
 
   let add lv t env =
-    (lv, t)::env
+    { env with lvals = (lv, t)::env.lvals }
+
+  let add_lbl lbl env =
+    { env with lbls = lbl::env.lbls}
+
+  let has_lbl lbl env =
+    List.mem lbl env.lbls
 end
 
 let rec check_stmt env (sk, _loc) =
@@ -94,12 +111,11 @@ let rec check_stmt env (sk, _loc) =
       check_blk env b
   | T.InfLoop blk ->
       check_blk env blk
-  | T.DoWith (blk, _lbl) ->
-      (* TODO add lbl in environment *)
-      check_blk env blk
-  | T.Goto _lbl ->
-      (* TODO check if lbl is in environment *)
-      ()
+  | T.DoWith (blk, lbl) ->
+      let new_env = Env.add_lbl lbl env in
+      check_blk new_env blk
+  | T.Goto lbl ->
+      tc_assert (Env.has_lbl lbl env)
   | T.Call (_args, _fe, _ret) ->
       assert false
   | T.UserSpec _ -> ()
