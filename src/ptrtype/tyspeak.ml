@@ -1,7 +1,7 @@
 (*
-  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
-  well-suited for static analysis.
-  Copyright (C) 2007-2011  Charles Hymans, Sarah Zennou
+  ptrtype: do finer typechecks on C pointers
+  Copyright (C) 2007-2011 Charles Hymans, Sarah Zennou
+  Copyright (C) 2011-2010 Etienne Millon
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public

@@ -1,6 +1,6 @@
 (*
  * ptrtype: do finer typechecks on C pointers
- * Copyright (C) 2011  Etienne Millon
+ * Copyright (C) 2011-2012 Etienne Millon
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
