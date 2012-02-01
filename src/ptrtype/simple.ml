@@ -51,28 +51,43 @@ let check_exp (_be, _te) =
   (* check result *)
   ()
 
-let from_env env k =
-  List.assoc k env
+module Env : sig
+  type t
+  val empty : t
+  val get : t -> simple T.lval -> simple
+  val add : simple T.lval -> simple -> t -> t
+end = struct
+
+  type t = (simple T.lval * simple) list
+
+  let empty = []
+
+  let get env k =
+    List.assoc k env
+
+  let add lv t env =
+    (lv, t)::env
+end
 
 let rec check_stmt env (sk, _loc) =
   match sk with
   | T.Set (lv, e, st) ->
       let (_be, te) = e in
-      let t_lv = from_env env lv in
+      let t_lv = Env.get env lv in
       check_exp e;
       tc_assert (scalar_compatible st te);
       same_type te t_lv;
       ()
   | T.Copy (dst, src, _sz) ->
-      let tdst = from_env env dst in
-      let tsrc = from_env env src in
+      let tdst = Env.get env dst in
+      let tsrc = Env.get env src in
       same_type tdst tsrc
   | T.Guard e ->
       let (_be, te) = e in
       check_exp e;
       same_type te Int
   | T.Decl (vid, ty, blk) ->
-      let new_env = (T.Local vid, ty)::env in
+      let new_env = Env.add (T.Local vid) ty env in
       check_blk new_env blk
   | T.Select (a, b) ->
       check_blk env a;
@@ -93,7 +108,7 @@ and check_blk env =
   List.iter (check_stmt env)
 
 let check tpk =
-  let init_env = [] in
+  let init_env = Env.empty in
   let fun_blocks =
     List.map
       (fun fdec -> fdec.T.body)
