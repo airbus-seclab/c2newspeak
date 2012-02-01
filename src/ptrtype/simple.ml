@@ -46,11 +46,6 @@ let tc_assert ok =
 let same_type (x:simple) y =
   tc_assert (x = y)
 
-let check_exp (_be, _te) =
-  (* check subexps *)
-  (* check result *)
-  ()
-
 module Env : sig
   type t
 
@@ -86,12 +81,35 @@ end = struct
     List.mem lbl env.lbls
 end
 
+let rec check_exp env (be, _te) =
+  (*
+   * General idea :
+   *   - check subexps
+   *   - check result <- TODO
+   *)
+  match be with
+  | T.Const _ -> ()
+  | T.Lval (lv, ty) ->
+      let t_lv = Env.get env lv in
+      same_type t_lv ty
+  | T.AddrOf _ -> ()
+  | T.BinOp (_op, a, b) ->
+      check_exp env a;
+      check_exp env b
+  | T.UnOp (_op, e) ->
+      check_exp env e
+  | T.AddrOfFun (_fid, _ftyp) -> assert false
+
+(*
+ * Propagate typing constraints through control flow.
+ * Besides the exp type in Guard, this is mostly generic.
+ *)
 let rec check_stmt env (sk, _loc) =
   match sk with
   | T.Set (lv, e, st) ->
       let (_be, te) = e in
       let t_lv = Env.get env lv in
-      check_exp e;
+      check_exp env e;
       tc_assert (scalar_compatible st te);
       same_type te t_lv;
       ()
@@ -101,7 +119,7 @@ let rec check_stmt env (sk, _loc) =
       same_type tdst tsrc
   | T.Guard e ->
       let (_be, te) = e in
-      check_exp e;
+      check_exp env e;
       same_type te Int
   | T.Decl (vid, ty, blk) ->
       let new_env = Env.add (T.Local vid) ty env in
