@@ -33,6 +33,7 @@ NPKSTRIP=../../bin/npkstrip
 NPKCHECK=../../bin/npkcheck
 SIMPLEAI=../../bin/simpleai
 NPKMERGER=../../bin/npkmerger
+PTRTYPE=../../bin/ptrtype
 
 ifeq ($(strip $(DIFF)),)
 DIFF=diff $*.spec $*.bak
