@@ -21,6 +21,9 @@
  * 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
  *)
 
+let hashtbl_keys h =
+  Hashtbl.fold (fun k _v l -> k::l) h []
+
 let hashtbl_values h =
   Hashtbl.fold (fun _k v l -> v::l) h []
 

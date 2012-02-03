@@ -215,12 +215,27 @@ let rec vars_of_typ = function
   | Var ({contents = Unknown n}) -> [n]
   | Var ({contents = Instanciated t}) -> vars_of_typ t
 
+let no_vars_in t =
+  vars_of_typ t = []
+
 let infer_blk _env =
   assert false
 
 let infer tpk =
+  let env = Env.empty in
   reset_unknowns ();
   List.iter
-    (infer_blk Env.empty)
+    (infer_blk env)
     (blocks_in tpk);
+
+  let global_names = Utils.hashtbl_keys tpk.T.globals in
+  let globals = Hashtbl.create 0 in
+  List.iter
+    (fun g ->
+      let t = Env.get env (T.Global g) in
+      tc_assert (no_vars_in t);
+      Hashtbl.add globals g t
+    )
+    global_names;
+
   assert false

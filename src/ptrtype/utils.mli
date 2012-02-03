@@ -21,6 +21,8 @@
  * 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
  *)
 
+val hashtbl_keys : ('a, 'b) Hashtbl.t -> 'a list
+
 val hashtbl_values : ('a, 'b) Hashtbl.t -> 'b list
 
 val hashtbl_map : ('a -> 'b) -> ('k, 'a) Hashtbl.t -> ('k, 'b) Hashtbl.t
