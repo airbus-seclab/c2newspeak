@@ -1,6 +1,6 @@
 (*
  * ptrtype: do finer typechecks on C pointers
- * Copyright (C) 2012 Etienne Millon
+ * Copyright (C) 2011-2012 Etienne Millon
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -21,8 +21,11 @@
  * 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
  *)
 
-type simple
+let hashtbl_values h =
+  Hashtbl.fold (fun _k v l -> v::l) h []
 
-val check : simple Tyspeak.t -> unit
+let hashtbl_map f h =
+  let h' = Hashtbl.create 0 in
+  Hashtbl.iter (fun k v -> Hashtbl.add h' k (f v)) h;
+  h'
 
-val infer : 'a Tyspeak.t -> simple Tyspeak.t

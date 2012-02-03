@@ -24,13 +24,6 @@
 module N = Newspeak
 module T = Tyspeak
 
-let hashtbl_map
-  : ('a -> 'b) -> ('k, 'a) Hashtbl.t -> ('k, 'b) Hashtbl.t
-  = fun f h ->
-    let h' = Hashtbl.create 0 in
-    Hashtbl.iter (fun k v -> Hashtbl.add h' k (f v)) h;
-    h'
-
 (*
  * Tyspeak builder.
  *
@@ -39,7 +32,7 @@ let hashtbl_map
  *)
 let convert to_ty nil_ty npk =
   let c_globals =
-    hashtbl_map to_ty
+    Utils.hashtbl_map to_ty
   in
 
   let c_fty (x, y) =
@@ -114,7 +107,7 @@ let convert to_ty nil_ty npk =
   in
 
   let c_fundecs =
-    hashtbl_map c_fundec 
+    Utils.hashtbl_map c_fundec 
   in
 
   { T.globals  = c_globals npk.N.globals

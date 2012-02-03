@@ -24,14 +24,14 @@
 module T = Tyspeak
 module N = Newspeak
 
-let hashtbl_values
-  : (('a, 'b) Hashtbl.t -> 'b list)
-  = fun h ->
-    Hashtbl.fold (fun _k v l -> v::l) h []
+type var_type =
+  | Unknown of int
+  | Instanciated of simple
 
-type simple =
+and simple =
   | Int
   | Ptr of simple
+  | Var of var_type ref
 
 let scalar_compatible st ty =
   match (st, ty) with
@@ -80,6 +80,11 @@ end = struct
   let has_lbl lbl env =
     List.mem lbl env.lbls
 end
+
+
+(************
+ * Checking *
+ ************)
 
 let const_compatible cst ty =
   match (cst, ty) with
@@ -176,12 +181,46 @@ let rec check_stmt env (sk, _loc) =
 and check_blk env =
   List.iter (check_stmt env)
 
-let check tpk =
-  let init_env = Env.empty in
+let blocks_in tpk =
   let fun_blocks =
     List.map
       (fun fdec -> fdec.T.body)
-      (hashtbl_values tpk.T.fundecs)
+      (Utils.hashtbl_values tpk.T.fundecs)
   in
-  let all_blocks = tpk.T.init::fun_blocks in
-  List.iter (check_blk init_env) all_blocks
+  tpk.T.init::fun_blocks
+
+let check tpk =
+  List.iter
+    (check_blk Env.empty)
+    (blocks_in tpk)
+
+(*************
+ * Inference *
+ *************)
+
+let (new_unknown, reset_unknowns) =
+  let c = ref 0 in
+  let n () =
+    let v = !c in
+    incr c;
+    Unknown v
+  and r () =
+    c := 0
+  in
+  (n, r)
+
+let rec vars_of_typ = function
+  | Int -> []
+  | Ptr t -> vars_of_typ t
+  | Var ({contents = Unknown n}) -> [n]
+  | Var ({contents = Instanciated t}) -> vars_of_typ t
+
+let infer_blk _env =
+  assert false
+
+let infer tpk =
+  reset_unknowns ();
+  List.iter
+    (infer_blk Env.empty)
+    (blocks_in tpk);
+  assert false
