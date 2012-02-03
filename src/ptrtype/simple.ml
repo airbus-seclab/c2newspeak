@@ -224,12 +224,81 @@ let rec vars_of_typ = function
 let no_vars_in t =
   vars_of_typ t = []
 
-let infer_stmt _env (sk, _loc) =
-  match sk with
-  | T.Set (_lv, _e, _st) -> assert false
+let infer_const = function
+  | N.CInt _ -> Int
+  | N.CFloat _ -> assert false
+  | N.Nil ->
+      let t = new_unknown () in
+      Ptr (Var (ref t))
+
+let infer_unop op (_e, t) =
+  match (op, t) with
+  | (N.Belongs _, _) -> t
+  | (N.Coerce _, _) -> t
+  | (N.Focus _, _) -> t
+  | (N.Not, Int) -> Int
+  | (N.BNot _, Int) -> Int
+
   | _ -> assert false
 
-let infer_blk env =
+let infer_binop op a b =
+  match (op, a, b) with
+  | _ -> assert false
+
+let rec infer_lv env = function
+  | T.Local s -> T.Local s
+  | T.Global s -> T.Global s
+  | T.Deref (e, sz) -> T.Deref (infer_exp env e, sz)
+  | T.Shift (lv, e) -> T.Shift (infer_lv env lv, infer_exp env e)
+
+and infer_exp env (e, _) =
+  match e with
+  | T.Const c -> (T.Const c, infer_const c)
+  | T.Lval (lv, _ty) ->
+      let lv' = infer_lv env lv in
+      let ty = Env.get env lv in
+      (T.Lval (lv', ty), ty)
+  | T.AddrOf lv ->
+      let lv' = infer_lv env lv in
+      let ty = Env.get env lv in
+      (T.AddrOf lv', Ptr ty)
+  | T.UnOp (op, e) ->
+      let e' = infer_exp env e in
+      (T.UnOp (op, e'), infer_unop op e')
+  | T.BinOp (op, a, b) ->
+      let a' = infer_exp env a in
+      let b' = infer_exp env b in
+      (T.BinOp (op, a', b'), infer_binop op a' b')
+  | T.AddrOfFun _ -> assert false
+
+let rec infer_stmtkind env sk =
+  match sk with
+  | T.Set (lv, e, st) ->
+      let lv' = infer_lv env lv in
+      let e' = infer_exp env e in
+      T.Set (lv', e', st)
+  | T.Select (a, b) ->
+      let a' = infer_blk env a in
+      let b' = infer_blk env b in
+      T.Select (a', b')
+  | T.InfLoop blk ->
+      let blk' = infer_blk env blk in
+      T.InfLoop blk'
+  | T.DoWith (blk, lbl) ->
+      let new_env = Env.add_lbl lbl env in
+      let blk' = infer_blk new_env blk in
+      T.DoWith (blk', lbl)
+  | T.Goto lbl ->
+      tc_assert (Env.has_lbl lbl env);
+      T.Goto lbl
+
+  | _ -> assert false
+
+and infer_stmt env (sk, loc) =
+  let sk' = infer_stmtkind env sk in
+  (sk', loc)
+
+and infer_blk env =
   List.map (infer_stmt env)
 
 let infer_fdec env fdec =
