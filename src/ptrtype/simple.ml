@@ -33,6 +33,12 @@ and simple =
   | Ptr of simple
   | Var of var_type ref
 
+let rec string_of_simple = function
+  | Int -> "Int"
+  | Ptr s -> "Ptr (" ^ string_of_simple s ^ ")"
+  | Var {contents = Unknown n} -> "_a"^string_of_int n
+  | Var {contents = Instanciated s} -> "@"^string_of_simple s^"@"
+
 let scalar_compatible st ty =
   match (st, ty) with
   | (N.Int _, Int) -> true
