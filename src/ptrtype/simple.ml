@@ -218,15 +218,53 @@ let rec vars_of_typ = function
 let no_vars_in t =
   vars_of_typ t = []
 
-let infer_blk _env =
-  assert false
+let infer_stmt _env (sk, _loc) =
+  match sk with
+  | T.Set (_lv, _e, _st) -> assert false
+  | _ -> assert false
+
+let infer_blk env =
+  List.map (infer_stmt env)
+
+let infer_fdec env fdec =
+  (*
+   * Prepare a new environment with rets & args.
+   * Infer the body under it.
+   * Retrieve the values from the typing environment.
+   * (generalization should be done here)
+   *)
+  let new_env =
+    List.fold_left
+      (fun e (name, _ty) ->
+        Env.add
+          (T.Local name)
+          (Var (ref (new_unknown ())))
+          e
+      )
+      env
+      (fdec.T.rets@fdec.T.args)
+  in
+  let blk = infer_blk new_env fdec.T.body in
+  let extract_types l =
+    List.map
+      (fun (name, _ty) ->
+        let t = Env.get new_env (T.Local name) in
+        (name, t)
+      )
+      l
+  in
+  { T.body = blk
+  ; T.rets = extract_types fdec.T.rets
+  ; T.args = extract_types fdec.T.args
+  ; T.position = fdec.T.position
+  }
 
 let infer tpk =
   let env = Env.empty in
   reset_unknowns ();
-  List.iter
-    (infer_blk env)
-    (blocks_in tpk);
+
+  let init = infer_blk env tpk.T.init in
+  let fdecs = Utils.hashtbl_map (infer_fdec env) tpk.T.fundecs in
 
   let global_names = Utils.hashtbl_keys tpk.T.globals in
   let globals = Hashtbl.create 0 in
@@ -237,5 +275,11 @@ let infer tpk =
       Hashtbl.add globals g t
     )
     global_names;
+  { T.globals = globals
+  ; T.init = init
+  ; T.fundecs = fdecs
+  ; T.ptr_sz = tpk.T.ptr_sz
+  ; T.src_lang = tpk.T.src_lang
+  ; T.abi = tpk.T.abi
+  }
 
-  assert false
