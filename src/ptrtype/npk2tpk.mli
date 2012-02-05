@@ -22,3 +22,5 @@
  *)
 
 val convert : (Newspeak.typ -> 'a) -> 'a -> Newspeak.t -> 'a Tyspeak.t
+
+val convert_unit : Newspeak.t -> unit Tyspeak.t

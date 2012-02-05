@@ -118,3 +118,4 @@ let convert to_ty nil_ty npk =
   ; T.abi      = npk.N.abi
   }
 
+let convert_unit = convert ignore ()
