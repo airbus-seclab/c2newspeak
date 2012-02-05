@@ -271,6 +271,17 @@ and infer_exp env (e, _) =
       (T.BinOp (op, a', b'), infer_binop op a' b')
   | T.AddrOfFun _ -> assert false
 
+let infer_spectoken env = function
+  | T.SymbolToken c -> T.SymbolToken c
+  | T.IdentToken s -> T.IdentToken s
+  | T.CstToken c -> T.CstToken c
+  | T.LvalToken (lv, _ty) ->
+      let lv' = infer_lv env lv in
+      let ty = Env.get env lv in
+      T.LvalToken (lv', ty)
+
+let infer_assertion env = List.map (infer_spectoken env)
+
 let rec infer_stmtkind env sk =
   match sk with
   | T.Set (lv, e, st) ->
@@ -291,8 +302,22 @@ let rec infer_stmtkind env sk =
   | T.Goto lbl ->
       tc_assert (Env.has_lbl lbl env);
       T.Goto lbl
-
-  | _ -> assert false
+  | T.Decl (n, _ty, blk) ->
+      let var = T.Local n in
+      let t0 = Var (ref (new_unknown())) in
+      let new_env = Env.add var t0 env in
+      let blk' = infer_blk new_env blk in
+      let ty = Env.get new_env var in
+      T.Decl (n, ty, blk')
+  | T.UserSpec a -> T.UserSpec (infer_assertion env a)
+  | T.Copy (dst, src, sz) ->
+      let dst' = infer_lv env dst in
+      let src' = infer_lv env src in
+      T.Copy (dst', src', sz)
+  | T.Guard e ->
+      let e' = infer_exp env e in
+      T.Guard e'
+  | T.Call _ -> assert false
 
 and infer_stmt env (sk, loc) =
   let sk' = infer_stmtkind env sk in

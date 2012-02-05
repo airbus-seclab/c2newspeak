@@ -23,7 +23,7 @@
 
 COMMAND=$(C2NEWSPEAK) $*.c > /dev/null 2>&1; \
         $(PTRTYPE) `[ -e $*.in ] && cat $*.in` a.npk
-PREREQ=%.c
+PREREQ=%.c $(PTRTYPE)
 TESTS=000 001
 
 include ../common.Makefile
