@@ -23,7 +23,8 @@
 
 let process_npk npk =
   let tpk = Npk2tpk.convert_unit npk in
-  Tyspeak.dump (fun () -> "TTTT") tpk
+  let s = Simple.infer tpk in
+  Tyspeak.dump Simple.string_of_simple s
 
 let exit_error msg =
   print_endline msg;
