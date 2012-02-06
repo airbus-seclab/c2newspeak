@@ -89,7 +89,6 @@ end = struct
     List.mem lbl env.lbls
 end
 
-
 (************
  * Checking *
  ************)
@@ -244,15 +243,24 @@ let is_atomic_type = function
   | Float -> true
   | _ -> false
 
-let unify ta tb =
+let occurs n t = List.mem n (vars_of_typ t)
+
+let rec unify ta tb =
   let sta = shorten ta in
   let stb = shorten tb in
   match (sta, stb) with
-  | ((Var ({contents = Unknown _} as r)), t)
-  | (t, (Var ({contents = Unknown _} as r)))
-    when is_atomic_type t
-    -> r := Instanciated t
+  | ((Var ({contents = Unknown n} as r)), t)
+    ->
+      begin
+        if occurs n t then
+          type_clash sta stb
+        else
+          r := Instanciated t
+      end
+  | (_, (Var ({contents = Unknown _}))) -> unify stb sta
   | _ when is_atomic_type sta && sta = stb -> ()
+
+  | Ptr pa, Ptr pb -> unify pa pb
     
   | _ -> type_clash sta stb
 
@@ -303,16 +311,25 @@ let rec infer_lv env = function
   | T.Deref (e, sz) -> T.Deref (infer_exp env e, sz)
   | T.Shift (lv, e) -> T.Shift (infer_lv env lv, infer_exp env e)
 
+and lval_type env = function
+  | (T.Local _ | T.Global _) as v -> Env.get env v
+  | T.Deref(e, _sz) ->
+      let (_, te) = infer_exp env e in
+      let t = new_unknown () in
+      unify (Ptr t) te;
+      t
+  | T.Shift _ -> assert false
+
 and infer_exp env (e, _) =
   match e with
   | T.Const c -> (T.Const c, infer_const c)
   | T.Lval (lv, _ty) ->
       let lv' = infer_lv env lv in
-      let ty = Env.get env lv in
+      let ty = lval_type env lv in
       (T.Lval (lv', ty), ty)
   | T.AddrOf lv ->
       let lv' = infer_lv env lv in
-      let ty = Env.get env lv in
+      let ty = lval_type env lv in
       (T.AddrOf lv', Ptr ty)
   | T.UnOp (op, e) ->
       let e' = infer_exp env e in
@@ -329,7 +346,7 @@ let infer_spectoken env = function
   | T.CstToken c -> T.CstToken c
   | T.LvalToken (lv, _ty) ->
       let lv' = infer_lv env lv in
-      let ty = Env.get env lv in
+      let ty = lval_type env lv in
       T.LvalToken (lv', ty)
 
 let infer_assertion env = List.map (infer_spectoken env)
@@ -338,7 +355,7 @@ let rec infer_stmtkind env sk =
   match sk with
   | T.Set (lv, e, st) ->
       let lv' = infer_lv env lv in
-      let tlv = Env.get env lv in
+      let tlv = lval_type env lv in
       let (_, te) as e' = infer_exp env e in
       unify te tlv;
       T.Set (lv', e', st)
@@ -361,7 +378,7 @@ let rec infer_stmtkind env sk =
       let t0 = new_unknown () in
       let new_env = Env.add var t0 env in
       let blk' = infer_blk new_env blk in
-      let ty = Env.get new_env var in
+      let ty = lval_type new_env var in
       T.Decl (n, ty, blk')
   | T.UserSpec a -> T.UserSpec (infer_assertion env a)
   | T.Copy (dst, src, sz) ->
@@ -402,7 +419,7 @@ let infer_fdec env fdec =
   let extract_types l =
     List.map
       (fun (name, _ty) ->
-        let t = Env.get new_env (T.Local name) in
+        let t = lval_type new_env (T.Local name) in
         (name, t)
       )
       l
@@ -424,7 +441,7 @@ let infer tpk =
   let globals = Hashtbl.create 0 in
   List.iter
     (fun g ->
-      let t = Env.get env (T.Global g) in
+      let t = lval_type env (T.Global g) in
       tc_assert (no_vars_in t);
       Hashtbl.add globals g t
     )
