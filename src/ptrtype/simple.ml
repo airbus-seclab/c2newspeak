@@ -30,11 +30,13 @@ type var_type =
 
 and simple =
   | Int
+  | Float
   | Ptr of simple
   | Var of var_type ref
 
 let rec string_of_simple = function
   | Int -> "Int"
+  | Float -> "Float"
   | Ptr s -> "Ptr (" ^ string_of_simple s ^ ")"
   | Var {contents = Unknown n} -> "_a"^string_of_int n
   | Var {contents = Instanciated s} -> string_of_simple s
@@ -216,7 +218,7 @@ let (new_unknown, reset_unknowns) =
   (n, r)
 
 let rec vars_of_typ = function
-  | Int -> []
+  | Int | Float -> []
   | Ptr t -> vars_of_typ t
   | Var ({contents = Unknown n}) -> [n]
   | Var ({contents = Instanciated t}) -> vars_of_typ t
@@ -237,18 +239,26 @@ let rec shorten = function
   | Var {contents = Instanciated t} -> t
   | t -> t
 
+let is_atomic_type = function
+  | Int
+  | Float -> true
+  | _ -> false
+
 let unify ta tb =
   let sta = shorten ta in
   let stb = shorten tb in
   match (sta, stb) with
-  | ((Var ({contents = Unknown _} as r)), Int)
-  | (Int, (Var ({contents = Unknown _} as r))) -> r := Instanciated Int
-  | (Int, Int) -> ()
+  | ((Var ({contents = Unknown _} as r)), t)
+  | (t, (Var ({contents = Unknown _} as r)))
+    when is_atomic_type t
+    -> r := Instanciated t
+  | _ when is_atomic_type sta && sta = stb -> ()
+    
   | _ -> type_clash sta stb
 
 let infer_const = function
   | N.CInt _ -> Int
-  | N.CFloat _ -> assert false
+  | N.CFloat _ -> Float
   | N.Nil ->
       Ptr (new_unknown ())
 
@@ -259,8 +269,11 @@ let infer_unop op (_e, t) =
   | N.Focus _ -> t
   | N.Not -> unify t Int; Int
   | N.BNot _ -> unify t Int; Int
+  | N.Cast (N.Float _, N.Float _) -> unify t Float; Float
 
-  | _ -> assert false
+  | _ ->
+      Printf.printf "Unsupported unop : %s\n" (N.string_of_unop op);
+      assert false
 
 let infer_binop op (_, a) (_, b) =
   match op with
