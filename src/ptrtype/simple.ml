@@ -41,49 +41,125 @@ let rec string_of_simple = function
   | Var {contents = Unknown n} -> "_a"^string_of_int n
   | Var {contents = Instanciated s} -> string_of_simple s
 
-let scalar_compatible st ty =
-  match (st, ty) with
-  | (N.Int _, Int) -> true
-  | (N.Ptr, Ptr _) -> true
-  | _ -> false
-
 let tc_assert ok =
   if not ok then
     assert false
 
-let same_type (x:simple) y =
-  tc_assert (x = y)
+let rec shorten = function
+  | Var ({contents = Instanciated (Var _ as t)} as vt) ->
+      let t2 = shorten t in
+      vt := Instanciated t;
+      t2
+  | Var {contents = Instanciated t} -> t
+  | t -> t
+
+let same_type lx ly =
+  let x = shorten lx in
+  let y = shorten ly in
+  if x <> y then
+    begin
+      let sx = string_of_simple x in
+      let sy = string_of_simple y in
+      Printf.printf "Typechecking failed : %s != %s\n" sx sy;
+      assert false
+    end
+
+let tc_scalar_compatible st lty =
+  let ty = shorten lty in
+  match (st, ty) with
+  | (N.Int _, Int) -> ()
+  | (N.Ptr, Ptr _) -> ()
+  | (N.Float _, Float) -> ()
+  | _ -> assert false
 
 (************
  * Checking *
  ************)
 
-let const_compatible cst ty =
+let tc_const_compatible cst ty =
   match (cst, ty) with
-  | (N.CInt _, Int) -> true
-  | (N.Nil, Ptr _) -> true
-  | _ -> false
+  | (N.CInt _, Int) -> ()
+  | (N.Nil, Ptr _) -> ()
+  | (N.CFloat _, Float) -> ()
+  | _ ->
+      print_endline
+        ( "Incompatibility between "
+        ^ N.string_of_cst cst
+        ^ " and "
+        ^ string_of_simple ty
+        );
+      assert false
 
-let binop_compatible ret op a b =
+let tc_binop_compatible ret op la lb =
+  let a = shorten la in
+  let b = shorten lb in
   match (ret, op, a, b) with
-  | (Int, (N.PlusI|N.MinusI
-          |N.MultI|N.DivI|N.Mod), Int, Int) -> true
-  | (Int, N.Eq st, _, _) -> (a = b) && scalar_compatible st a
-  | (Int, N.Gt st, Int, Int) -> scalar_compatible st Int
-  | (Int, (N.BOr _|N.BAnd _|N.BXor _|N.Shiftlt|N.Shiftrt), Int, Int) -> true
-  | (Ptr tr, N.PlusPI, Ptr ta, Int) -> tr = ta
-  | (Int, N.MinusPP, Ptr ta, Ptr tb) -> ta = tb
-  | _ -> false
+  | (Int, ( N.PlusI | N.MinusI
+          | N.MultI | N.DivI
+          | N.Mod | N.BOr _
+          | N.BAnd _ | N.BXor _
+          | N.Shiftlt | N.Shiftrt
+          ) , Int, Int) -> ()
+  | (Int, N.Eq st, _, _) when (a = b) -> tc_scalar_compatible st a
+  | (Int, N.Gt st, Int, Int) -> tc_scalar_compatible st Int
+  | (Ptr tr, N.PlusPI, Ptr ta, Int) when tr = ta -> ()
+  | (Int, N.MinusPP, Ptr ta, Ptr tb) when ta = tb -> ()
+  | _ ->
+      print_endline
+        (String.concat ""
+          [ "Incompatible types in binary operation : "
+          ; N.string_of_binop op
+          ; " : "
+          ; string_of_simple a
+          ; " x "
+          ; string_of_simple b
+          ; " -> "
+          ; string_of_simple ret
+          ]
+        );
+      assert false
 
-let unop_compatible ret op e =
+let tc_unop_compatible ret op le =
+  let e = shorten le in
   match (ret, op, e) with
-  | (_, (N.Belongs _|N.Coerce _|N.Focus _), _) -> ret = e
-  | (Int, (N.Not|N.BNot _), Int) -> true
-  | (Int, N.PtrToInt _, Ptr _) -> true
-  | (Ptr _, N.IntToPtr _, Int) -> true
+  | (_, (N.Belongs _|N.Coerce _|N.Focus _), _) when ret = e -> ()
+  | (Int, (N.Not|N.BNot _), Int) -> ()
+  | (Int, N.PtrToInt _, Ptr _) -> ()
+  | (Ptr _, N.IntToPtr _, Int) -> ()
   | (_, N.Cast (sret, se), _) ->
-      (scalar_compatible sret ret && scalar_compatible se e)
-  | _ -> false
+      begin
+        tc_scalar_compatible sret ret;
+        tc_scalar_compatible se e
+      end
+  | _ ->
+      print_endline
+        (String.concat ""
+          [ "Incompatible types in unary operation : "
+          ; N.string_of_unop op
+          ; " : "
+          ; string_of_simple e
+          ; " -> "
+          ; string_of_simple ret
+          ]
+        );
+      assert false
+
+let get_lv_type env = function
+  | (T.Local _ | T.Global _) as lv ->
+      begin try
+        Env.get env lv
+      with Not_found ->
+        begin
+          failwith ("Cannot find lval : "^T.string_of_lval string_of_simple lv)
+        end
+      end
+  | T.Deref ((_, t), _sz) ->
+      begin
+        match (shorten t) with
+        | Ptr pt -> pt
+        | _ -> assert false
+      end
+  | T.Shift _ -> assert false
 
 let rec check_exp env (be, te) =
   (*
@@ -92,24 +168,24 @@ let rec check_exp env (be, te) =
    *   - check result (specific)
    *)
   match be with
-  | T.Const c -> tc_assert (const_compatible c te)
+  | T.Const c -> tc_const_compatible c te
   | T.Lval (lv, ty) ->
-      let t_lv = Env.get env lv in
+      let t_lv = get_lv_type env lv in
       same_type t_lv ty;
       same_type te ty;
   | T.AddrOf lv ->
-      let t_lv = Env.get env lv in
+      let t_lv = get_lv_type env lv in
       same_type te (Ptr t_lv)
   | T.BinOp (op, a, b) ->
       let (_, ta) = a in
       let (_, tb) = b in
       check_exp env a;
       check_exp env b;
-      tc_assert (binop_compatible te op ta tb)
+      tc_binop_compatible te op ta tb
   | T.UnOp (op, e) ->
       let (_, top) = e in
       check_exp env e;
-      tc_assert (unop_compatible te op top)
+      tc_unop_compatible te op top
   | T.AddrOfFun (_fid, _ftyp) -> assert false
 
 (*
@@ -120,14 +196,14 @@ let rec check_stmt env (sk, _loc) =
   match sk with
   | T.Set (lv, e, st) ->
       let (_be, te) = e in
-      let t_lv = Env.get env lv in
+      let t_lv = get_lv_type env lv in
       check_exp env e;
-      tc_assert (scalar_compatible st te);
+      tc_scalar_compatible st te;
       same_type te t_lv;
       ()
   | T.Copy (dst, src, _sz) ->
-      let tdst = Env.get env dst in
-      let tsrc = Env.get env src in
+      let tdst = get_lv_type env dst in
+      let tsrc = get_lv_type env src in
       same_type tdst tsrc
   | T.Guard e ->
       let (_be, te) = e in
@@ -153,18 +229,19 @@ let rec check_stmt env (sk, _loc) =
 and check_blk env =
   List.iter (check_stmt env)
 
-let blocks_in tpk =
-  let fun_blocks =
-    List.map
-      (fun fdec -> fdec.T.body)
-      (Utils.hashtbl_values tpk.T.fundecs)
+let check_fun env fdec =
+  let new_env =
+    List.fold_left
+      (fun e (name, ty) -> Env.add (T.Local name) ty e)
+      env
+      (fdec.T.rets@fdec.T.args)
   in
-  tpk.T.init::fun_blocks
+  check_blk new_env fdec.T.body
 
 let check tpk =
-  List.iter
-    (check_blk Env.empty)
-    (blocks_in tpk)
+  let env = Env.empty in
+  check_blk env tpk.T.init;
+  List.iter (check_fun env) (Utils.hashtbl_values tpk.T.fundecs)
 
 (*************
  * Inference *
@@ -194,14 +271,6 @@ let type_clash ta tb =
   let sa = string_of_simple ta in
   let sb = string_of_simple tb in
   failwith ("Type clash : "^sa^" vs "^sb)
-
-let rec shorten = function
-  | Var ({contents = Instanciated (Var _ as t)} as vt) ->
-      let t2 = shorten t in
-      vt := Instanciated t;
-      t2
-  | Var {contents = Instanciated t} -> t
-  | t -> t
 
 let is_atomic_type = function
   | Int

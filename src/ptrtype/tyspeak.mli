@@ -135,3 +135,5 @@ and 'ty funexp =
 (** {1 Display} *)
 
 val dump : ('ty -> string) -> 'ty t -> unit
+
+val string_of_lval : ('ty -> string) -> 'ty lval -> string

@@ -24,6 +24,7 @@
 let process_npk npk =
   let tpk = Npk2tpk.convert_unit npk in
   let s = Simple.infer tpk in
+  Simple.check s;
   Tyspeak.dump Simple.string_of_simple s
 
 let exit_error msg =
@@ -50,6 +51,7 @@ let main () =
     let files = List.rev (!inputs) in
     List.iter process_file files
   in
+  Printexc.record_backtrace true;
   StandardApplication.launch speclist add_file usage_msg process
 
 let _ = main ()
