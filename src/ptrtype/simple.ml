@@ -241,6 +241,7 @@ let unify ta tb =
   let sta = shorten ta in
   let stb = shorten tb in
   match (sta, stb) with
+  | ((Var ({contents = Unknown _} as r)), Int)
   | (Int, (Var ({contents = Unknown _} as r))) -> r := Instanciated Int
   | (Int, Int) -> ()
   | _ -> type_clash sta stb
