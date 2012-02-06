@@ -209,7 +209,7 @@ let (new_unknown, reset_unknowns) =
   let n () =
     let v = !c in
     incr c;
-    Unknown v
+    Var (ref (Unknown v))
   and r () =
     c := 0
   in
@@ -250,8 +250,7 @@ let infer_const = function
   | N.CInt _ -> Int
   | N.CFloat _ -> assert false
   | N.Nil ->
-      let t = new_unknown () in
-      Ptr (Var (ref t))
+      Ptr (new_unknown ())
 
 let infer_unop op (_e, t) =
   match op with
@@ -346,7 +345,7 @@ let rec infer_stmtkind env sk =
       T.Goto lbl
   | T.Decl (n, _ty, blk) ->
       let var = T.Local n in
-      let t0 = Var (ref (new_unknown())) in
+      let t0 = new_unknown () in
       let new_env = Env.add var t0 env in
       let blk' = infer_blk new_env blk in
       let ty = Env.get new_env var in
@@ -380,7 +379,7 @@ let infer_fdec env fdec =
       (fun e (name, _ty) ->
         Env.add
           (T.Local name)
-          (Var (ref (new_unknown ())))
+          (new_unknown ())
           e
       )
       env
