@@ -54,41 +54,6 @@ let tc_assert ok =
 let same_type (x:simple) y =
   tc_assert (x = y)
 
-module Env : sig
-  type ('a, 'b) t
-
-  val empty : ('a, 'b) t
-
-  val get : ('a, 'b) t -> 'a -> 'b
-  val add : 'a -> 'b -> ('a, 'b) t -> ('a, 'b) t
-
-  val add_lbl : Newspeak.lbl -> ('a, 'b) t -> ('a, 'b) t
-  val has_lbl : Newspeak.lbl -> ('a, 'b) t -> bool
-end = struct
-
-  type ('a, 'b) t =
-    { lvals : ('a * 'b) list
-    ; lbls  : Newspeak.lbl list
-    }
-
-  let empty =
-    { lvals = []
-    ; lbls  = []
-    }
-
-  let get env k =
-    List.assoc k env.lvals
-
-  let add lv t env =
-    { env with lvals = (lv, t)::env.lvals }
-
-  let add_lbl lbl env =
-    { env with lbls = lbl::env.lbls}
-
-  let has_lbl lbl env =
-    List.mem lbl env.lbls
-end
-
 (************
  * Checking *
  ************)
