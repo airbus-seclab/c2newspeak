@@ -269,6 +269,8 @@ let infer_binop op (_, a) (_, b) =
   | N.MultI
   | N.DivI
   | N.BXor _
+  | N.BAnd _
+  | N.BOr _
     ->
       unify a Int;
       unify b Int;

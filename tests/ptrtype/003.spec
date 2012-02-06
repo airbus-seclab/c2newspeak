@@ -56,6 +56,14 @@ void (003.c:1#5)^f(void) {
                       (003.c:14#8)^{
                         Int j;
                         (003.c:14#8)^j =(int32) (((x_Int : Int) ^ (y_Int : Int)) : Int);
+                        (003.c:15#8)^{
+                          Int k;
+                          (003.c:15#8)^k =(int32) (((x_Int : Int) & (y_Int : Int)) : Int);
+                          (003.c:16#8)^{
+                            Int l;
+                            (003.c:16#8)^l =(int32) (((x_Int : Int) | (y_Int : Int)) : Int);
+                          }
+                        }
                       }
                     }
                   }
