@@ -229,10 +229,21 @@ let type_clash ta tb =
   let sb = string_of_simple tb in
   failwith ("Type clash : "^sa^" vs "^sb)
 
+let rec shorten = function
+  | Var ({contents = Instanciated (Var _ as t)} as vt) ->
+      let t2 = shorten t in
+      vt := Instanciated t;
+      t2
+  | Var {contents = Instanciated t} -> t
+  | t -> t
+
 let unify ta tb =
-  match (ta, tb) with
+  let sta = shorten ta in
+  let stb = shorten tb in
+  match (sta, stb) with
   | (Int, (Var ({contents = Unknown _} as r))) -> r := Instanciated Int
-  | _ -> type_clash ta tb
+  | (Int, Int) -> ()
+  | _ -> type_clash sta stb
 
 let infer_const = function
   | N.CInt _ -> Int
@@ -242,18 +253,34 @@ let infer_const = function
       Ptr (Var (ref t))
 
 let infer_unop op (_e, t) =
-  match (op, t) with
-  | (N.Belongs _, _) -> t
-  | (N.Coerce _, _) -> t
-  | (N.Focus _, _) -> t
-  | (N.Not, Int) -> Int
-  | (N.BNot _, Int) -> Int
+  match op with
+  | N.Belongs _ -> t
+  | N.Coerce _ -> t
+  | N.Focus _ -> t
+  | N.Not -> unify t Int; Int
+  | N.BNot _ -> unify t Int; Int
 
   | _ -> assert false
 
-let infer_binop op a b =
-  match (op, a, b) with
-  | _ -> assert false
+let infer_binop op (_, a) (_, b) =
+  match op with
+  | N.PlusI
+  | N.MinusI
+  | N.MultI
+  | N.DivI
+  | N.BXor _
+    ->
+      unify a Int;
+      unify b Int;
+      Int
+  | N.Eq _ ->
+      unify a b;
+      Int
+  | _ ->
+      let sop = N.string_of_binop op in
+      let sa = string_of_simple a in
+      let sb = string_of_simple b in
+      failwith (Printf.sprintf "No such operation : %s %s %s" sa sop sb)
 
 let rec infer_lv env = function
   | T.Local s -> T.Local s
