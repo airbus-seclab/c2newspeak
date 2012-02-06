@@ -37,7 +37,7 @@ let rec string_of_simple = function
   | Int -> "Int"
   | Ptr s -> "Ptr (" ^ string_of_simple s ^ ")"
   | Var {contents = Unknown n} -> "_a"^string_of_int n
-  | Var {contents = Instanciated s} -> "@"^string_of_simple s^"@"
+  | Var {contents = Instanciated s} -> string_of_simple s
 
 let scalar_compatible st ty =
   match (st, ty) with
@@ -224,6 +224,16 @@ let rec vars_of_typ = function
 let no_vars_in t =
   vars_of_typ t = []
 
+let type_clash ta tb =
+  let sa = string_of_simple ta in
+  let sb = string_of_simple tb in
+  failwith ("Type clash : "^sa^" vs "^sb)
+
+let unify ta tb =
+  match (ta, tb) with
+  | (Int, (Var ({contents = Unknown _} as r))) -> r := Instanciated Int
+  | _ -> type_clash ta tb
+
 let infer_const = function
   | N.CInt _ -> Int
   | N.CFloat _ -> assert false
@@ -286,7 +296,9 @@ let rec infer_stmtkind env sk =
   match sk with
   | T.Set (lv, e, st) ->
       let lv' = infer_lv env lv in
-      let e' = infer_exp env e in
+      let tlv = Env.get env lv in
+      let (_, te) as e' = infer_exp env e in
+      unify te tlv;
       T.Set (lv', e', st)
   | T.Select (a, b) ->
       let a' = infer_blk env a in
