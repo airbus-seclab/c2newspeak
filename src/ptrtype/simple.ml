@@ -67,6 +67,20 @@ let rec shorten = function
   | Var {contents = Instanciated t} -> t
   | t -> t
 
+(************
+ * Checking *
+ ************)
+
+(*
+ * Input : simple Tyspeak.t
+ *
+ * Output : unit
+ *
+ * This phase is quite straightforward : we walk through the program and check
+ * if types are compatible through constructs. Every annotation is present, so
+ * most functions are pure (they only read their environment).
+ *)
+
 let same_type lx ly =
   let x = shorten lx in
   let y = shorten ly in
@@ -97,10 +111,6 @@ let tc_scalar_compatible st lty =
   | (N.Ptr, Ptr _) -> ()
   | (N.Float _, Float) -> ()
   | _ -> error ()
-
-(************
- * Checking *
- ************)
 
 let same_type_option xo yo =
   match (xo, yo) with
@@ -303,6 +313,32 @@ let check tpk =
 (*************
  * Inference *
  *************)
+
+(*
+ * Input : 'a Tyspeak.t
+ *
+ * Output : simple Tyspeak.t
+ *
+ * What we have to do here is to fill in the "holes" at each T.exp. For every
+ * "new" variable (ie, at a Decl), we can create a new type variable with
+ * new_unknown.
+ *
+ * The unification mechanism will then put constraints on these : whenever a and
+ * b are known to be equal (or should be made equal); unify a b will walk the
+ * two types and modify the inner structure so that they will compare equal. If
+ * this is not possible, it means that the program is not well-typed and an
+ * error message will be printed.
+ *
+ * There are two small pitfalls to avoid infinite types (ie, cycles in the type
+ * object graph). It is necessary to
+ *
+ *   - "shorten" types from time to time, ie removing redundant indirections
+ *   - check that no assignments lengthen the types. This is the "occurs" check.
+ *
+ * NB: This mechanism relies on sharing : when a reference (such as the one
+ * under the Var constructor) is shared between two objects, its modification
+ * will affect both roots. So, it is important _not_ to do any deep copies.
+ *)
 
 let (new_unknown, reset_unknowns) =
   let c = ref 0 in
