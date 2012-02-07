@@ -30,3 +30,6 @@ val add : 'a -> 'b -> ('a, 'b) t -> ('a, 'b) t
 
 val add_lbl : Newspeak.lbl -> ('a, 'b) t -> ('a, 'b) t
 val has_lbl : Newspeak.lbl -> ('a, 'b) t -> bool
+
+val add_fun : ('a, 'b) t -> Newspeak.fid -> 'b -> ('a, 'b) t
+val get_fun : ('a, 'b) t -> Newspeak.fid -> 'b

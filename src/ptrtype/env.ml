@@ -24,11 +24,13 @@
 type ('a, 'b) t =
   { lvals : ('a * 'b) list
   ; lbls  : Newspeak.lbl list
+  ; funs  : (Newspeak.fid  * 'b) list
   }
 
 let empty =
   { lvals = []
   ; lbls  = []
+  ; funs  = []
   }
 
 let get env k =
@@ -42,3 +44,9 @@ let add_lbl lbl env =
 
 let has_lbl lbl env =
   List.mem lbl env.lbls
+
+let add_fun env fid t =
+  { env with funs = (fid, t)::env.funs}
+
+let get_fun env fid =
+  List.assoc fid env.funs

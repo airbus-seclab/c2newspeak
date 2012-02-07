@@ -26,3 +26,11 @@ val hashtbl_keys : ('a, 'b) Hashtbl.t -> 'a list
 val hashtbl_values : ('a, 'b) Hashtbl.t -> 'b list
 
 val hashtbl_map : ('a -> 'b) -> ('k, 'a) Hashtbl.t -> ('k, 'b) Hashtbl.t
+
+val hashtbl_mapi : ('k -> 'a -> 'b) -> ('k, 'a) Hashtbl.t -> ('k, 'b) Hashtbl.t
+
+val list_of_option : 'a option -> 'a list
+
+val option_of_list : 'a list -> 'a option
+
+val option_map : ('a -> 'b) -> 'a option -> 'b option

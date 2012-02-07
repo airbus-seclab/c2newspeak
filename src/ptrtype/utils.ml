@@ -27,8 +27,24 @@ let hashtbl_keys h =
 let hashtbl_values h =
   Hashtbl.fold (fun _k v l -> v::l) h []
 
-let hashtbl_map f h =
+let hashtbl_mapi f h =
   let h' = Hashtbl.create 0 in
-  Hashtbl.iter (fun k v -> Hashtbl.add h' k (f v)) h;
+  Hashtbl.iter (fun k v -> Hashtbl.add h' k (f k v)) h;
   h'
 
+let hashtbl_map f h =
+  let g _k x = f x in
+  hashtbl_mapi g h
+
+let list_of_option = function
+  | None -> []
+  | Some x -> [x]
+
+let option_of_list = function
+  | [] -> None
+  | [x] -> Some x
+  | _ -> failwith "option_of_list"
+
+let option_map f = function
+  | None -> None
+  | Some x -> Some (f x)

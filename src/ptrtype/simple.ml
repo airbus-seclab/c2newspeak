@@ -31,6 +31,7 @@ type var_type =
 and simple =
   | Int
   | Float
+  | Fun of simple list * simple option
   | Ptr of simple
   | Var of var_type ref
 
@@ -40,6 +41,15 @@ let rec string_of_simple = function
   | Ptr s -> "Ptr (" ^ string_of_simple s ^ ")"
   | Var {contents = Unknown n} -> "_a"^string_of_int n
   | Var {contents = Instanciated s} -> string_of_simple s
+  | Fun (args, ret) ->
+          let string_of_ret = function
+              | None -> "Void"
+              | Some t -> string_of_simple t
+          in
+            "("
+          ^ String.concat " * " (List.map string_of_simple args)
+          ^ ") -> "
+          ^ string_of_ret ret
 
 let tc_assert ok =
   if not ok then
@@ -222,8 +232,24 @@ let rec check_stmt env (sk, _loc) =
       check_blk new_env blk
   | T.Goto lbl ->
       tc_assert (Env.has_lbl lbl env)
-  | T.Call (_args, _fe, _ret) ->
-      assert false
+  | T.Call (args, T.FunId fid, ret) ->
+      begin
+        let reto = Utils.option_of_list ret in
+        let t_ret = Utils.option_map snd reto in
+        let targs = List.map snd args in
+        let extract_fun_type = function
+          | Fun (a, r) -> (a, r)
+          | _ -> assert false
+        in
+        let (eargs, eret) = extract_fun_type (Env.get_fun env fid) in
+        List.iter2 same_type eargs targs;
+        match (eret, t_ret) with
+        | None, None -> ()
+        | Some x, Some y -> same_type x y
+        | _ -> assert false
+      end
+  | T.Call (_, T.FunDeref _, _) ->
+      failwith "no funderef yet"
   | T.UserSpec _ -> ()
 
 and check_blk env =
@@ -238,8 +264,20 @@ let check_fun env fdec =
   in
   check_blk new_env fdec.T.body
 
+let type_of_fdec fdec =
+  let args' = List.map snd fdec.T.args in
+  let reto = Utils.option_of_list fdec.T.rets in
+  let reto' = Utils.option_map snd reto in
+  Fun (args', reto')
+
+let fundec_env_check fdecs =
+  Hashtbl.fold (fun fname fdec env ->
+    let t = type_of_fdec fdec in
+    Env.add_fun env fname t
+  ) fdecs Env.empty
+
 let check tpk =
-  let env = Env.empty in
+  let env = fundec_env_check tpk.T.fundecs in
   check_blk env tpk.T.init;
   List.iter (check_fun env) (Utils.hashtbl_values tpk.T.fundecs)
 
@@ -263,6 +301,9 @@ let rec vars_of_typ = function
   | Ptr t -> vars_of_typ t
   | Var ({contents = Unknown n}) -> [n]
   | Var ({contents = Instanciated t}) -> vars_of_typ t
+  | Fun (args, ret) ->
+          let ret_list = Utils.list_of_option ret in
+          List.concat (List.map vars_of_typ (ret_list@args))
 
 let no_vars_in t =
   vars_of_typ t = []
@@ -279,15 +320,26 @@ let is_atomic_type = function
 
 let occurs n t = List.mem n (vars_of_typ t)
 
+let occurs_check_failed ta tb =
+  let sa = string_of_simple ta in
+  let sb = string_of_simple tb in
+  failwith ("Occurs check failed : cannot unify "^sa^" and "^sb)
+
 let rec unify ta tb =
   let sta = shorten ta in
   let stb = shorten tb in
   match (sta, stb) with
+  | ((Var ({contents = Unknown na} as ra)),
+     (Var  {contents = Unknown nb})) ->
+       begin
+         if na <> nb then
+           ra := Instanciated stb
+       end
   | ((Var ({contents = Unknown n} as r)), t)
     ->
       begin
         if occurs n t then
-          type_clash sta stb
+          occurs_check_failed sta stb
         else
           r := Instanciated t
       end
@@ -295,6 +347,11 @@ let rec unify ta tb =
   | _ when is_atomic_type sta && sta = stb -> ()
 
   | Ptr pa, Ptr pb -> unify pa pb
+  | Fun (args_a, Some ret_a), Fun (args_b, Some ret_b) ->
+      List.iter2 unify args_a args_b;
+      unify ret_a ret_b;
+  | Fun (args_a, None), Fun (args_b, None) ->
+      List.iter2 unify args_a args_b
     
   | _ -> type_clash sta stb
 
@@ -422,7 +479,38 @@ let rec infer_stmtkind env sk =
   | T.Guard e ->
       let e' = infer_exp env e in
       T.Guard e'
-  | T.Call _ -> assert false
+  | T.Call (args, T.FunId fid, rets) ->
+      (*
+       * Warning : plumbing ahead.
+       *
+       * Nothing interesting here : we just construct a Fun type corresponding
+       * to the actual arguments and unify it with the formal arguments from
+       * the environment.
+       *)
+      let reto' =
+        Utils.option_map
+          (fun (lv, _) ->
+            let lv' = infer_lv env lv
+            in (lv', lval_type env lv')
+          )
+          (Utils.option_of_list rets)
+      in
+      let args' =
+        List.map
+          (fun (e, _) ->
+            let (e', t) = infer_exp env e in
+            ((e', t), t)
+          ) args
+      in
+      let t_args = List.map snd args' in
+      let t_ret = Utils.option_map snd reto' in
+      let tfcall = Fun (t_args, t_ret) in
+      let tf = Env.get_fun env fid in
+      unify tf tfcall;
+      let rets' = Utils.list_of_option reto' in
+      T.Call (args', T.FunId fid, rets')
+  | T.Call (_, T.FunDeref _, _) ->
+      failwith "no function pointers yet"
 
 and infer_stmt env (sk, loc) =
   let sk' = infer_stmtkind env sk in
@@ -431,7 +519,7 @@ and infer_stmt env (sk, loc) =
 and infer_blk env =
   List.map (infer_stmt env)
 
-let infer_fdec env fdec =
+let infer_fdec env fname fdec =
   (*
    * Prepare a new environment with rets & args.
    * Infer the body under it.
@@ -458,18 +546,42 @@ let infer_fdec env fdec =
       )
       l
   in
-  { T.body = blk
-  ; T.rets = extract_types fdec.T.rets
-  ; T.args = extract_types fdec.T.args
-  ; T.position = fdec.T.position
-  }
+  let fdec' =
+    { T.body = blk
+    ; T.rets = extract_types fdec.T.rets
+    ; T.args = extract_types fdec.T.args
+    ; T.position = fdec.T.position
+    }
+  in
+  let t = type_of_fdec fdec' in
+  let te = Env.get_fun env fname in
+  unify t te;
+  fdec'
+
+(*
+ * Build an environment from function declarations.
+ *
+ * Arity (#args and #rets) of global functions is correct
+ * but every type is an unknown variable type.
+ *)
+let fundec_env_infer fdecs =
+  Hashtbl.fold (fun fname fdec env ->
+    let make_new_type _ =
+      new_unknown ()
+    in
+    let args' = List.map make_new_type fdec.T.args in
+    let reto = Utils.option_of_list fdec.T.rets in
+    let reto' = Utils.option_map make_new_type reto in
+    let t = Fun (args', reto') in
+    Env.add_fun env fname t
+  ) fdecs Env.empty
 
 let infer tpk =
-  let env = Env.empty in
+  let env = fundec_env_infer tpk.T.fundecs in
   reset_unknowns ();
 
   let init = infer_blk env tpk.T.init in
-  let fdecs = Utils.hashtbl_map (infer_fdec env) tpk.T.fundecs in
+  let fdecs = Utils.hashtbl_mapi (infer_fdec env) tpk.T.fundecs in
 
   let global_names = Utils.hashtbl_keys tpk.T.globals in
   let globals = Hashtbl.create 0 in
