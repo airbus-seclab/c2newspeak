@@ -349,7 +349,7 @@ let rec unify ta tb =
   | Ptr pa, Ptr pb -> unify pa pb
   | Fun (args_a, Some ret_a), Fun (args_b, Some ret_b) ->
       List.iter2 unify args_a args_b;
-      unify ret_a ret_b;
+      unify ret_a ret_b
   | Fun (args_a, None), Fun (args_b, None) ->
       List.iter2 unify args_a args_b
     
@@ -577,8 +577,8 @@ let fundec_env_infer fdecs =
   ) fdecs Env.empty
 
 let infer tpk =
-  let env = fundec_env_infer tpk.T.fundecs in
   reset_unknowns ();
+  let env = fundec_env_infer tpk.T.fundecs in
 
   let init = infer_blk env tpk.T.init in
   let fdecs = Utils.hashtbl_mapi (infer_fdec env) tpk.T.fundecs in
