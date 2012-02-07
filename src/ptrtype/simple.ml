@@ -35,6 +35,10 @@ and simple =
   | Ptr of simple
   | Var of var_type ref
 
+let extract_fun_type = function
+  | Fun (a, r) -> (a, r)
+  | _ -> assert false
+
 let rec string_of_simple = function
   | Int -> "Int"
   | Float -> "Float"
@@ -76,15 +80,33 @@ let same_type lx ly =
 
 let tc_scalar_compatible st lty =
   let ty = shorten lty in
+  let error () =
+    print_endline
+      ( "Scalar type "
+      ^ N.string_of_scalar st
+      ^ " is not compatible with "
+      ^ string_of_simple ty
+      );
+    assert false
+  in
   match (st, ty) with
   | (N.Int _, Int) -> ()
+  | (N.FunPtr, Ptr (Fun (_, _))) -> ()
+  | (N.FunPtr, _) -> error ()
+  | (N.Ptr, Ptr (Fun (_, _))) -> error ()
   | (N.Ptr, Ptr _) -> ()
   | (N.Float _, Float) -> ()
-  | _ -> assert false
+  | _ -> error ()
 
 (************
  * Checking *
  ************)
+
+let same_type_option xo yo =
+  match (xo, yo) with
+  | None, None -> ()
+  | Some x, Some y -> same_type x y
+  | _ -> assert false
 
 let tc_const_compatible cst ty =
   match (cst, ty) with
@@ -196,7 +218,11 @@ let rec check_exp env (be, te) =
       let (_, top) = e in
       check_exp env e;
       tc_unop_compatible te op top
-  | T.AddrOfFun (_fid, _ftyp) -> assert false
+  | T.AddrOfFun (fid, (args, retl)) ->
+      let ret = Utils.option_of_list retl in
+      let (ea, er) = extract_fun_type (Env.get_fun env fid) in
+      List.iter2 same_type ea args;
+      same_type_option er ret
 
 (*
  * Propagate typing constraints through control flow.
@@ -237,16 +263,9 @@ let rec check_stmt env (sk, _loc) =
         let reto = Utils.option_of_list ret in
         let t_ret = Utils.option_map snd reto in
         let targs = List.map snd args in
-        let extract_fun_type = function
-          | Fun (a, r) -> (a, r)
-          | _ -> assert false
-        in
         let (eargs, eret) = extract_fun_type (Env.get_fun env fid) in
         List.iter2 same_type eargs targs;
-        match (eret, t_ret) with
-        | None, None -> ()
-        | Some x, Some y -> same_type x y
-        | _ -> assert false
+        same_type_option eret t_ret
       end
   | T.Call (_, T.FunDeref _, _) ->
       failwith "no funderef yet"
@@ -429,7 +448,10 @@ and infer_exp env (e, _) =
       let a' = infer_exp env a in
       let b' = infer_exp env b in
       (T.BinOp (op, a', b'), infer_binop op a' b')
-  | T.AddrOfFun _ -> assert false
+  | T.AddrOfFun (fid, _) ->
+      let (a, r) = extract_fun_type (Env.get_fun env fid) in
+      let t = Ptr (Fun (a, r)) in
+      (T.AddrOfFun (fid, (a, Utils.list_of_option r)), t)
 
 let infer_spectoken env = function
   | T.SymbolToken c -> T.SymbolToken c
