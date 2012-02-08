@@ -33,6 +33,7 @@ and simple =
   | Float
   | Fun of simple list * simple list
   | Ptr of simple
+  | Array of simple
   | Var of var_type ref
 
 let extract_fun_type = function
@@ -43,6 +44,7 @@ let rec string_of_simple = function
   | Int -> "Int"
   | Float -> "Float"
   | Ptr s -> "Ptr (" ^ string_of_simple s ^ ")"
+  | Array s -> "Array (" ^ string_of_simple s ^ ")"
   | Var {contents = Unknown n} -> "_a"^string_of_int n
   | Var {contents = Instanciated s} -> string_of_simple s
   | Fun (args, rets) ->
@@ -171,7 +173,7 @@ let tc_unop_compatible ret op le =
           ]
         )
 
-let get_lv_type env = function
+let rec get_lv_type env = function
   | (T.Local _ | T.Global _) as lv ->
       begin try
         Env.get env lv
@@ -186,7 +188,21 @@ let get_lv_type env = function
         | Ptr pt -> pt
         | _ -> invalid_arg "get_lv_type : not dereferencing a pointer type"
       end
-  | T.Shift _ -> invalid_arg "get_lv_type : not support for Shift expressions"
+  | T.Shift (lv, (_e, te)) ->
+      begin
+        same_type te Int;
+        let tlv = get_lv_type env lv in
+        match shorten tlv with
+        | Array t -> t
+        | _ ->
+            let msg =
+              Printf.sprintf
+                "%s has type %s but should have an array type"
+                (T.string_of_lval string_of_simple lv)
+                (string_of_simple tlv)
+            in
+            failwith msg
+      end
 
 let rec check_exp env (be, te) =
   (*
@@ -335,7 +351,7 @@ let (new_unknown, reset_unknowns) =
 
 let rec vars_of_typ = function
   | Int | Float -> []
-  | Ptr t -> vars_of_typ t
+  | Ptr t | Array t -> vars_of_typ t
   | Var ({contents = Unknown n}) -> [n]
   | Var ({contents = Instanciated t}) -> vars_of_typ t
   | Fun (args, rets) ->
@@ -380,7 +396,9 @@ let rec unify_now ta tb =
   | (_, (Var ({contents = Unknown _}))) -> unify_now stb sta
   | _ when is_atomic_type sta && sta = stb -> ()
 
-  | Ptr pa, Ptr pb -> unify_now pa pb
+  | Ptr a, Ptr b
+  | Array a, Array b -> unify_now a b
+
   | Fun (args_a, rets_a), Fun (args_b, rets_b) ->
       List.iter2 unify_now args_a args_b;
       List.iter2 unify_now rets_a rets_b
@@ -455,7 +473,13 @@ and lval_type env = function
       let t = new_unknown () in
       unify (Ptr t) te;
       t
-  | T.Shift _ -> invalid_arg "lval_type : no support for Shift expressions"
+  | T.Shift (lv, e) ->
+      let (_, te) = infer_exp env e in
+      unify te Int;
+      let t = new_unknown () in
+      let tlv = lval_type env lv in
+      unify (Array t) tlv;
+      t
 
 and infer_exp env (e, _) =
   match e with
