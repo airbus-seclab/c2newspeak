@@ -47,7 +47,7 @@ let rec string_of_simple = function
   | Var {contents = Instanciated s} -> string_of_simple s
   | Fun (args, ret) ->
           let string_of_ret = function
-              | None -> "Void"
+              | None -> "()"
               | Some t -> string_of_simple t
           in
             "("
