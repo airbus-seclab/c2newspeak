@@ -37,7 +37,7 @@ and simple =
 
 let extract_fun_type = function
   | Fun (a, r) -> (a, r)
-  | _ -> assert false
+  | _ -> invalid_arg "extract_fun_type" 
 
 let rec string_of_simple = function
   | Int -> "Int"
@@ -55,9 +55,9 @@ let rec string_of_simple = function
           ^ ") -> "
           ^ string_of_ret ret
 
-let tc_assert ok =
-  if not ok then
-    assert false
+let tc_assert_label env lbl =
+  if not (Env.has_lbl lbl env) then
+    failwith ("No such label : " ^ N.string_of_lbl lbl)
 
 let rec shorten = function
   | Var ({contents = Instanciated (Var _ as t)} as vt) ->
@@ -88,20 +88,18 @@ let same_type lx ly =
     begin
       let sx = string_of_simple x in
       let sy = string_of_simple y in
-      Printf.printf "Typechecking failed : %s != %s\n" sx sy;
-      assert false
+      failwith (Printf.sprintf "Typechecking failed : %s != %s\n" sx sy)
     end
 
 let tc_scalar_compatible st lty =
   let ty = shorten lty in
   let error () =
-    print_endline
+    failwith
       ( "Scalar type "
       ^ N.string_of_scalar st
       ^ " is not compatible with "
       ^ string_of_simple ty
-      );
-    assert false
+      )
   in
   match (st, ty) with
   | (N.Int _, Int) -> ()
@@ -113,10 +111,20 @@ let tc_scalar_compatible st lty =
   | _ -> error ()
 
 let same_type_option xo yo =
+  let to_string = function
+  | None -> "(no value)"
+  | Some x -> string_of_simple x
+  in
   match (xo, yo) with
   | None, None -> ()
   | Some x, Some y -> same_type x y
-  | _ -> assert false
+  | _ ->
+      failwith
+        ( "Different types : "
+        ^ to_string xo
+        ^ " and "
+        ^ to_string yo
+        )
 
 let tc_const_compatible cst ty =
   match (cst, ty) with
@@ -124,13 +132,12 @@ let tc_const_compatible cst ty =
   | (N.Nil, Ptr _) -> ()
   | (N.CFloat _, Float) -> ()
   | _ ->
-      print_endline
+      failwith
         ( "Incompatibility between "
         ^ N.string_of_cst cst
         ^ " and "
         ^ string_of_simple ty
-        );
-      assert false
+        )
 
 let tc_binop_compatible ret op la lb =
   let a = shorten la in
@@ -147,7 +154,7 @@ let tc_binop_compatible ret op la lb =
   | (Ptr tr, N.PlusPI, Ptr ta, Int) when tr = ta -> ()
   | (Int, N.MinusPP, Ptr ta, Ptr tb) when ta = tb -> ()
   | _ ->
-      print_endline
+      failwith
         (String.concat ""
           [ "Incompatible types in binary operation : "
           ; N.string_of_binop op
@@ -158,8 +165,7 @@ let tc_binop_compatible ret op la lb =
           ; " -> "
           ; string_of_simple ret
           ]
-        );
-      assert false
+        )
 
 let tc_unop_compatible ret op le =
   let e = shorten le in
@@ -174,7 +180,7 @@ let tc_unop_compatible ret op le =
         tc_scalar_compatible se e
       end
   | _ ->
-      print_endline
+      failwith
         (String.concat ""
           [ "Incompatible types in unary operation : "
           ; N.string_of_unop op
@@ -183,8 +189,7 @@ let tc_unop_compatible ret op le =
           ; " -> "
           ; string_of_simple ret
           ]
-        );
-      assert false
+        )
 
 let get_lv_type env = function
   | (T.Local _ | T.Global _) as lv ->
@@ -199,9 +204,9 @@ let get_lv_type env = function
       begin
         match (shorten t) with
         | Ptr pt -> pt
-        | _ -> assert false
+        | _ -> invalid_arg "get_lv_type : not dereferencing a pointer type"
       end
-  | T.Shift _ -> assert false
+  | T.Shift _ -> invalid_arg "get_lv_type : not support for Shift expressions"
 
 let rec check_exp env (be, te) =
   (*
@@ -267,7 +272,7 @@ let rec check_stmt env (sk, _loc) =
       let new_env = Env.add_lbl lbl env in
       check_blk new_env blk
   | T.Goto lbl ->
-      tc_assert (Env.has_lbl lbl env)
+      tc_assert_label env lbl
   | T.Call (args, T.FunId fid, ret) ->
       begin
         let reto = Utils.option_of_list ret in
@@ -360,9 +365,6 @@ let rec vars_of_typ = function
           let ret_list = Utils.list_of_option ret in
           List.concat (List.map vars_of_typ (ret_list@args))
 
-let no_vars_in t =
-  vars_of_typ t = []
-
 let type_clash ta tb =
   let sa = string_of_simple ta in
   let sb = string_of_simple tb in
@@ -426,8 +428,7 @@ let infer_unop op (_e, t) =
   | N.Cast (N.Float _, N.Float _) -> unify t Float; Float
 
   | _ ->
-      Printf.printf "Unsupported unop : %s\n" (N.string_of_unop op);
-      assert false
+      failwith ("Unsupported unop : " ^ N.string_of_unop op)
 
 let infer_binop op (_, a) (_, b) =
   match op with
@@ -464,7 +465,7 @@ and lval_type env = function
       let t = new_unknown () in
       unify (Ptr t) te;
       t
-  | T.Shift _ -> assert false
+  | T.Shift _ -> invalid_arg "lval_type : no support for Shift expressions"
 
 and infer_exp env (e, _) =
   match e with
@@ -520,7 +521,7 @@ let rec infer_stmtkind env sk =
       let blk' = infer_blk new_env blk in
       T.DoWith (blk', lbl)
   | T.Goto lbl ->
-      tc_assert (Env.has_lbl lbl env);
+      tc_assert_label env lbl;
       T.Goto lbl
   | T.Decl (n, _ty, blk) ->
       let var = T.Local n in
@@ -646,7 +647,8 @@ let infer tpk =
   List.iter
     (fun g ->
       let t = lval_type env (T.Global g) in
-      tc_assert (no_vars_in t);
+      if (vars_of_typ t <> []) then
+        failwith ("Free type variables :\n" ^ g ^ " : " ^ string_of_simple t);
       Hashtbl.add globals g t
     )
     global_names;
