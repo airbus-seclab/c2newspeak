@@ -453,7 +453,13 @@ let infer_binop op (_, a) (_, b) =
       unify a Int;
       unify b Int;
       Int
-  | N.Eq _ ->
+  | N.PlusPI ->
+      let t = new_unknown () in
+      let p = Ptr t in
+      unify a p;
+      unify b Int;
+      p
+  | N.Eq _ | N.Gt _ ->
       unify a b;
       Int
   | _ ->
