@@ -359,7 +359,7 @@ let occurs_check_failed ta tb =
   let sb = string_of_simple tb in
   failwith ("Occurs check failed : cannot unify "^sa^" and "^sb)
 
-let rec unify ta tb =
+let rec unify_now ta tb =
   let sta = shorten ta in
   let stb = shorten tb in
   match (sta, stb) with
@@ -377,15 +377,30 @@ let rec unify ta tb =
         else
           r := Instanciated t
       end
-  | (_, (Var ({contents = Unknown _}))) -> unify stb sta
+  | (_, (Var ({contents = Unknown _}))) -> unify_now stb sta
   | _ when is_atomic_type sta && sta = stb -> ()
 
-  | Ptr pa, Ptr pb -> unify pa pb
+  | Ptr pa, Ptr pb -> unify_now pa pb
   | Fun (args_a, rets_a), Fun (args_b, rets_b) ->
-      List.iter2 unify args_a args_b;
-      List.iter2 unify rets_a rets_b
+      List.iter2 unify_now args_a args_b;
+      List.iter2 unify_now rets_a rets_b
     
   | _ -> type_clash sta stb
+
+let unify_queue = Queue.create ()
+
+let unify_do show_steps tpk =
+  Queue.iter (fun (a, b) ->
+    if show_steps then begin
+      Tyspeak.dump string_of_simple tpk;
+      print_endline (String.make 50 '-')
+    end;
+    unify_now a b
+  ) unify_queue;
+  Queue.clear unify_queue
+
+let unify a b =
+  Queue.add (a, b) unify_queue
 
 let infer_const = function
   | N.CInt _ -> Int
@@ -608,7 +623,7 @@ let fundec_env_infer fdecs =
     Env.add_fun env fname t
   ) fdecs Env.empty
 
-let infer tpk =
+let infer show_steps tpk =
   reset_unknowns ();
   let env = fundec_env_infer tpk.T.fundecs in
 
@@ -625,11 +640,16 @@ let infer tpk =
       Hashtbl.add globals g t
     )
     global_names;
-  { T.globals = globals
-  ; T.init = init
-  ; T.fundecs = fdecs
-  ; T.ptr_sz = tpk.T.ptr_sz
-  ; T.src_lang = tpk.T.src_lang
-  ; T.abi = tpk.T.abi
-  }
+  let tpk' =
+    { T.globals = globals
+    ; T.init = init
+    ; T.fundecs = fdecs
+    ; T.ptr_sz = tpk.T.ptr_sz
+    ; T.src_lang = tpk.T.src_lang
+    ; T.abi = tpk.T.abi
+    }
+  in
 
+  unify_do show_steps tpk';
+
+  tpk'

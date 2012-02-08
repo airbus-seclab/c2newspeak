@@ -27,4 +27,4 @@ val string_of_simple : simple -> string
 
 val check : simple Tyspeak.t -> unit
 
-val infer : 'a Tyspeak.t -> simple Tyspeak.t
+val infer : bool -> 'a Tyspeak.t -> simple Tyspeak.t
