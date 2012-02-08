@@ -182,14 +182,16 @@ let rec get_lv_type env = function
           failwith ("Cannot find lval : "^T.string_of_lval string_of_simple lv)
         end
       end
-  | T.Deref ((_, t), _sz) ->
+  | T.Deref ((_, t) as e, _sz) ->
       begin
+        check_exp env e;
         match (shorten t) with
         | Ptr pt -> pt
         | _ -> invalid_arg "get_lv_type : not dereferencing a pointer type"
       end
-  | T.Shift (lv, (_e, te)) ->
+  | T.Shift (lv, ((_, te) as e)) ->
       begin
+        check_exp env e;
         same_type te Int;
         let tlv = get_lv_type env lv in
         match shorten tlv with
@@ -204,7 +206,7 @@ let rec get_lv_type env = function
             failwith msg
       end
 
-let rec check_exp env (be, te) =
+and check_exp env (be, te) =
   (*
    * General idea :
    *   - check subexps (generic)
@@ -270,7 +272,7 @@ let rec check_stmt env (sk, _loc) =
       tc_assert_label env lbl
   | T.Call (args, T.FunId fid, rets) ->
       begin
-        let targs = List.map snd args in
+        let targs = List.map (fun (e, t) -> check_exp env e; t) args in
         let t_ret = List.map snd rets in
         let (eargs, eret) = extract_fun_type (Env.get_fun env fid) in
         List.iter2 same_type eargs targs;
