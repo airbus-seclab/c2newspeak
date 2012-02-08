@@ -65,6 +65,17 @@ let rec shorten = function
   | Var {contents = Instanciated t} -> t
   | t -> t
 
+let rec type_eq x y =
+  match (shorten x, shorten y) with
+  | Int, Int -> true
+  | Float, Float -> true
+  | Ptr px, Ptr py -> type_eq px py
+  | Var {contents = Unknown nx}, Var {contents = Unknown ny} -> nx = ny
+  | Fun (argsa, retsa), Fun (argsb, retsb) ->
+        List.for_all2 type_eq argsa argsb
+     && List.for_all2 type_eq retsa retsb
+  | _ -> false
+
 (************
  * Checking *
  ************)
@@ -79,10 +90,8 @@ let rec shorten = function
  * most functions are pure (they only read their environment).
  *)
 
-let same_type lx ly =
-  let x = shorten lx in
-  let y = shorten ly in
-  if x <> y then
+let same_type x y =
+  if not (type_eq x y) then
     begin
       let sx = string_of_simple x in
       let sy = string_of_simple y in
