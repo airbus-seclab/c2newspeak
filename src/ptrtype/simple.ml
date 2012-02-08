@@ -344,7 +344,8 @@ let rec vars_of_typ = function
 let type_clash ta tb =
   let sa = string_of_simple ta in
   let sb = string_of_simple tb in
-  failwith ("Type clash : "^sa^" vs "^sb)
+  print_endline ("Type clash between :\n  "^sa^"\n  "^sb);
+  exit 1
 
 let is_atomic_type = function
   | Int
