@@ -31,7 +31,7 @@ type var_type =
 and simple =
   | Int
   | Float
-  | Fun of simple list * simple option
+  | Fun of simple list * simple list
   | Ptr of simple
   | Var of var_type ref
 
@@ -45,15 +45,11 @@ let rec string_of_simple = function
   | Ptr s -> "Ptr (" ^ string_of_simple s ^ ")"
   | Var {contents = Unknown n} -> "_a"^string_of_int n
   | Var {contents = Instanciated s} -> string_of_simple s
-  | Fun (args, ret) ->
-          let string_of_ret = function
-              | None -> "()"
-              | Some t -> string_of_simple t
-          in
-            "("
-          ^ String.concat " * " (List.map string_of_simple args)
-          ^ ") -> "
-          ^ string_of_ret ret
+  | Fun (args, rets) ->
+      let print_lst l =
+        "(" ^ String.concat " * " (List.map string_of_simple l) ^ ")"
+      in
+      print_lst args ^ " -> " ^ print_lst rets
 
 let tc_assert_label env lbl =
   if not (Env.has_lbl lbl env) then
@@ -109,22 +105,6 @@ let tc_scalar_compatible st lty =
   | (N.Ptr, Ptr _) -> ()
   | (N.Float _, Float) -> ()
   | _ -> error ()
-
-let same_type_option xo yo =
-  let to_string = function
-  | None -> "(no value)"
-  | Some x -> string_of_simple x
-  in
-  match (xo, yo) with
-  | None, None -> ()
-  | Some x, Some y -> same_type x y
-  | _ ->
-      failwith
-        ( "Different types : "
-        ^ to_string xo
-        ^ " and "
-        ^ to_string yo
-        )
 
 let tc_const_compatible cst ty =
   match (cst, ty) with
@@ -233,11 +213,10 @@ let rec check_exp env (be, te) =
       let (_, top) = e in
       check_exp env e;
       tc_unop_compatible te op top
-  | T.AddrOfFun (fid, (args, retl)) ->
-      let ret = Utils.option_of_list retl in
+  | T.AddrOfFun (fid, (args, rets)) ->
       let (ea, er) = extract_fun_type (Env.get_fun env fid) in
       List.iter2 same_type ea args;
-      same_type_option er ret
+      List.iter2 same_type er rets
 
 (*
  * Propagate typing constraints through control flow.
@@ -273,14 +252,13 @@ let rec check_stmt env (sk, _loc) =
       check_blk new_env blk
   | T.Goto lbl ->
       tc_assert_label env lbl
-  | T.Call (args, T.FunId fid, ret) ->
+  | T.Call (args, T.FunId fid, rets) ->
       begin
-        let reto = Utils.option_of_list ret in
-        let t_ret = Utils.option_map snd reto in
         let targs = List.map snd args in
+        let t_ret = List.map snd rets in
         let (eargs, eret) = extract_fun_type (Env.get_fun env fid) in
         List.iter2 same_type eargs targs;
-        same_type_option eret t_ret
+        List.iter2 same_type eret t_ret
       end
   | T.Call (_, T.FunDeref _, _) ->
       failwith "no funderef yet"
@@ -300,9 +278,8 @@ let check_fun env fdec =
 
 let type_of_fdec fdec =
   let args' = List.map snd fdec.T.args in
-  let reto = Utils.option_of_list fdec.T.rets in
-  let reto' = Utils.option_map snd reto in
-  Fun (args', reto')
+  let rets' = List.map snd fdec.T.rets in
+  Fun (args', rets')
 
 let fundec_env_check fdecs =
   Hashtbl.fold (fun fname fdec env ->
@@ -361,9 +338,8 @@ let rec vars_of_typ = function
   | Ptr t -> vars_of_typ t
   | Var ({contents = Unknown n}) -> [n]
   | Var ({contents = Instanciated t}) -> vars_of_typ t
-  | Fun (args, ret) ->
-          let ret_list = Utils.list_of_option ret in
-          List.concat (List.map vars_of_typ (ret_list@args))
+  | Fun (args, rets) ->
+          List.concat (List.map vars_of_typ (rets@args))
 
 let type_clash ta tb =
   let sa = string_of_simple ta in
@@ -404,11 +380,9 @@ let rec unify ta tb =
   | _ when is_atomic_type sta && sta = stb -> ()
 
   | Ptr pa, Ptr pb -> unify pa pb
-  | Fun (args_a, Some ret_a), Fun (args_b, Some ret_b) ->
+  | Fun (args_a, rets_a), Fun (args_b, rets_b) ->
       List.iter2 unify args_a args_b;
-      unify ret_a ret_b
-  | Fun (args_a, None), Fun (args_b, None) ->
-      List.iter2 unify args_a args_b
+      List.iter2 unify rets_a rets_b
     
   | _ -> type_clash sta stb
 
@@ -488,7 +462,7 @@ and infer_exp env (e, _) =
   | T.AddrOfFun (fid, _) ->
       let (a, r) = extract_fun_type (Env.get_fun env fid) in
       let t = Ptr (Fun (a, r)) in
-      (T.AddrOfFun (fid, (a, Utils.list_of_option r)), t)
+      (T.AddrOfFun (fid, (a, r)), t)
 
 let infer_spectoken env = function
   | T.SymbolToken c -> T.SymbolToken c
@@ -546,13 +520,13 @@ let rec infer_stmtkind env sk =
        * to the actual arguments and unify it with the formal arguments from
        * the environment.
        *)
-      let reto' =
-        Utils.option_map
+      let rets' =
+        List.map
           (fun (lv, _) ->
             let lv' = infer_lv env lv
             in (lv', lval_type env lv')
           )
-          (Utils.option_of_list rets)
+          rets
       in
       let args' =
         List.map
@@ -562,11 +536,10 @@ let rec infer_stmtkind env sk =
           ) args
       in
       let t_args = List.map snd args' in
-      let t_ret = Utils.option_map snd reto' in
+      let t_ret = List.map snd rets' in
       let tfcall = Fun (t_args, t_ret) in
       let tf = Env.get_fun env fid in
       unify tf tfcall;
-      let rets' = Utils.list_of_option reto' in
       T.Call (args', T.FunId fid, rets')
   | T.Call (_, T.FunDeref _, _) ->
       failwith "no function pointers yet"
@@ -629,9 +602,8 @@ let fundec_env_infer fdecs =
       new_unknown ()
     in
     let args' = List.map make_new_type fdec.T.args in
-    let reto = Utils.option_of_list fdec.T.rets in
-    let reto' = Utils.option_map make_new_type reto in
-    let t = Fun (args', reto') in
+    let rets' = List.map make_new_type fdec.T.rets in
+    let t = Fun (args', rets') in
     Env.add_fun env fname t
   ) fdecs Env.empty
 
