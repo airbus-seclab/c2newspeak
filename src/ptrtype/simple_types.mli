@@ -21,33 +21,26 @@
  * 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
  *)
 
-type ('a, 'b) t =
-  { lvals : ('a * 'b) list
-  ; lbls  : Newspeak.lbl list
-  ; funs  : (Newspeak.fid  * 'b) list
-  }
+type var_type =
+  | Unknown of int
+  | Instanciated of simple
 
-let empty =
-  { lvals = []
-  ; lbls  = []
-  ; funs  = []
-  }
+and simple =
+  | Int
+  | Float
+  | Fun of simple list * simple list
+  | Ptr of simple
+  | Array of simple
+  | Var of var_type ref
 
-let get env k =
-  List.assoc k env.lvals
+val type_eq : simple -> simple -> bool
 
-let add lv t env =
-  { env with lvals = (lv, t)::env.lvals }
+val string_of_simple : simple -> string
 
-let add_lbl lbl env =
-  { env with lbls = lbl::env.lbls}
+val shorten : simple -> simple
 
-let assert_lbl lbl env =
-  if not (List.mem lbl env.lbls) then
-    failwith ("No such label : " ^ Newspeak.string_of_lbl lbl)
+val vars_of_typ : simple -> int list
 
-let add_fun env fid t =
-  { env with funs = (fid, t)::env.funs}
+val type_of_fdec : simple Tyspeak.fundec -> simple
 
-let get_fun env fid =
-  List.assoc fid env.funs
+val extract_fun_type : simple -> simple list * simple list

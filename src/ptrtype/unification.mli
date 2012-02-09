@@ -21,33 +21,6 @@
  * 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
  *)
 
-type ('a, 'b) t =
-  { lvals : ('a * 'b) list
-  ; lbls  : Newspeak.lbl list
-  ; funs  : (Newspeak.fid  * 'b) list
-  }
+val unify : Simple_types.simple -> Simple_types.simple -> unit
 
-let empty =
-  { lvals = []
-  ; lbls  = []
-  ; funs  = []
-  }
-
-let get env k =
-  List.assoc k env.lvals
-
-let add lv t env =
-  { env with lvals = (lv, t)::env.lvals }
-
-let add_lbl lbl env =
-  { env with lbls = lbl::env.lbls}
-
-let assert_lbl lbl env =
-  if not (List.mem lbl env.lbls) then
-    failwith ("No such label : " ^ Newspeak.string_of_lbl lbl)
-
-let add_fun env fid t =
-  { env with funs = (fid, t)::env.funs}
-
-let get_fun env fid =
-  List.assoc fid env.funs
+val unify_do : bool -> Simple_types.simple Tyspeak.t -> unit

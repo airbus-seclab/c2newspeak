@@ -29,9 +29,9 @@ let process_npk npk =
   let s = Simple.infer (!show_steps) tpk in
   begin
     if !do_checks then
-      Simple.check s
+      Simple_check.check s
   end;
-  Tyspeak.dump Simple.string_of_simple s
+  Tyspeak.dump Simple_types.string_of_simple s
 
 let exit_error msg =
   print_endline msg;
