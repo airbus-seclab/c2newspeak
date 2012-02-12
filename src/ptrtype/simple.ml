@@ -327,7 +327,7 @@ let fundec_env_infer fdecs =
     Env.add_fun env fname t
   ) fdecs Env.empty
 
-let infer show_steps tpk =
+let infer tpk =
   reset_unknowns ();
   let env = fundec_env_infer tpk.T.fundecs in
 
@@ -353,7 +353,5 @@ let infer show_steps tpk =
     ; T.abi = tpk.T.abi
     }
   in
-
-  unify_do show_steps tpk';
-
+  unify_do tpk';
   tpk'

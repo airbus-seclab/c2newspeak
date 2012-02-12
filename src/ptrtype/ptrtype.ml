@@ -21,14 +21,11 @@
  * 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
  *)
 
-let do_checks = ref true
-let show_steps = ref false
-
 let process_npk npk =
   let tpk = Npk2tpk.convert_unit npk in
-  let s = Simple.infer (!show_steps) tpk in
+  let s = Simple.infer tpk in
   begin
-    if !do_checks then
+    if !Options.do_checks then
       Simple_check.check s
   end;
   Tyspeak.dump Simple_types.string_of_simple s
@@ -47,15 +44,16 @@ let process_file =
   with_npk process_npk
 
 let main () =
-  let speclist = [ ( "--no-check"
-                   , Arg.Unit (fun () -> do_checks := false)
-                   , "Don't run the typechecking phase (only inference)"
-                   )
-                 ; ( "--show-steps"
-                   , Arg.Unit (fun () -> show_steps := true)
-                   , "Show the type inference phase in slow motion"
-                   )
-                 ] in
+  let speclist =
+    [ ( "--no-check"
+      , Arg.Unit (fun () -> Options.do_checks := false)
+      , "Don't run the typechecking phase (only inference)"
+      )
+    ; ( "--show-steps"
+      , Arg.Unit (fun () -> Options.show_steps := true)
+      , "Show the type inference phase in slow motion"
+      )
+    ] in
   let inputs = ref [] in
   let add_file file =
     inputs := file::!inputs

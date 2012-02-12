@@ -23,7 +23,8 @@
 TARGET=ptrtype
 DIRS=newspeak/ utils/ ptrtype/
 
-MODS=utils tyspeak env simple_types unification simple_check simple npk2tpk ptrtype
+MODS=options utils tyspeak env simple_types unification \
+     simple_check simple npk2tpk ptrtype
 
 FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
      newspeak/newspeak utils/standardApplication newspeak/npkcontext \

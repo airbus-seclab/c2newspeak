@@ -73,9 +73,9 @@ let rec unify_now ta tb =
 
 let unify_queue = Queue.create ()
 
-let unify_do show_steps tpk =
+let unify_do tpk =
   Queue.iter (fun (a, b) ->
-    if show_steps then begin
+    if !Options.show_steps then begin
       Tyspeak.dump string_of_simple tpk;
       print_endline (String.make 50 '-')
     end;

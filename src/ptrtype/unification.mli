@@ -23,4 +23,4 @@
 
 val unify : Simple_types.simple -> Simple_types.simple -> unit
 
-val unify_do : bool -> Simple_types.simple Tyspeak.t -> unit
+val unify_do : Simple_types.simple Tyspeak.t -> unit
