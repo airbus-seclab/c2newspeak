@@ -24,7 +24,7 @@
 module T = Tyspeak
 module N = Newspeak
 
-open Simple_types
+open Types
 open Unification
 
 (*************

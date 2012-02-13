@@ -21,7 +21,7 @@
  * 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
  *)
 
-open Simple_types
+open Types
 
 let occurs n t = List.mem n (vars_of_typ t)
 

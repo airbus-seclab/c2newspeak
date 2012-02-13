@@ -21,6 +21,6 @@
  * 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
  *)
 
-val unify : Simple_types.simple -> Simple_types.simple -> unit
+val unify : Types.simple -> Types.simple -> unit
 
-val unify_do : Simple_types.simple Tyspeak.t -> unit
+val unify_do : Types.simple Tyspeak.t -> unit

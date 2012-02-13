@@ -23,12 +23,12 @@
 
 let process_npk npk =
   let tpk = Npk2tpk.convert_unit npk in
-  let s = Simple.infer tpk in
+  let s = Infer.infer tpk in
   begin
     if !Options.do_checks then
-      Simple_check.check s
+      Check.check s
   end;
-  Tyspeak.dump Simple_types.string_of_simple s
+  Tyspeak.dump Types.string_of_simple s
 
 let exit_error msg =
   print_endline msg;

@@ -21,4 +21,4 @@
  * 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
  *)
 
-val check : Simple_types.simple Tyspeak.t -> unit
+val infer : 'a Tyspeak.t -> Types.simple Tyspeak.t
