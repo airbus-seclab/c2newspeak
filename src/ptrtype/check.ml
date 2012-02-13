@@ -133,14 +133,8 @@ let tc_unop_compatible ret op le =
         )
 
 let rec get_lv_type env = function
-  | (T.Local _ | T.Global _) as lv ->
-      begin try
-        Env.get env lv
-      with Not_found ->
-        begin
-          failwith ("Cannot find lval : "^T.string_of_lval string_of_simple lv)
-        end
-      end
+  | T.Local v -> Env.get env (VLocal v)
+  | T.Global v -> Env.get env (VGlobal v)
   | T.Deref ((_, t) as e, _sz) ->
       begin
         check_exp env e;
@@ -217,7 +211,7 @@ let rec check_stmt env (sk, _loc) =
       check_exp env e;
       same_type te Int
   | T.Decl (vid, ty, blk) ->
-      let new_env = Env.add (T.Local vid) ty env in
+      let new_env = Env.add (VLocal vid) ty env in
       check_blk new_env blk
   | T.Select (a, b) ->
       check_blk env a;
@@ -247,19 +241,29 @@ and check_blk env =
 let check_fun env fdec =
   let new_env =
     List.fold_left
-      (fun e (name, ty) -> Env.add (T.Local name) ty e)
+      (fun e (name, ty) -> Env.add (VLocal name) ty e)
       env
       (fdec.T.rets@fdec.T.args)
   in
   check_blk new_env fdec.T.body
 
-let fundec_env_check fdecs =
-  Hashtbl.fold (fun fname fdec env ->
+let env_add_fundecs fdecs env =
+  Hashtbl.fold (fun fname fdec e ->
     let t = type_of_fdec fdec in
-    Env.add_fun env fname t
-  ) fdecs Env.empty
+    Env.add_fun e fname t
+  ) fdecs env
+
+let env_add_globals globals env =
+  Hashtbl.fold (fun name ty e ->
+    Env.add (VGlobal name) ty e
+  ) globals env
 
 let check tpk =
-  let env = fundec_env_check tpk.T.fundecs in
+  let env =
+    env_add_fundecs tpk.T.fundecs
+    ( env_add_globals tpk.T.globals
+      Env.empty
+    )
+  in
   check_blk env tpk.T.init;
   List.iter (check_fun env) (Utils.hashtbl_values tpk.T.fundecs)

@@ -35,6 +35,10 @@ and simple =
   | Array of simple
   | Var of var_type ref
 
+type variable =
+  | VGlobal of string
+  | VLocal of string
+
 let rec string_of_simple = function
   | Int -> "Int"
   | Float -> "Float"

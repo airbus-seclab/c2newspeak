@@ -33,6 +33,10 @@ and simple =
   | Array of simple
   | Var of var_type ref
 
+type variable =
+  | VGlobal of string
+  | VLocal of string
+
 val type_eq : simple -> simple -> bool
 
 val string_of_simple : simple -> string

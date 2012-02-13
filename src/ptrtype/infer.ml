@@ -147,7 +147,8 @@ let rec infer_lv env = function
   | T.Shift (lv, e) -> T.Shift (infer_lv env lv, infer_exp env e)
 
 and lval_type env = function
-  | (T.Local _ | T.Global _) as v -> Env.get env v
+  | T.Local v -> Env.get env (VLocal v)
+  | T.Global v -> Env.get env (VGlobal v)
   | T.Deref(e, _sz) ->
       let (_, te) = infer_exp env e in
       let t = new_unknown () in
@@ -220,7 +221,7 @@ let rec infer_stmtkind env sk =
   | T.Decl (n, _ty, blk) ->
       let var = T.Local n in
       let t0 = new_unknown () in
-      let new_env = Env.add var t0 env in
+      let new_env = Env.add (VLocal n) t0 env in
       let blk' = infer_blk new_env blk in
       let ty = lval_type new_env var in
       T.Decl (n, ty, blk')
@@ -282,7 +283,7 @@ let infer_fdec env fname fdec =
     List.fold_left
       (fun e (name, _ty) ->
         Env.add
-          (T.Local name)
+          (VLocal name)
           (new_unknown ())
           e
       )
@@ -311,39 +312,45 @@ let infer_fdec env fname fdec =
   fdec'
 
 (*
- * Build an environment from function declarations.
+ * Extend an environment from function declarations.
  *
  * Arity (#args and #rets) of global functions is correct
  * but every type is an unknown variable type.
  *)
-let fundec_env_infer fdecs =
-  Hashtbl.fold (fun fname fdec env ->
+let env_add_fundecs fdecs env =
+  Hashtbl.fold (fun fname fdec e ->
     let make_new_type _ =
       new_unknown ()
     in
     let args' = List.map make_new_type fdec.T.args in
     let rets' = List.map make_new_type fdec.T.rets in
     let t = Fun (args', rets') in
-    Env.add_fun env fname t
-  ) fdecs Env.empty
+    Env.add_fun e fname t
+  ) fdecs env
+
+(*
+ * Extend an environment from global variables.
+ *)
+let env_add_globals globals env =
+  Hashtbl.fold (fun name _ty e ->
+    Env.add (VGlobal name) (new_unknown ()) e
+  ) globals env
 
 let infer tpk =
   reset_unknowns ();
-  let env = fundec_env_infer tpk.T.fundecs in
+  let env =
+    env_add_fundecs tpk.T.fundecs
+      (env_add_globals tpk.T.globals
+        Env.empty
+      )
+  in
 
   let init = infer_blk env tpk.T.init in
   let fdecs = Utils.hashtbl_mapi (infer_fdec env) tpk.T.fundecs in
 
   let global_names = Utils.hashtbl_keys tpk.T.globals in
   let globals = Hashtbl.create 0 in
-  List.iter
-    (fun g ->
-      let t = lval_type env (T.Global g) in
-      if (vars_of_typ t <> []) then
-        failwith ("Free type variables :\n" ^ g ^ " : " ^ string_of_simple t);
-      Hashtbl.add globals g t
-    )
-    global_names;
+
   let tpk' =
     { T.globals = globals
     ; T.init = init
@@ -354,4 +361,16 @@ let infer tpk =
     }
   in
   unify_do tpk';
+
+  List.iter
+    (fun g ->
+      let t = Env.get env (VGlobal g) in
+      if (vars_of_typ t <> []) then
+        begin
+          print_endline ("Error : free type variables :\n" ^ g ^ " : " ^ string_of_simple t);
+          exit 1
+        end;
+      Hashtbl.add globals g t
+    )
+    global_names;
   tpk'
