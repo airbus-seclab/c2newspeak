@@ -223,16 +223,28 @@ let rec check_stmt env (sk, _loc) =
       check_blk new_env blk
   | T.Goto lbl ->
       Env.assert_lbl lbl env
-  | T.Call (args, T.FunId fid, rets) ->
+  | T.Call (args, fexp, rets) ->
       begin
         let targs = List.map (fun (e, t) -> check_exp env e; t) args in
         let t_ret = List.map snd rets in
-        let (eargs, eret) = extract_fun_type (Env.get_fun env fid) in
+        let ft =
+          match fexp with
+          | T.FunId fid -> Env.get_fun env fid
+          | T.FunDeref ((_, Ptr f) as e) -> (check_exp env e; f)
+          | T.FunDeref ((_, t') as e) ->
+              check_exp env e;
+              begin match shorten t' with
+              | Ptr f -> f
+              | _ -> failwith
+                (T.string_of_exp string_of_simple e
+                ^ " does not have a function pointer type"
+                )
+              end
+        in
+        let (eargs, eret) = extract_fun_type ft in
         List.iter2 same_type eargs targs;
         List.iter2 same_type eret t_ret
       end
-  | T.Call (_, T.FunDeref _, _) ->
-      failwith "no funderef yet"
   | T.UserSpec _ -> ()
 
 and check_blk env =

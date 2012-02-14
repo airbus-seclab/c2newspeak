@@ -196,6 +196,14 @@ let infer_spectoken env = function
 
 let infer_assertion env = List.map (infer_spectoken env)
 
+let infer_funexp env = function
+  | T.FunId fid -> (T.FunId fid, Env.get_fun env fid)
+  | T.FunDeref e ->
+      let (_, t) as e' = infer_exp env e in
+      let tf = new_unknown () in
+      unify t (Ptr tf);
+      (T.FunDeref e', tf)
+
 let rec infer_stmtkind env sk =
   match sk with
   | T.Set (lv, e, st) ->
@@ -233,7 +241,7 @@ let rec infer_stmtkind env sk =
   | T.Guard e ->
       let e' = infer_exp env e in
       T.Guard e'
-  | T.Call (args, T.FunId fid, rets) ->
+  | T.Call (args, fexp, rets) ->
       (*
        * Warning : plumbing ahead.
        *
@@ -259,11 +267,9 @@ let rec infer_stmtkind env sk =
       let t_args = List.map snd args' in
       let t_ret = List.map snd rets' in
       let tfcall = Fun (t_args, t_ret) in
-      let tf = Env.get_fun env fid in
+      let (fexp', tf) = infer_funexp env fexp in
       unify tf tfcall;
-      T.Call (args', T.FunId fid, rets')
-  | T.Call (_, T.FunDeref _, _) ->
-      failwith "no function pointers yet"
+      T.Call (args', fexp', rets')
 
 and infer_stmt env (sk, loc) =
   let sk' = infer_stmtkind env sk in

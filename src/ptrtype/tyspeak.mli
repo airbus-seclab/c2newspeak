@@ -137,3 +137,5 @@ and 'ty funexp =
 val dump : ('ty -> string) -> 'ty t -> unit
 
 val string_of_lval : ('ty -> string) -> 'ty lval -> string
+
+val string_of_exp : ('ty -> string) -> 'ty exp -> string
