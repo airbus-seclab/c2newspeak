@@ -37,11 +37,6 @@ let occurs_check_failed ta tb =
 let type_clash ta tb =
   fail "Type clash between" ta tb
 
-let is_atomic_type = function
-  | Int
-  | Float -> true
-  | _ -> false
-
 let rec unify_now ta tb =
   let sta = shorten ta in
   let stb = shorten tb in
@@ -61,7 +56,9 @@ let rec unify_now ta tb =
           r := Instanciated t
       end
   | (_, (Var ({contents = Unknown _}))) -> unify_now stb sta
-  | _ when is_atomic_type sta && sta = stb -> ()
+
+  | Int, Int
+  | Float, Float -> ()
 
   | Ptr a, Ptr b
   | Array a, Array b -> unify_now a b
