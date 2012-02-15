@@ -834,6 +834,20 @@ type_specifier:
     RPAREN                                 { (* __typeof__( * (((&p->f)))) y; *)
                                              TypeofExpr (Field (Index (Var $8, BareSyntax.exp_of_int 0), $10))
                                            }
+| TYPEOF
+    LPAREN
+      STAR
+      LPAREN
+        LPAREN
+          AMPERSAND
+          IDENTIFIER
+          ARROW
+          IDENTIFIER
+        RPAREN
+      RPAREN
+    RPAREN                                 { (* __typeof__( * ((&p->f))) y; *)
+                                             TypeofExpr (Field (Index (Var $7, BareSyntax.exp_of_int 0), $9))
+                                           }
 ;;
 
 struct_or_union:
