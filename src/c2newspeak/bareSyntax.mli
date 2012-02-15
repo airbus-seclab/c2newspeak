@@ -105,6 +105,7 @@ and base_typ =
     | Enum of ((string * exp option) list) option
     | Va_arg
     | Typeof of string
+    | PtrTo of base_typ (* for stuff like typeof ((&(x))) == (typeof(x) * ) (GNU) *)
 
 and var_modifier = (int * modifier)
 

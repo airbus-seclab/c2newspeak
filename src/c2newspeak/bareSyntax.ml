@@ -111,6 +111,7 @@ and base_typ =
     | Enum of ((string * exp option) list) option
     | Va_arg
     | Typeof of string
+    | PtrTo of base_typ
 
 and var_modifier = (int * modifier)
 
