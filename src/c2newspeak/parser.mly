@@ -795,59 +795,10 @@ type_specifier:
 | ENUM enum_arguments                      { Enum $2 }
 | VA_LIST                                  { Va_arg }
 | TYPEOF LPAREN type_specifier RPAREN      { $3 }
-| TYPEOF LPAREN IDENTIFIER RPAREN          { Typeof $3 }
-| TYPEOF
-    LPAREN LPAREN
-    AMPERSAND LPAREN IDENTIFIER RPAREN
-    RPAREN RPAREN                          { PtrTo (Typeof $6) }
 | TYPEOF
     LPAREN
-      STAR
-      LPAREN
-        AMPERSAND
-        LPAREN
-          IDENTIFIER
-        RPAREN
-      RPAREN
-    RPAREN                                 { Typeof $7 }
-| TYPEOF
-    LPAREN
-      LPAREN
-        declaration_specifiers
-        STAR
-      RPAREN
       expression
-    RPAREN                                 { PtrTo $4 }
-| TYPEOF
-    LPAREN
-      STAR
-      LPAREN
-        LPAREN
-          LPAREN
-            AMPERSAND
-            IDENTIFIER
-            ARROW
-            IDENTIFIER
-          RPAREN
-        RPAREN
-      RPAREN
-    RPAREN                                 { (* __typeof__( * (((&p->f)))) y; *)
-                                             TypeofExpr (Field (Index (Var $8, BareSyntax.exp_of_int 0), $10))
-                                           }
-| TYPEOF
-    LPAREN
-      STAR
-      LPAREN
-        LPAREN
-          AMPERSAND
-          IDENTIFIER
-          ARROW
-          IDENTIFIER
-        RPAREN
-      RPAREN
-    RPAREN                                 { (* __typeof__( * ((&p->f))) y; *)
-                                             TypeofExpr (Field (Index (Var $7, BareSyntax.exp_of_int 0), $9))
-                                           }
+    RPAREN                                 { TypeofExpr $3 }
 ;;
 
 struct_or_union:
