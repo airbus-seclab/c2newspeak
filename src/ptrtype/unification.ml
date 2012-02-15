@@ -25,21 +25,22 @@ open Types
 
 let occurs n t = List.mem n (vars_of_typ t)
 
-let occurs_check_failed ta tb =
+let fail reason ta tb =
   let sa = string_of_simple ta in
   let sb = string_of_simple tb in
-  failwith ("Occurs check failed : cannot unify "^sa^" and "^sb)
+  Printf.printf "%s :\n  %s\n  %s\n" reason sa sb;
+  exit 1
+
+let occurs_check_failed ta tb =
+  fail "Occurs check failed - cannot unify" ta tb
+
+let type_clash ta tb =
+  fail "Type clash between" ta tb
 
 let is_atomic_type = function
   | Int
   | Float -> true
   | _ -> false
-
-let type_clash ta tb =
-  let sa = string_of_simple ta in
-  let sb = string_of_simple tb in
-  print_endline ("Type clash between :\n  "^sa^"\n  "^sb);
-  exit 1
 
 let rec unify_now ta tb =
   let sta = shorten ta in
