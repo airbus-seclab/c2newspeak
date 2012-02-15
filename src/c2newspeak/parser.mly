@@ -348,6 +348,8 @@ declaration_modifier:
 asm:
   ASM volatile_option 
   LPAREN asm_statement_list RPAREN         { report_asm $4 }
+| ASM GOTO
+  LPAREN asm_statement_list RPAREN         { report_asm $4 }
 ;;
 
 asm_statement_list:
@@ -362,6 +364,7 @@ asm_statement:
 | string_literal LPAREN expression RPAREN  { $1 } 
 | LBRACKET ident_or_tname RBRACKET 
   string_literal LPAREN expression RPAREN  { $2^" "^$4 }
+| ident_or_tname                           { $1 }
 ;;
 
 iteration_statement:
