@@ -955,6 +955,12 @@ attribute_name:
 	"__aligned__" -> []
       | _ -> raise Parsing.Parse_error
   }
+| IDENTIFIER LPAREN INTEGER SHIFTL
+  LPAREN INTEGER RPAREN RPAREN    {
+    match $1 with
+	"__aligned__" -> []
+      | _ -> raise Parsing.Parse_error
+  }
 | IDENTIFIER LPAREN LPAREN 
       IDENTIFIER LPAREN type_name RPAREN 
       RPAREN RPAREN                         { 
