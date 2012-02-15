@@ -106,6 +106,7 @@ and base_typ =
     | Va_arg
     | Typeof of string
     | PtrTo of base_typ (* for stuff like typeof ((&(x))) == (typeof(x) * ) (GNU) *)
+    | TypeofExpr of exp
 
 and var_modifier = (int * modifier)
 

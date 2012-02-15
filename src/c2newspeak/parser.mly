@@ -818,6 +818,22 @@ type_specifier:
       RPAREN
       expression
     RPAREN                                 { PtrTo $4 }
+| TYPEOF
+    LPAREN
+      STAR
+      LPAREN
+        LPAREN
+          LPAREN
+            AMPERSAND
+            IDENTIFIER
+            ARROW
+            IDENTIFIER
+          RPAREN
+        RPAREN
+      RPAREN
+    RPAREN                                 { (* __typeof__( * (((&p->f)))) y; *)
+                                             TypeofExpr (Field (Index (Var $8, BareSyntax.exp_of_int 0), $10))
+                                           }
 ;;
 
 struct_or_union:
