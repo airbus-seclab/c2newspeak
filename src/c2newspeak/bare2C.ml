@@ -72,6 +72,7 @@ let rec normalize_base_typ t =
     | TypeofExpr e -> [], T.Typeof (process_exp e)
     | Enum None -> [], T.Int (Cir.int_kind ())
     | Enum (Some f) -> define_enum f, T.Int (Cir.int_kind ())
+    | Label -> [], T.Ptr T.Void
 
 and define_enum e =
   let rec define_enum e n =

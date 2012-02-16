@@ -81,7 +81,7 @@ let report_asm tokens =
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS QMARK
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
-%token ATTRIBUTE EXTENSION VA_LIST CDECL
+%token ATTRIBUTE EXTENSION VA_LIST CDECL LABEL
 %token INLINE ASM RESTRICT 
 %token BUILTIN_CONSTANT_P
 %token FUNNAME 
@@ -510,6 +510,11 @@ expression:
   COLON expression   %prec QMARK           { IfExp ($1, None, $4)}
 | expression assignment_operator
                    expression     %prec EQ { Set ($1, $2, $3) }
+| AND IDENTIFIER { Npkcontext.report_warning
+                     "Parser.expression"
+                     "ignoring address of label, parsing as NULL instead";
+                    Cst (Cir.CInt (Newspeak.Nat.zero), Csyntax.Ptr Csyntax.Void)
+                   }
 ;;
 
 aux_offsetof_member:
@@ -799,6 +804,11 @@ type_specifier:
     LPAREN
       expression
     RPAREN                                 { TypeofExpr $3 }
+| LABEL                                    { Npkcontext.report_warning
+                                               "Parser.type_specifier"
+                                               "accepting local label";
+                                             Label
+                                           }
 ;;
 
 struct_or_union:

@@ -111,6 +111,7 @@ and base_typ =
     | Enum of ((string * exp option) list) option
     | Va_arg
     | TypeofExpr of exp
+    | Label (* first class label *)
 
 and var_modifier = (int * modifier)
 
