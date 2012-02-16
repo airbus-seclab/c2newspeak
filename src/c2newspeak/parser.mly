@@ -67,6 +67,18 @@ let report_asm tokens =
   let tokens = ListUtils.to_string (fun x -> x) "' '" tokens in
   let msg = "assembly directive '"^tokens^"'" in
     Npkcontext.report_ignore_warning loc msg Npkcontext.Asm
+
+(*
+ * build_ptrto n t =
+ *    PtrTo (PtrTo (... t))
+ *      \_____________/
+ *          n times
+ *)
+let rec build_ptrto n t =
+  if n < 0 then invalid_arg "build_ptrto"
+  else if n = 0 then t
+  else PtrTo (build_ptrto (n-1) t)
+
 %}
 
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
@@ -174,13 +186,6 @@ function_definition:
 declaration:
   declaration_specifiers 
   init_declarator_list                      { ($1, $2) }
-| typeof_declaration 			    { $1 }
-;;
-
-typeof_declaration:
-type_qualifier_list TYPEOF LPAREN 
-type_specifier pointer RPAREN 
-type_qualifier_list ident_or_tname          { ($4, [( ($5, Variable ($8, get_loc ())), []) , None])}
 ;;
 
 init_declarator_list:
@@ -799,6 +804,12 @@ type_specifier:
 | ENUM enum_arguments                      { Enum $2 }
 | VA_LIST                                  { Va_arg }
 | TYPEOF LPAREN type_specifier RPAREN      { $3 }
+| TYPEOF
+    LPAREN type_specifier pointer RPAREN   { build_ptrto $4 $3 }
+| TYPEOF
+    LPAREN type_specifier
+      LBRACKET expression RBRACKET
+    RPAREN                                 { ArrayOf ($3, $5) }
 | TYPEOF
     LPAREN
       expression

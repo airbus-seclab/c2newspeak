@@ -112,6 +112,8 @@ and base_typ =
     | Va_arg
     | TypeofExpr of exp
     | Label (* first class label *)
+    | PtrTo of base_typ (* used so that typeof(int * ) can return a pointer *)
+    | ArrayOf of base_typ * exp (* idem *)
 
 and var_modifier = (int * modifier)
 

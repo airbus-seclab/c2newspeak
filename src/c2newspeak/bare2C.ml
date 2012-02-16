@@ -73,6 +73,13 @@ let rec normalize_base_typ t =
     | Enum None -> [], T.Int (Cir.int_kind ())
     | Enum (Some f) -> define_enum f, T.Int (Cir.int_kind ())
     | Label -> [], T.Ptr T.Void
+    | PtrTo t ->
+            let (sdecl, t') = normalize_base_typ t in
+            sdecl, T.Ptr t'
+    | ArrayOf (t, e) ->
+            let (sdecl, t') = normalize_base_typ t in
+            let e' = process_exp e in
+            sdecl, T.Array (t', Some e')
 
 and define_enum e =
   let rec define_enum e n =
