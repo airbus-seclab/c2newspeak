@@ -940,13 +940,20 @@ attribute_name:
     [] 
   }
 | IDENTIFIER LPAREN string_list RPAREN               {
-    if ($1 = "alias") then begin
-      Npkcontext.report_warning "Parser.attribute" 
-      ("ignoring attribute alias")
-    end 
-    else if ($1 <> "__warning__") && ($1 <> "__error__") && ($1 <> "__section__") && ($1 <> "section")
-    then raise Parsing.Parse_error;
-    []
+  match $1 with
+  | "alias" ->
+      begin
+        Npkcontext.report_warning "Parser.attribute"
+        ("ignoring attribute alias");
+        []
+      end
+  | "warning"
+  | "__warning__"
+  | "__error__"
+  | "__section__"
+  | "section"
+    -> []
+  | _ -> raise Parsing.Parse_error
   }
 | IDENTIFIER LPAREN integer_list RPAREN    { 
     match ($1, $3) with
