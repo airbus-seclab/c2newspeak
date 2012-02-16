@@ -584,8 +584,7 @@ named_init_list:
 ;;
 
 named_init:
-  DOT IDENTIFIER EQ expression             { (Some $2, Data $4) }
-| DOT IDENTIFIER EQ LBRACE init_list RBRACE { (Some $2, Sequence $5) }
+  DOT IDENTIFIER EQ init                   { (Some $2, $4) }
 ;;
 
 init_list:
