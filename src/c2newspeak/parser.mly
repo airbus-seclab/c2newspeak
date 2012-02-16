@@ -1066,7 +1066,7 @@ volatile_option:
 ;;
 
 expression_option:
-  expression                               { Some $1 }
+  expression_sequence                      { Some $1 }
 |                                          { None }
 ;;
 
