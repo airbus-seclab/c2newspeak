@@ -958,6 +958,12 @@ attribute_name:
       | (("__nonnull__" | "__nonnull"), _) -> []
       | _ -> raise Parsing.Parse_error
   }
+| IDENTIFIER LPAREN SIZEOF LPAREN type_name RPAREN RPAREN
+  {
+    match $1 with
+	"aligned" -> []
+      | _ -> raise Parsing.Parse_error
+  }
 | IDENTIFIER LPAREN LPAREN LPAREN INTEGER RPAREN
   SHIFTL INTEGER RPAREN RPAREN    {
     match $1 with
