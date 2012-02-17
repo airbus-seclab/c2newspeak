@@ -589,12 +589,12 @@ named_init_list:
 ;;
 
 named_init:
-  DOT IDENTIFIER EQ init                   { (Some $2, $4) }
+  DOT IDENTIFIER EQ init                   { (InitField $2, $4) }
 ;;
 
 init_list:
-  init COMMA init_list                     { (None, $1)::$3 }
-| init                                     { (None, $1)::[] }
+  init COMMA init_list                     { (InitAnon, $1)::$3 }
+| init                                     { (InitAnon, $1)::[] }
 |                                          {
     Npkcontext.report_strict_warning "Parser.init_list"
       "comma terminated initializer";

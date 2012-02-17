@@ -72,7 +72,11 @@ and typ =
 
 and init = 
     | Data of exp
-    | Sequence of (string option * init) list
+    | Sequence of (init_designator * init) list
+
+and init_designator =
+    | InitField of string
+    | InitAnon
 
 and stmt = (stmtkind * Newspeak.location)
 

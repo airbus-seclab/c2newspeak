@@ -225,7 +225,7 @@ and process_init x =
     | Sequence sequence -> T.Sequence (process_init_sequence sequence)
 
 and process_init_sequence x =
-  List.map (fun (x, i) -> (x, process_init i)) x
+  List.map (fun (designator, init) -> (designator, process_init init)) x
 
 and process_blk x = 
   let result = ref [] in
