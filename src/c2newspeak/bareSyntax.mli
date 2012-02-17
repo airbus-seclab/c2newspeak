@@ -84,7 +84,7 @@ and exp =
   | Set of (exp * Csyntax.binop option * exp)
   | OpExp of (Csyntax.binop * exp * bool)
   | BlkExp of blk
-  | LocalComposite of ((base_typ * var_modifier) * (Csyntax.init_designator * init) list * Newspeak.location)
+  | LocalComposite of ((base_typ * var_modifier) * (exp Csyntax.init_designator * init) list * Newspeak.location)
 
 and aux_offset_exp =
     OffComp of string
@@ -123,7 +123,7 @@ and field = (base_typ * var_modifier * exp option)
 
 and init = 
   | Data of exp
-  | Sequence of (Csyntax.init_designator * init) list
+  | Sequence of (exp Csyntax.init_designator * init) list
 
 val exp_of_int: int -> exp
 

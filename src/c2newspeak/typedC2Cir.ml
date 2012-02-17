@@ -194,7 +194,9 @@ let translate prog =
   (* TODO: this should be simplified because a bit is done already in 
      csyntax2TypedC!!! *)
   and translate_init t x =
-    let res = ref [] in
+    let res : (int * C.typ * C.exp) list ref =
+      ref []
+    in
     let rec translate o t x =
       match (x, t) with
 	| (Data (e, t1), _) -> 
@@ -265,6 +267,7 @@ let translate prog =
 		  match fname with 
 		      Csyntax.InitField f -> List.find (fun (f', _) -> String.compare f f' = 0) fields
 		    | Csyntax.InitAnon -> current
+		    | Csyntax.InitIndex _e -> assert false
 		in
 		let not_init' = remove name not_init in
 		let f_o' = o + f_o in
@@ -303,8 +306,14 @@ let translate prog =
 	    Npkcontext.report_error 
 	      "Firstpass.translate_init.translate_sequence" 
 	      "anonymous initializer expected for array"
+
+	| (Csyntax.InitIndex offset_expr, v)::tl ->
+            let offset_expr' = translate_exp false offset_expr in
+            let o = size_of t * (Nat.to_int (C.eval_exp offset_expr')) in
+            let _ = translate o t v in
+            translate_sequence o t (n-1) tl
 	      
-	| _::_ -> 
+	| (Csyntax.InitAnon, _)::_ -> 
 	    Npkcontext.report_accept_warning 
 	      "Firstpass.translate_init.translate_sequence" 
 	      "extra initializer for array" Npkcontext.DirtySyntax

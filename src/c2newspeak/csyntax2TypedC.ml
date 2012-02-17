@@ -454,7 +454,7 @@ let process (fname, globals) =
 (* TODO: remove is_after in TypedC! *)
 	    (C.BlkExp (blk, false), t)
 	      
-  and translate_exp e = 
+  and translate_exp e =
     let (e, t) = translate_lv e in
       match t with
 	  C.Array (t, len) -> 
@@ -726,6 +726,9 @@ let process (fname, globals) =
 
 
   and translate_init t x =
+    let translate_designated_init t =
+      List.map (fun (x, init) -> (translate_designator x, translate_init t init))
+    in
     match (x, t) with
 (* TODO: redundant code with complete_init?? *)
 	((Data (Str str)|Sequence ([(InitAnon, Data (Str str))])), 
@@ -736,10 +739,7 @@ let process (fname, globals) =
       | (Data e, _) -> C.Data (translate_exp e)
 
       | (Sequence seq, C.Array (t, _)) -> 
-	  let seq = 
-	    List.map (fun (x, init) -> (x, translate_init t init)) seq 
-	  in
-	    C.Sequence seq
+          C.Sequence (translate_designated_init t seq)
 	      
       | (Sequence seq, C.Comp (TypedC.Known (f, true))) ->
 	  C.Sequence (translate_field_sequence seq f)
@@ -752,8 +752,7 @@ let process (fname, globals) =
 		  Npkcontext.report_error "Firstpass.translate_init"
 		    "unexpected empty union"
 	  in
-	  let seq = (InitAnon, translate_init t init)::[] in
-	    C.Sequence seq
+          C.Sequence [InitAnon, translate_init t init]
 
       | (Sequence ((InitField f, init)::[]), 
 	 C.Comp (TypedC.Known (r, false))) -> 
@@ -762,25 +761,27 @@ let process (fname, globals) =
 	    C.Sequence seq
 
       | (Sequence seq, C.Ptr t) ->
-	  let seq = 
-	    List.map (fun (x, init) -> (x, translate_init t init)) seq in
-	    C.Sequence seq
+          C.Sequence (translate_designated_init t seq)
 
       | (Sequence seq, C.Int _) ->
-	  let seq = 
-	    List.map (fun (x, init) -> (x, translate_init t init)) seq in
-	    C.Sequence seq
+          C.Sequence (translate_designated_init t seq)
 
       | (Sequence _, _) ->
 	  Npkcontext.report_error "Csyntax2TypedC.translate_init"
 	    "this type of initialization not implemented yet"
+
+  and translate_designator = function
+    | InitAnon -> InitAnon
+    | InitField f -> InitField f
+    | InitIndex e -> InitIndex (translate_exp e)
 
   and translate_field_sequence seq fields =
     match (fields, seq) with
 	((_, t)::fields, (expected_f, init)::seq) -> 
 	  let init = translate_init t init in
 	  let seq = translate_field_sequence seq fields in
-	    (expected_f, init)::seq
+          let des' = translate_designator expected_f in
+	    (des', init)::seq
       
       | ([], []) -> []
 

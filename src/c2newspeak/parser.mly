@@ -580,6 +580,7 @@ init:
 composite:
   LBRACE init_list RBRACE                  { $2 }
 | LBRACE named_init_list RBRACE            { $2 }
+| LBRACE indexed_init_list RBRACE          { $2 }
 ;;
 
 named_init_list:
@@ -590,6 +591,16 @@ named_init_list:
 
 named_init:
   DOT IDENTIFIER EQ init                   { (InitField $2, $4) }
+;;
+
+indexed_init_list:
+  indexed_init COMMA indexed_init_list     { $1::$3 }
+| indexed_init                             { $1::[] }
+| indexed_init COMMA                       { $1::[] }
+;;
+
+indexed_init:
+  LBRACKET expression RBRACKET EQ init     { (InitIndex $2, $5) }
 ;;
 
 init_list:
