@@ -311,7 +311,7 @@ let infer_fdec env fname fdec =
     ; T.rets = extract_types fdec.T.rets
     ; T.args = extract_types fdec.T.args
     ; T.position = fdec.T.position
-    ; T.fdectype = te
+    ; T.fdectype = T.Forall ([], te)
     }
   in
   let t = type_of_fdec fdec' in

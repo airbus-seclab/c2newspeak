@@ -103,7 +103,7 @@ let convert to_ty nil_ty npk =
     ; T.rets = c_argsrets f.N.rets
     ; T.body = c_blk f.N.body
     ; T.position = f.N.position
-    ; T.fdectype = nil_ty
+    ; T.fdectype = T.Forall ([], nil_ty)
     }
   in
 

@@ -42,8 +42,10 @@ and 'ty fundec = {
   rets : (string * 'ty) list;
   body : 'ty blk;
   position: Newspeak.location;
-  fdectype : 'ty;
+  fdectype : 'ty scheme;
 }
+
+and 'ty scheme = Forall of int list * 'ty
 
 and 'ty globals = (string, 'ty) Hashtbl.t
 
@@ -331,11 +333,21 @@ let string_of_blk sty offset x =
     dump_blk x;
     Buffer.contents buf
 
+let string_of_scheme sty (Forall (bv, t)) =
+  let s_forall =
+    if bv == [] then
+      ""
+    else
+      String.concat " " (List.map string_of_int bv) ^ " . "
+  in
+  s_forall ^ sty t
+
+
 let string_of_fundec sty name declaration =
   Printf.sprintf
     "%s : %s\n%s %s%s%s {\n%s}\n"
        name
-       (sty declaration.fdectype)
+       (string_of_scheme sty declaration.fdectype)
        (string_of_ret sty declaration.rets)
        (string_of_loc_as_prefix declaration.position)
        name

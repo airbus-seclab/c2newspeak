@@ -75,8 +75,10 @@ and 'ty fundec = {
   rets : (string * 'ty) list;
   body : 'ty blk;
   position: Newspeak.location;
-  fdectype : 'ty;
+  fdectype : 'ty scheme;
 }
+
+and 'ty scheme = Forall of int list * 'ty
 
 and 'ty globals = (string, 'ty) Hashtbl.t
 
