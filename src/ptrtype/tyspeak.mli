@@ -75,6 +75,7 @@ and 'ty fundec = {
   rets : (string * 'ty) list;
   body : 'ty blk;
   position: Newspeak.location;
+  fdectype : 'ty;
 }
 
 and 'ty globals = (string, 'ty) Hashtbl.t

@@ -42,6 +42,7 @@ and 'ty fundec = {
   rets : (string * 'ty) list;
   body : 'ty blk;
   position: Newspeak.location;
+  fdectype : 'ty;
 }
 
 and 'ty globals = (string, 'ty) Hashtbl.t
@@ -334,7 +335,9 @@ let string_of_fundec sty name declaration =
   let str_args = string_of_formal_args sty declaration.args in
   let str_ret  = string_of_ret sty declaration.rets in
   let position = string_of_loc_as_prefix declaration.position in
-  let result   = str_ret ^ " " ^ position ^ name ^ str_args ^ " {\n" in
+  let str_typ  = sty declaration.fdectype in
+  let result   = name ^ " : " ^ str_typ ^ "\n" in
+  let result   = result^str_ret ^ " " ^ position ^ name ^ str_args ^ " {\n" in
   let result   = result^string_of_blk sty 2 declaration.body^"}\n" in
     result
 

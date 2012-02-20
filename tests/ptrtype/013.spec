@@ -1,3 +1,4 @@
+f : () -> ()
 void (013.c:12#5)^f(void) {
   (013.c:14#8)^Int x;
   (013.c:14#8)^x =(int32) (0 : Int);
@@ -14,6 +15,7 @@ void (013.c:12#5)^f(void) {
   }
 }
 
+memcpy : (Ptr (Int) * Ptr (Int) * Int) -> (Ptr (Int))
 Ptr (Int) (013.c:1#6)^memcpy(Ptr (Int) dst, Ptr (Int) src, Int n) {
   (013.c:5#18)^Int i;
   (013.c:4#10)^Ptr (Int) s;

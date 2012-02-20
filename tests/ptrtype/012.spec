@@ -1,3 +1,4 @@
+memcpy : (Ptr (_a12) * Ptr (_a12) * Int) -> (Ptr (_a12))
 Ptr (_a12) (012.c:1#6)^memcpy(Ptr (_a12) dst, Ptr (_a12) src, Int n) {
   (012.c:5#18)^Int i;
   (012.c:4#10)^Ptr (_a12) s;

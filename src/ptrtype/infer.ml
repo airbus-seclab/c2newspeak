@@ -305,15 +305,16 @@ let infer_fdec env fname fdec =
       )
       l
   in
+  let te = Env.get_fun env fname in
   let fdec' =
     { T.body = blk
     ; T.rets = extract_types fdec.T.rets
     ; T.args = extract_types fdec.T.args
     ; T.position = fdec.T.position
+    ; T.fdectype = te
     }
   in
   let t = type_of_fdec fdec' in
-  let te = Env.get_fun env fname in
   unify t te;
   fdec'
 
