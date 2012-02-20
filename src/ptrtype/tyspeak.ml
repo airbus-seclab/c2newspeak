@@ -2,17 +2,17 @@
   ptrtype: do finer typechecks on C pointers
   Copyright (C) 2007-2011 Charles Hymans, Sarah Zennou
   Copyright (C) 2011-2010 Etienne Millon
-  
+
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
-  
+
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
   Lesser General Public License for more details.
-  
+
   You should have received a copy of the GNU Lesser General Public
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
@@ -107,7 +107,7 @@ and 'ty funexp =
 
 (* Useful types, functions and variables *)
 
-module StringMap = 
+module StringMap =
   Map.Make (struct type t = string let compare = Pervasives.compare end)
 
 let rec seq sep f l =
@@ -136,7 +136,7 @@ let string_of_ret sty ret =
       [] -> "void"
     | l -> String.concat ", " (List.map (fun (_, t) -> sty t) l)
 
-let string_of_formal_args sty args = 
+let string_of_formal_args sty args =
   match args with
       [] -> "(void)"
     | l -> string_of_list (string_of_formal_arg sty) l
@@ -149,16 +149,16 @@ let string_of_ret_list sty = function
   | []  -> "void"
   | args -> String.concat ", " (List.map sty args)
 
-let string_of_ftyp sty (args, ret) = 
+let string_of_ftyp sty (args, ret) =
   string_of_typ_list sty args ^ " -> " ^ string_of_ret_list sty ret
 
-let string_of_loc (fname, line, carac) = 
+let string_of_loc (fname, line, carac) =
   if (fname = "") then invalid_arg "Newspeak.string_of_loc: unknown location";
   if (line < 0) || (carac < 0) then fname
   else (fname^":"^(string_of_int line)^"#"^(string_of_int carac))
-  
-let dummy_loc fname = 
-  if fname = "" 
+
+let dummy_loc fname =
+  if fname = ""
   then invalid_arg "Newspeak.dummy_loc: invalid function name for location";
   (fname, -1, -1)
 
@@ -170,7 +170,7 @@ let string_of_cst c =
       CInt c -> Nat.to_string c
     | CFloat (_, s) -> s
     | Nil -> "nil"
-        
+
 let string_of_bounds (l, u) = "["^(Nat.to_string l)^","^(Nat.to_string u)^"]"
 
 let string_of_unop op =
@@ -184,7 +184,7 @@ let string_of_unop op =
     | BNot _ 	       -> "~"
     | PtrToInt i       -> "("^(string_of_scalar (Int i))^")"
     | IntToPtr _       -> "(ptr)"
-          
+
 let rec string_of_lval sty lv =
   match lv with
     | Local name     -> name
@@ -232,7 +232,7 @@ let string_of_assertion sty x =
     List.iter append_token x;
     !res
 
-let string_of_loc_as_prefix loc = 
+let string_of_loc_as_prefix loc =
   if loc = unknown_loc then "" else "("^(string_of_loc loc)^")^"
 
 let string_of_blk sty offset x =
@@ -240,14 +240,14 @@ let string_of_blk sty offset x =
   let offset = ref offset in
   let incr_margin () = offset := !offset + 2 in
   let decr_margin () = offset := !offset - 2 in
-  let dump_line str = 
+  let dump_line str =
     let margin = String.make !offset ' ' in
-      Buffer.add_string buf (margin^str^"\n") 
+      Buffer.add_string buf (margin^str^"\n")
   in
   let dump_line_at loc str =
     let loc = string_of_loc_as_prefix loc in
     let margin = String.make !offset ' ' in
-      Buffer.add_string buf (margin^loc^str^"\n") 
+      Buffer.add_string buf (margin^loc^str^"\n")
   in
 
   let rec dump_stmt only (sk, loc) =
@@ -259,7 +259,7 @@ let string_of_blk sty offset x =
       | Copy (lv1, lv2, sz) ->
           dump_line_at loc ((string_of_lval sty lv1)^" ="^(Newspeak.string_of_size_t sz)^
                         " "^(string_of_lval sty lv2)^";")
-            
+
       | Decl (x, t, body) ->
           if only then begin
             dump_line_at loc ((sty t)^" "^x^";");
@@ -272,7 +272,7 @@ let string_of_blk sty offset x =
             decr_margin ();
             dump_line "}"
           end
-            
+
       | DoWith (body, lbl) ->
           dump_line_at loc "do {";
           incr_margin ();
@@ -281,21 +281,21 @@ let string_of_blk sty offset x =
           dump_line ("} with lbl"^(string_of_int lbl)^":")
 
       | Goto l -> dump_line_at loc ("goto "^(string_of_lbl l)^";")
-      | Call (args, fn, ret_vars) ->  
+      | Call (args, fn, ret_vars) ->
 	  let string_of_args (x, t) = string_of_exp sty x^": "^sty t in
 	  let string_of_rets (x, t) = string_of_lval sty x^": "^sty t in
 	  let args = List.map string_of_args args in
 	  let rets = List.map string_of_rets ret_vars in
-          
-	  let ret_str = 
+
+	  let ret_str =
 	    match rets with
 	      | [] -> ""
 	      | r::[] -> r ^ " <- "
 	      | _ -> (string_of_list (fun x -> x) rets) ^ " <- "
           in
 	  let arg_str = string_of_list (fun x -> x) args in
-          let result = 
-	    ret_str ^ (string_of_funexp sty fn) ^ arg_str ^ ";" 
+          let result =
+	    ret_str ^ (string_of_funexp sty fn) ^ arg_str ^ ";"
 	  in
             dump_line_at loc result
       | Select (body1, body2) ->
@@ -310,7 +310,7 @@ let string_of_blk sty offset x =
           decr_margin ();
           dump_line "}"
 
-      | InfLoop body -> 
+      | InfLoop body ->
           dump_line_at loc "while (1) {";
           incr_margin ();
           dump_blk body;
@@ -327,28 +327,29 @@ let string_of_blk sty offset x =
           List.iter (dump_stmt false) r
       | [] -> ()
   in
-    
+
     dump_blk x;
     Buffer.contents buf
-  
-let string_of_fundec sty name declaration =
-  let str_args = string_of_formal_args sty declaration.args in
-  let str_ret  = string_of_ret sty declaration.rets in
-  let position = string_of_loc_as_prefix declaration.position in
-  let str_typ  = sty declaration.fdectype in
-  let result   = name ^ " : " ^ str_typ ^ "\n" in
-  let result   = result^str_ret ^ " " ^ position ^ name ^ str_args ^ " {\n" in
-  let result   = result^string_of_blk sty 2 declaration.body^"}\n" in
-    result
 
-let dump_fundec sty name declaration = 
+let string_of_fundec sty name declaration =
+  Printf.sprintf
+    "%s : %s\n%s %s%s%s {\n%s}\n"
+       name
+       (sty declaration.fdectype)
+       (string_of_ret sty declaration.rets)
+       (string_of_loc_as_prefix declaration.position)
+       name
+       (string_of_formal_args sty declaration.args)
+       (string_of_blk sty 2 declaration.body)
+
+let dump_fundec sty name declaration =
   print_endline (string_of_fundec sty name declaration)
 
-let dump_globals sty gdecls = 
+let dump_globals sty gdecls =
   (* TODO: Clean this mess... StringMap *)
   let glbs = ref (StringMap.empty) in
-    Hashtbl.iter 
-      (fun name info -> glbs := (StringMap.add name info !glbs)) 
+    Hashtbl.iter
+      (fun name info -> glbs := (StringMap.add name info !glbs))
       gdecls;
     StringMap.iter (dump_gdecl sty) !glbs
 
@@ -364,105 +365,3 @@ let dump string_of_ty prog =
     StringMap.iter (dump_fundec string_of_ty) !funs;
     dump_globals string_of_ty prog.globals;
     print_string init
-
-(* Input/output functions *)
-let write name prog =
-  let cout = open_out_bin name in
-    Marshal.to_channel cout "NPK!" [];
-    Marshal.to_channel cout Version.newspeak_hash [];
-    Marshal.to_channel cout prog [];
-    close_out cout
-
-let read name = 
-  try
-    let cin = open_in_bin name in
-    let str = Marshal.from_channel cin in
-      if str <> "NPK!" 
-      then invalid_arg ("Newspeak.read: "^name^" is not an .npk file");
-      let version = Marshal.from_channel cin in
-        if (version <> Version.newspeak_hash) then begin
-          invalid_arg ("Newspeak.read: this file was generated with a "
-                       ^"different version of c2newspeak. "
-                       ^"Please regenerate your file or install the latest "
-                       ^"version of newspeak."^
-                       " Operation aborted.")
-        end;
-        Marshal.from_channel cin
-  with Failure "input_value: bad object" -> 
-    invalid_arg ("Newspeak.read: "^name^" is not an .npk file")
-
-let nat_op op =
-  match op with
-      PlusI -> Nat.add
-    | MinusI -> Nat.sub
-    | MultI -> Nat.mul
-    | _ -> invalid_arg "Newspeak.big_int_op: unexpected operator"
-
-module Lbl = 
-struct
-  type t = lbl
-  let compare = compare
-end
-
-module LblSet = Set.Make(Lbl)
-
-let has_goto lbl x =
-  let rec blk_has_goto x = List.exists has_goto x
-
-  and has_goto (x, _) =
-  match x with
-      Decl (_, _, body) | InfLoop body | DoWith (body, _) -> blk_has_goto body
-    | Select (body1, body2) 				  -> 
-	(blk_has_goto body1) || (blk_has_goto body2)
-    | Goto lbl' 	    				  -> lbl = lbl'
-    | _ 		    				  -> false
-  in
-    has_goto x
-
-let split_loop lbl body =
-  let rec split x =
-    match x with
-        hd::tl when not (has_goto lbl hd) -> 
-          let (prefix, suffix) = split tl in
-            (hd::prefix, suffix)
-      | _ -> ([], x)
-  in
-    split body
-
-let rec normalize_loop blk =
-  match blk with
-      (DoWith ([InfLoop body, loc], lbl), loc')::tl ->
-        let (prefix, suffix) = split_loop lbl body in
-        let body 	     = prefix@[InfLoop (suffix@prefix), loc] in
-          (DoWith (body, lbl), loc')::(normalize_loop tl)
-    | hd::tl -> hd::(normalize_loop tl)
-    | [] -> []
-
-let max_ikind = max
-
-let rec equal_stmt (x1, _) (x2, _) =
-  match (x1, x2) with
-      (Decl (_, t1, body1), Decl (_, t2, body2)) -> 
-        t1 = t2 && equal_blk body1 body2
-    | (Select (bl1, br1), Select (bl2, br2)) ->
-         (equal_blk bl1 bl2) && (equal_blk br1 br2)
-    | (InfLoop body1, InfLoop body2) -> equal_blk body1 body2
-    | (DoWith (body1, lbl1), DoWith (body2, lbl2)) ->
-        equal_blk body1 body2 && lbl1 = lbl2
-    | _ -> x1 = x2
-  
-and equal_blk x1 x2 = List.for_all2 equal_stmt x1 x2
-
-let exp_of_int x = Const (CInt (Nat.of_int x))
-
-let return_value = Temps.return_value
-
-let char_kind () =
-  let char_signedness =
-   if !Config.is_char_type_signed then Signed else Unsigned
-  in
-    (char_signedness, !Config.size_of_char)
-
-let char_typ () = Int (char_kind ())
-  
-let is_generic_temp name = Temps.is_generic_temp name
