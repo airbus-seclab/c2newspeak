@@ -107,16 +107,7 @@ and 'ty funexp =
 (* Display *)
 (*---------*)
 
-(* Useful types, functions and variables *)
-
-module StringMap =
-  Map.Make (struct type t = string let compare = Pervasives.compare end)
-
-let rec seq sep f l =
-  match l with
-    | [] -> ""
-    | [e] -> f e
-    | e::r -> (f e)^sep^(seq sep f r)
+module StringMap = Map.Make(String)
 
 (* Types *)
 
