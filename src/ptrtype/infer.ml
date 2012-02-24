@@ -57,13 +57,7 @@ open Unification
  * will affect both roots. So, it is important _not_ to do any deep copies.
  *)
 
-let warning msg =
-  let loc = Npkcontext.get_loc () in
-  Printf.printf "%s - %s\n" (Newspeak.string_of_loc loc) msg
-
-let error msg =
-  warning msg;
-  exit 1
+open Utils
 
 let (new_unknown, reset_unknowns) =
   let c = ref 0 in
@@ -83,12 +77,6 @@ let rec vars_of_typ = function
   | Var ({contents = Instanciated t}) -> vars_of_typ t
   | Fun (args, rets) ->
           List.concat (List.map vars_of_typ (rets@args))
-
-let type_clash ta tb =
-  let sa = string_of_simple ta in
-  let sb = string_of_simple tb in
-  print_endline ("Type clash between :\n  "^sa^"\n  "^sb);
-  exit 1
 
 let is_atomic_type = function
   | Int
@@ -367,9 +355,9 @@ let infer tpk =
   in
 
   let init = infer_blk env tpk.T.init in
-  let fdecs = Utils.hashtbl_mapi (infer_fdec env) tpk.T.fundecs in
+  let fdecs = hashtbl_mapi (infer_fdec env) tpk.T.fundecs in
 
-  let global_names = Utils.hashtbl_keys tpk.T.globals in
+  let global_names = hashtbl_keys tpk.T.globals in
   let globals = Hashtbl.create 0 in
 
   let tpk' =

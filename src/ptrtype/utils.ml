@@ -48,3 +48,11 @@ let option_of_list = function
 let option_map f = function
   | None -> None
   | Some x -> Some (f x)
+
+let warning msg =
+  let loc = Npkcontext.get_loc () in
+  Printf.printf "%s - %s\n" (Newspeak.string_of_loc loc) msg
+
+let error msg =
+  warning msg;
+  exit 1

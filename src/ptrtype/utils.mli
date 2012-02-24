@@ -34,3 +34,7 @@ val list_of_option : 'a option -> 'a list
 val option_of_list : 'a list -> 'a option
 
 val option_map : ('a -> 'b) -> 'a option -> 'b option
+
+val warning : string -> unit
+
+val error : string -> 'a

@@ -28,8 +28,7 @@ let occurs n t = List.mem n (vars_of_typ t)
 let fail reason ta tb =
   let sa = string_of_simple ta in
   let sb = string_of_simple tb in
-  Printf.printf "%s :\n  %s\n  %s\n" reason sa sb;
-  exit 1
+  Utils.error (Printf.sprintf "%s :\n  %s\n  %s\n" reason sa sb)
 
 let occurs_check_failed ta tb =
   fail "Occurs check failed - cannot unify" ta tb
