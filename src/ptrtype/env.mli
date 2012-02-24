@@ -21,15 +21,15 @@
  * 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
  *)
 
-type ('a, 'b) t
+type 'a t
 
-val empty : ('a, 'b) t
+val empty : 'a t
 
-val get : ('a, 'b) t -> 'a -> 'b
-val add : 'a -> 'b -> ('a, 'b) t -> ('a, 'b) t
+val get : 'a t -> Types.variable -> 'a
+val add : Types.variable -> 'a -> 'a t -> 'a t
 
-val add_lbl : Newspeak.lbl -> ('a, 'b) t -> ('a, 'b) t
-val assert_lbl : Newspeak.lbl -> ('a, 'b) t -> unit
+val add_lbl : Newspeak.lbl -> 'a t -> 'a t
+val assert_lbl : Newspeak.lbl -> 'a t -> unit
 
-val add_fun : ('a, 'b) t -> Newspeak.fid -> 'b -> ('a, 'b) t
-val get_fun : ('a, 'b) t -> Newspeak.fid -> 'b
+val add_fun : 'a t -> Newspeak.fid -> 'a -> 'a t
+val get_fun : 'a t -> Newspeak.fid -> 'a

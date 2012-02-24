@@ -21,10 +21,10 @@
  * 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
  *)
 
-type ('a, 'b) t =
-  { lvals : ('a * 'b) list
+type 'a t =
+  { lvals : (Types.variable * 'a) list
   ; lbls  : Newspeak.lbl list
-  ; funs  : (Newspeak.fid  * 'b) list
+  ; funs  : (Newspeak.fid  * 'a) list
   }
 
 let empty =
@@ -33,8 +33,13 @@ let empty =
   ; funs  = []
   }
 
+exception Var_not_found of Types.variable
+
 let get env k =
-  List.assoc k env.lvals
+  try
+    List.assoc k env.lvals
+  with
+    Not_found -> raise (Var_not_found k)
 
 let add lv t env =
   { env with lvals = (lv, t)::env.lvals }
@@ -49,5 +54,9 @@ let assert_lbl lbl env =
 let add_fun env fid t =
   { env with funs = (fid, t)::env.funs}
 
+exception Fun_not_found of Newspeak.fid
+
 let get_fun env fid =
-  List.assoc fid env.funs
+  try
+    List.assoc fid env.funs
+  with Not_found -> raise (Fun_not_found fid)
