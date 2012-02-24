@@ -181,7 +181,7 @@ and infer_exp env (e, _) =
       let b' = infer_exp env b in
       (T.BinOp (op, a', b'), infer_binop op a' b')
   | T.AddrOfFun (fid, _) ->
-      let (a, r) = extract_fun_type (Env.get_fun env fid) in
+      let (a, r) = extract_fun_type (Env.get env (VFun fid)) in
       let t = Ptr (Fun (a, r)) in
       (T.AddrOfFun (fid, (a, r)), t)
 
@@ -197,7 +197,7 @@ let infer_spectoken env = function
 let infer_assertion env = List.map (infer_spectoken env)
 
 let infer_funexp env = function
-  | T.FunId fid -> (T.FunId fid, Env.get_fun env fid)
+  | T.FunId fid -> (T.FunId fid, Env.get env (VFun fid))
   | T.FunDeref e ->
       let (_, t) as e' = infer_exp env e in
       let tf = new_unknown () in
@@ -307,7 +307,7 @@ let infer_fdec env fname fdec =
       )
       l
   in
-  let te = Env.get_fun env fname in
+  let te = Env.get env (VFun fname) in
   let fdec' =
     { T.body = blk
     ; T.rets = extract_types fdec.T.rets
@@ -334,7 +334,7 @@ let env_add_fundecs fdecs env =
     let args' = List.map make_new_type fdec.T.args in
     let rets' = List.map make_new_type fdec.T.rets in
     let t = Fun (args', rets') in
-    Env.add_fun e fname t
+    Env.add (VFun fname) t e
   ) fdecs env
 
 (*

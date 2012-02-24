@@ -24,13 +24,11 @@
 type 'a t =
   { lvals : (Types.variable * 'a) list
   ; lbls  : Newspeak.lbl list
-  ; funs  : (Newspeak.fid  * 'a) list
   }
 
 let empty =
   { lvals = []
   ; lbls  = []
-  ; funs  = []
   }
 
 exception Var_not_found of Types.variable
@@ -50,13 +48,3 @@ let add_lbl lbl env =
 let assert_lbl lbl env =
   if not (List.mem lbl env.lbls) then
     failwith ("No such label : " ^ Newspeak.string_of_lbl lbl)
-
-let add_fun env fid t =
-  { env with funs = (fid, t)::env.funs}
-
-exception Fun_not_found of Newspeak.fid
-
-let get_fun env fid =
-  try
-    List.assoc fid env.funs
-  with Not_found -> raise (Fun_not_found fid)

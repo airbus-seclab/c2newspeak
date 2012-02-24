@@ -185,7 +185,7 @@ and check_exp env (be, te) =
       check_exp env e;
       tc_unop_compatible te op top
   | T.AddrOfFun (fid, (args, rets)) ->
-      let (ea, er) = extract_fun_type (Env.get_fun env fid) in
+      let (ea, er) = extract_fun_type (Env.get env (VFun fid)) in
       List.iter2 same_type ea args;
       List.iter2 same_type er rets
 
@@ -229,7 +229,7 @@ let rec check_stmt env (sk, _loc) =
         let t_ret = List.map snd rets in
         let ft =
           match fexp with
-          | T.FunId fid -> Env.get_fun env fid
+          | T.FunId fid -> Env.get env (VFun fid)
           | T.FunDeref ((_, Ptr f) as e) -> (check_exp env e; f)
           | T.FunDeref ((_, t') as e) ->
               check_exp env e;
@@ -262,7 +262,7 @@ let check_fun env fdec =
 let env_add_fundecs fdecs env =
   Hashtbl.fold (fun fname fdec e ->
     let t = type_of_fdec fdec in
-    Env.add_fun e fname t
+    Env.add (VFun fname) t e
   ) fdecs env
 
 let env_add_globals globals env =

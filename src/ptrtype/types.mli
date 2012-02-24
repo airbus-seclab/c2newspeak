@@ -36,6 +36,7 @@ and simple =
 type variable =
   | VGlobal of string
   | VLocal of string
+  | VFun of Newspeak.fid
 
 val type_eq : simple -> simple -> bool
 

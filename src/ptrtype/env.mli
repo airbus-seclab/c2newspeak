@@ -30,6 +30,3 @@ val add : Types.variable -> 'a -> 'a t -> 'a t
 
 val add_lbl : Newspeak.lbl -> 'a t -> 'a t
 val assert_lbl : Newspeak.lbl -> 'a t -> unit
-
-val add_fun : 'a t -> Newspeak.fid -> 'a -> 'a t
-val get_fun : 'a t -> Newspeak.fid -> 'a

@@ -38,6 +38,7 @@ and simple =
 type variable =
   | VGlobal of string
   | VLocal of string
+  | VFun of Newspeak.fid
 
 let rec string_of_simple = function
   | Int -> "Int"
