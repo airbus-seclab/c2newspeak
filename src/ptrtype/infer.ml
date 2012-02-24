@@ -361,12 +361,10 @@ let infer tpk =
   let globals = Hashtbl.create 0 in
 
   let tpk' =
-    { T.globals = globals
+    { tpk with
+      T.globals = globals
     ; T.init = init
     ; T.fundecs = fdecs
-    ; T.ptr_sz = tpk.T.ptr_sz
-    ; T.src_lang = tpk.T.src_lang
-    ; T.abi = tpk.T.abi
     }
   in
   unify_do tpk';
@@ -376,8 +374,7 @@ let infer tpk =
       let t = Env.get env (VGlobal g) in
       if (vars_of_typ t <> []) then
         begin
-          print_endline ("Error : free type variables :\n" ^ g ^ " : " ^ string_of_simple t);
-          exit 1
+          error ("Error : free type variables :\n" ^ g ^ " : " ^ string_of_simple t);
         end;
       Hashtbl.add globals g t
     )
