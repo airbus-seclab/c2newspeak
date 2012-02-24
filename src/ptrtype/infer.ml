@@ -57,6 +57,11 @@ open Unification
  * will affect both roots. So, it is important _not_ to do any deep copies.
  *)
 
+let error msg =
+  let loc = Npkcontext.get_loc () in
+  Printf.printf "%s - %s\n" (Newspeak.string_of_loc loc) msg;
+  exit 1
+
 let (new_unknown, reset_unknowns) =
   let c = ref 0 in
   let n () =
@@ -92,7 +97,7 @@ let occurs n t = List.mem n (vars_of_typ t)
 let occurs_check_failed ta tb =
   let sa = string_of_simple ta in
   let sb = string_of_simple tb in
-  failwith ("Occurs check failed : cannot unify "^sa^" and "^sb)
+  error ("Occurs check failed : cannot unify "^sa^" and "^sb)
 
 let infer_const = function
   | N.CInt _ -> Int
@@ -110,7 +115,7 @@ let infer_unop op (_e, t) =
   | N.Cast (N.Float _, N.Float _) -> unify t Float; Float
 
   | _ ->
-      failwith ("Unsupported unop : " ^ N.string_of_unop op)
+      error ("Unsupported unop : " ^ N.string_of_unop op)
 
 let infer_binop op (_, a) (_, b) =
   match op with
@@ -138,7 +143,7 @@ let infer_binop op (_, a) (_, b) =
       let sop = N.string_of_binop op in
       let sa = string_of_simple a in
       let sb = string_of_simple b in
-      failwith (Printf.sprintf "No such operation : %s %s %s" sa sop sb)
+      error (Printf.sprintf "No such operation : %s %s %s" sa sop sb)
 
 let rec infer_lv env = function
   | T.Local s -> T.Local s
@@ -272,6 +277,7 @@ let rec infer_stmtkind env sk =
       T.Call (args', fexp', rets')
 
 and infer_stmt env (sk, loc) =
+  Npkcontext.set_loc loc;
   let sk' = infer_stmtkind env sk in
   (sk', loc)
 
@@ -285,6 +291,7 @@ let infer_fdec env fname fdec =
    * Retrieve the values from the typing environment.
    * (generalization should be done here)
    *)
+  Npkcontext.set_loc fdec.T.position;
   let new_env =
     List.fold_left
       (fun e (name, _ty) ->
