@@ -57,9 +57,12 @@ open Unification
  * will affect both roots. So, it is important _not_ to do any deep copies.
  *)
 
-let error msg =
+let warning msg =
   let loc = Npkcontext.get_loc () in
-  Printf.printf "%s - %s\n" (Newspeak.string_of_loc loc) msg;
+  Printf.printf "%s - %s\n" (Newspeak.string_of_loc loc) msg
+
+let error msg =
+  warning msg;
   exit 1
 
 let (new_unknown, reset_unknowns) =
@@ -113,6 +116,10 @@ let infer_unop op (_e, t) =
   | N.Not -> unify t Int; Int
   | N.BNot _ -> unify t Int; Int
   | N.Cast (N.Float _, N.Float _) -> unify t Float; Float
+  | N.IntToPtr _src ->
+      warning "Warning : accepting cast int -> ptr";
+      unify t Int ;
+      Ptr (new_unknown ())
 
   | _ ->
       error ("Unsupported unop : " ^ N.string_of_unop op)
