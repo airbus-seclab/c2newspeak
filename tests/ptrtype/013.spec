@@ -6,7 +6,7 @@ void (013.c:12#5)^f(void) {
     Int y;
     (013.c:16#4)^{
       Ptr (Int) tmp_cir!0;
-      (013.c:16#4)^tmp_cir!0: Ptr (Int) <- memcpy((focus32 (&(y) : Ptr (Int)) : Ptr (Int)): Ptr (Int), (focus32 (&(x) : Ptr (Int)) : Ptr (Int)): Ptr (Int), (4 : Int): Int);
+      (013.c:16#4)^tmp_cir!0 <- memcpy((focus32 (&(y) : Ptr (Int)) : Ptr (Int)): Ptr (Int), (focus32 (&(x) : Ptr (Int)) : Ptr (Int)): Ptr (Int), (4 : Int): Int);
     }
     (013.c:17#8)^{
       Int z;

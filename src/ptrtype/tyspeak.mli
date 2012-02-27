@@ -71,8 +71,8 @@ type 'ty t = {
 }
 
 and 'ty fundec = {
-  args : (string * 'ty) list;
-  rets : (string * 'ty) list;
+  args : (string * Newspeak.typ * 'ty) list;
+  rets : (string * Newspeak.typ * 'ty) list;
   body : 'ty blk;
   position: Newspeak.location;
   fdectype : 'ty scheme;
@@ -80,20 +80,20 @@ and 'ty fundec = {
 
 and 'ty scheme = Forall of int list * 'ty
 
-and 'ty globals = (string, 'ty) Hashtbl.t
+and 'ty globals = (string, (Newspeak.typ * 'ty)) Hashtbl.t
 
 and 'ty stmtkind =
     Set	     of ('ty lval * 'ty exp * Newspeak.scalar_t)
   | Copy     of ('ty lval * 'ty lval * Newspeak.size_t)
   | Guard    of 'ty exp
-  | Decl     of (string * 'ty * 'ty blk)
+  | Decl     of (string * Newspeak.typ * 'ty * 'ty blk)
   | Select   of ('ty blk * 'ty blk)
   | InfLoop  of 'ty blk
   | DoWith   of ('ty blk * Newspeak.lbl)
   | Goto     of Newspeak.lbl
 (* TODO: maybe should use a record rather than a tuple? *)
 (* arguments, function type, function expression, return left values *)
-  | Call     of (('ty exp * 'ty) list * 'ty funexp * ('ty lval * 'ty) list  )
+  | Call     of (('ty exp * Newspeak.typ) list * 'ty funexp * ('ty lval * Newspeak.typ) list  )
   | UserSpec of 'ty assertion
 
 and 'ty specs = 'ty assertion list
@@ -103,7 +103,7 @@ and 'ty assertion = 'ty spec_token list
 and 'ty spec_token =
   | SymbolToken of char
   | IdentToken  of string
-  | LvalToken   of ('ty lval * 'ty)
+  | LvalToken   of ('ty lval * Newspeak.typ)
   | CstToken    of Newspeak.cst
 
 and 'ty stmt = 'ty stmtkind * Newspeak.location
@@ -120,7 +120,7 @@ and 'ty exp = ('ty bexp * 'ty)
 
 and 'ty bexp =
     Const     of Newspeak.cst
-  | Lval      of ('ty lval * 'ty)
+  | Lval      of ('ty lval * Newspeak.typ * 'ty)
   | AddrOf    of 'ty lval
   | AddrOfFun of (Newspeak.fid * 'ty ftyp)
   | UnOp      of (Newspeak.unop * 'ty exp)
@@ -128,8 +128,6 @@ and 'ty bexp =
 
 (* TODO: try to remove ftyp?? maybe not, it comes in handy *)
 and 'ty ftyp = 'ty list * 'ty list
-
-and 'ty field = Newspeak.offset * 'ty
 
 and 'ty funexp =
     FunId of Newspeak.fid

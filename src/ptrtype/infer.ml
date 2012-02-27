@@ -165,10 +165,10 @@ and lval_type env = function
 and infer_exp env (e, _) =
   match e with
   | T.Const c -> (T.Const c, infer_const c)
-  | T.Lval (lv, _ty) ->
+  | T.Lval (lv, nty, _ty) ->
       let lv' = infer_lv env lv in
       let ty = lval_type env lv in
-      (T.Lval (lv', ty), ty)
+      (T.Lval (lv', nty, ty), ty)
   | T.AddrOf lv ->
       let lv' = infer_lv env lv in
       let ty = lval_type env lv in
@@ -189,10 +189,9 @@ let infer_spectoken env = function
   | T.SymbolToken c -> T.SymbolToken c
   | T.IdentToken s -> T.IdentToken s
   | T.CstToken c -> T.CstToken c
-  | T.LvalToken (lv, _ty) ->
+  | T.LvalToken (lv, nty) ->
       let lv' = infer_lv env lv in
-      let ty = lval_type env lv in
-      T.LvalToken (lv', ty)
+      T.LvalToken (lv', nty)
 
 let infer_assertion env = List.map (infer_spectoken env)
 
@@ -226,13 +225,13 @@ let rec infer_stmtkind env sk =
   | T.Goto lbl ->
       Env.assert_lbl lbl env;
       T.Goto lbl
-  | T.Decl (n, _ty, blk) ->
+  | T.Decl (n, nty, _ty, blk) ->
       let var = T.Local n in
-      let t0 = new_unknown () in
+      let t0 = new_unknown () in (* TODO use nty *)
       let new_env = Env.add (VLocal n) t0 env in
       let blk' = infer_blk new_env blk in
       let ty = lval_type new_env var in
-      T.Decl (n, ty, blk')
+      T.Decl (n, nty, ty, blk')
   | T.UserSpec a -> T.UserSpec (infer_assertion env a)
   | T.Copy (dst, src, sz) ->
       let dst' = infer_lv env dst in
@@ -249,26 +248,25 @@ let rec infer_stmtkind env sk =
        * to the actual arguments and unify it with the formal arguments from
        * the environment.
        *)
-      let rets' =
-        List.map
-          (fun (lv, _) ->
-            let lv' = infer_lv env lv
-            in (lv', lval_type env lv')
-          )
-          rets
+
+      let infer_arg (e, nt) =
+        let et = infer_exp env e in
+        (et, nt)
       in
-      let args' =
-        List.map
-          (fun (e, _) ->
-            let (e', t) = infer_exp env e in
-            ((e', t), t)
-          ) args
+
+      let infer_ret (lv, nt) =
+        (infer_lv env lv, nt)
       in
-      let t_args = List.map snd args' in
-      let t_ret = List.map snd rets' in
-      let tfcall = Fun (t_args, t_ret) in
+
+      let args' = List.map infer_arg args in
+      let rets' = List.map infer_ret rets in
+
+      let t_args = List.map (fun ((_, t), _) -> t) args' in
+      let t_rets = List.map (fun (lv, _) -> lval_type env lv) rets' in
+
       let (fexp', tf) = infer_funexp env fexp in
-      unify tf tfcall;
+      unify tf (Fun (t_args, t_rets));
+
       T.Call (args', fexp', rets')
 
 and infer_stmt env (sk, loc) =
@@ -289,7 +287,7 @@ let infer_fdec env fname fdec =
   Npkcontext.set_loc fdec.T.position;
   let new_env =
     List.fold_left
-      (fun e (name, _ty) ->
+      (fun e (name, _nty, _ty) ->
         Env.add
           (VLocal name)
           (new_unknown ())
@@ -301,9 +299,9 @@ let infer_fdec env fname fdec =
   let blk = infer_blk new_env fdec.T.body in
   let extract_types l =
     List.map
-      (fun (name, _ty) ->
+      (fun (name, nty, _ty) ->
         let t = lval_type new_env (T.Local name) in
-        (name, t)
+        (name, nty, t)
       )
       l
   in
@@ -316,8 +314,8 @@ let infer_fdec env fname fdec =
     ; T.fdectype = T.Forall ([], te)
     }
   in
-  let t = type_of_fdec fdec' in
-  unify t te;
+  let get_type (_, _, t) = t in
+  unify te (Fun (List.map get_type fdec'.T.args, List.map get_type fdec'.T.rets));
   fdec'
 
 (*
@@ -357,9 +355,13 @@ let infer tpk =
   let init = infer_blk env tpk.T.init in
   let fdecs = hashtbl_mapi (infer_fdec env) tpk.T.fundecs in
 
-  let global_names = hashtbl_keys tpk.T.globals in
-  let globals = Hashtbl.create 0 in
-
+  let globals =
+    hashtbl_mapi (fun g (nt, _t) ->
+        let t = Env.get env (VGlobal g) in
+        (nt, t)
+    ) tpk.T.globals
+  in
+  
   let tpk' =
     { tpk with
       T.globals = globals
@@ -367,16 +369,13 @@ let infer tpk =
     ; T.fundecs = fdecs
     }
   in
-  unify_do tpk';
 
-  List.iter
-    (fun g ->
-      let t = Env.get env (VGlobal g) in
-      if (vars_of_typ t <> []) then
-        begin
-          error ("Error : free type variables :\n" ^ g ^ " : " ^ string_of_simple t);
-        end;
-      Hashtbl.add globals g t
-    )
-    global_names;
+  unify_do tpk';
+  Hashtbl.iter (fun g (_nt, t) ->
+    if (vars_of_typ t <> []) then
+      begin
+        error ("Error : free type variables :\n" ^ g ^ " : " ^ string_of_simple t);
+      end
+  ) globals;
+
   tpk'

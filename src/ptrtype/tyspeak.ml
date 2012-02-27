@@ -38,8 +38,8 @@ type 'ty t = {
 }
 
 and 'ty fundec = {
-  args : (string * 'ty) list;
-  rets : (string * 'ty) list;
+  args : (string * Newspeak.typ * 'ty) list;
+  rets : (string * Newspeak.typ * 'ty) list;
   body : 'ty blk;
   position: Newspeak.location;
   fdectype : 'ty scheme;
@@ -47,20 +47,20 @@ and 'ty fundec = {
 
 and 'ty scheme = Forall of int list * 'ty
 
-and 'ty globals = (string, 'ty) Hashtbl.t
+and 'ty globals = (string, (Newspeak.typ * 'ty)) Hashtbl.t
 
 and 'ty stmtkind =
     Set	     of ('ty lval * 'ty exp * Newspeak.scalar_t)
   | Copy     of ('ty lval * 'ty lval * Newspeak.size_t)
   | Guard    of 'ty exp
-  | Decl     of (string * 'ty * 'ty blk)
+  | Decl     of (string * Newspeak.typ * 'ty * 'ty blk)
   | Select   of ('ty blk * 'ty blk)
   | InfLoop  of 'ty blk
   | DoWith   of ('ty blk * Newspeak.lbl)
   | Goto     of Newspeak.lbl
 (* TODO: maybe should use a record rather than a tuple? *)
 (* arguments, function type, function expression, return left values *)
-  | Call     of (('ty exp * 'ty) list * 'ty funexp * ('ty lval * 'ty) list  )
+  | Call     of (('ty exp * Newspeak.typ) list * 'ty funexp * ('ty lval * Newspeak.typ) list  )
   | UserSpec of 'ty assertion
 
 and 'ty specs = 'ty assertion list
@@ -70,7 +70,7 @@ and 'ty assertion = 'ty spec_token list
 and 'ty spec_token =
   | SymbolToken of char
   | IdentToken  of string
-  | LvalToken   of ('ty lval * 'ty)
+  | LvalToken   of ('ty lval * Newspeak.typ)
   | CstToken    of Newspeak.cst
 
 and 'ty stmt = 'ty stmtkind * Newspeak.location
@@ -87,7 +87,7 @@ and 'ty exp = ('ty bexp * 'ty)
 
 and 'ty bexp =
     Const     of Newspeak.cst
-  | Lval      of ('ty lval * 'ty)
+  | Lval      of ('ty lval * Newspeak.typ * 'ty)
   | AddrOf    of 'ty lval
   | AddrOfFun of (Newspeak.fid * 'ty ftyp)
   | UnOp      of (Newspeak.unop * 'ty exp)
@@ -95,8 +95,6 @@ and 'ty bexp =
 
 (* TODO: try to remove ftyp?? maybe not, it comes in handy *)
 and 'ty ftyp = 'ty list * 'ty list
-
-and 'ty field = Newspeak.offset * 'ty
 
 and 'ty funexp =
     FunId of Newspeak.fid
@@ -121,13 +119,13 @@ let string_of_scalar s =
 let string_of_list print l =
   "(" ^ (String.concat ", " (List.map print l)) ^ ")"
 
-let string_of_formal_arg sty (arg_name, typ) =
+let string_of_formal_arg sty (arg_name, _, typ) =
   sty typ ^ " " ^ arg_name
 
 let string_of_ret sty ret =
   match ret with
       [] -> "void"
-    | l -> String.concat ", " (List.map (fun (_, t) -> sty t) l)
+    | l -> String.concat ", " (List.map (fun (_, _, t) -> sty t) l)
 
 let string_of_formal_args sty args =
   match args with
@@ -193,7 +191,7 @@ and string_of_exp sty (e, ty) =
 and string_of_bexp sty e =
   match e with
       Const c 		  -> string_of_cst c
-    | Lval (lv, t) 	  -> (string_of_lval sty lv)^"_"^(sty t)
+    | Lval (lv, _nt, t)   -> (string_of_lval sty lv)^"_"^(sty t)
     | AddrOf lv 	  -> "&("^(string_of_lval sty lv)^")"
     | AddrOfFun (fid, ft) -> "&_{"^(string_of_ftyp sty ft)^"}("^fid^")"
     | BinOp (op, e1, e2)  ->
@@ -253,7 +251,7 @@ let string_of_blk sty offset x =
           dump_line_at loc ((string_of_lval sty lv1)^" ="^(Newspeak.string_of_size_t sz)^
                         " "^(string_of_lval sty lv2)^";")
 
-      | Decl (x, t, body) ->
+      | Decl (x, _nt, t, body) ->
           if only then begin
             dump_line_at loc ((sty t)^" "^x^";");
             dump_blk body
@@ -275,8 +273,8 @@ let string_of_blk sty offset x =
 
       | Goto l -> dump_line_at loc ("goto "^(string_of_lbl l)^";")
       | Call (args, fn, ret_vars) ->
-	  let string_of_args (x, t) = string_of_exp sty x^": "^sty t in
-	  let string_of_rets (x, t) = string_of_lval sty x^": "^sty t in
+	  let string_of_args ((_, t) as x, _) = string_of_exp sty x^": "^sty t in
+	  let string_of_rets (x, _t) = string_of_lval sty x in
 	  let args = List.map string_of_args args in
 	  let rets = List.map string_of_rets ret_vars in
 
@@ -352,7 +350,7 @@ let dump_globals sty gdecls =
   (* TODO: Clean this mess... StringMap *)
   let glbs = ref (StringMap.empty) in
     Hashtbl.iter
-      (fun name info -> glbs := (StringMap.add name info !glbs))
+      (fun name (_, info) -> glbs := (StringMap.add name info !glbs))
       gdecls;
     StringMap.iter (dump_gdecl sty) !glbs
 

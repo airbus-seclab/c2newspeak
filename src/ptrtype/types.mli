@@ -46,6 +46,4 @@ val shorten : simple -> simple
 
 val vars_of_typ : simple -> int list
 
-val type_of_fdec : simple Tyspeak.fundec -> simple
-
 val extract_fun_type : simple -> simple list * simple list

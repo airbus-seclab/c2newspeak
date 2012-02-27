@@ -80,11 +80,6 @@ let rec vars_of_typ = function
   | Fun (args, rets) ->
           List.concat (List.map vars_of_typ (rets@args))
 
-let type_of_fdec fdec =
-  let args' = List.map snd fdec.T.args in
-  let rets' = List.map snd fdec.T.rets in
-  Fun (args', rets')
-
 let rec type_eq x y =
   match (shorten x, shorten y) with
   | Int, Int -> true

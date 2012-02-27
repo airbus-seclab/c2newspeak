@@ -167,10 +167,10 @@ and check_exp env (be, te) =
    *)
   match be with
   | T.Const c -> tc_const_compatible c te
-  | T.Lval (lv, ty) ->
+  | T.Lval (lv, _nty, t) ->
       let t_lv = get_lv_type env lv in
-      same_type t_lv ty;
-      same_type te ty;
+      same_type te t;
+      same_type te t_lv;
   | T.AddrOf lv ->
       let t_lv = get_lv_type env lv in
       same_type te (Ptr t_lv)
@@ -210,7 +210,7 @@ let rec check_stmt env (sk, _loc) =
       let (_be, te) = e in
       check_exp env e;
       same_type te Int
-  | T.Decl (vid, ty, blk) ->
+  | T.Decl (vid, _nty, ty, blk) ->
       let new_env = Env.add (VLocal vid) ty env in
       check_blk new_env blk
   | T.Select (a, b) ->
@@ -225,8 +225,8 @@ let rec check_stmt env (sk, _loc) =
       Env.assert_lbl lbl env
   | T.Call (args, fexp, rets) ->
       begin
-        let targs = List.map (fun (e, t) -> check_exp env e; t) args in
-        let t_ret = List.map snd rets in
+        let targs = List.map (fun ((_, t) as e, _) -> check_exp env e; t) args in
+        let t_ret = List.map (fun (lv, _) -> get_lv_type env lv) rets in
         let ft =
           match fexp with
           | T.FunId fid -> Env.get env (VFun fid)
@@ -250,10 +250,10 @@ let rec check_stmt env (sk, _loc) =
 and check_blk env =
   List.iter (check_stmt env)
 
-let check_fun env fdec =
+let check_fun (env:Types.simple Env.t) fdec =
   let new_env =
     List.fold_left
-      (fun e (name, ty) -> Env.add (VLocal name) ty e)
+      (fun e (name, _, ty) -> Env.add (VLocal name) ty e)
       env
       (fdec.T.rets@fdec.T.args)
   in
@@ -261,12 +261,13 @@ let check_fun env fdec =
 
 let env_add_fundecs fdecs env =
   Hashtbl.fold (fun fname fdec e ->
-    let t = type_of_fdec fdec in
+    let extract_types = List.map (fun (_, _, t) -> t) in
+    let t = Fun (extract_types fdec.T.args, extract_types fdec.T.rets) in
     Env.add (VFun fname) t e
   ) fdecs env
 
 let env_add_globals globals env =
-  Hashtbl.fold (fun name ty e ->
+  Hashtbl.fold (fun name (_, ty) e ->
     Env.add (VGlobal name) ty e
   ) globals env
 

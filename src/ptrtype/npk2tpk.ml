@@ -32,7 +32,7 @@ module T = Tyspeak
  *)
 let convert to_ty nil_ty npk =
   let c_globals =
-    Utils.hashtbl_map to_ty
+    Utils.hashtbl_map (fun t -> (t, to_ty t))
   in
 
   let c_fty (x, y) =
@@ -48,7 +48,7 @@ let convert to_ty nil_ty npk =
     | N.Shift (lv, e) -> T.Shift (c_lv lv, c_exp e)
   and c_bexp = function
     | N.Const c -> T.Const c
-    | N.Lval (lv, ty) -> T.Lval (c_lv lv, to_ty ty)
+    | N.Lval (lv, ty) -> T.Lval (c_lv lv, ty, nil_ty)
     | N.AddrOf lv -> T.AddrOf (c_lv lv)
     | N.AddrOfFun (s, fty) -> T.AddrOfFun (s, c_fty fty)
     | N.UnOp (op, e) -> T.UnOp (op, c_exp e)
@@ -57,11 +57,11 @@ let convert to_ty nil_ty npk =
   in
 
   let c_args =
-    List.map (fun (e, ty) -> (c_exp e, to_ty ty))
+    List.map (fun (e, ty) -> (c_exp e, ty))
   in
 
   let c_rets =
-    List.map (fun (lv, ty) -> (c_lv lv, to_ty ty))
+    List.map (fun (lv, ty) -> (c_lv lv, ty))
   in
 
   let c_funexp = function
@@ -72,7 +72,7 @@ let convert to_ty nil_ty npk =
   let c_spec = function
     | N.SymbolToken c      -> T.SymbolToken c
     | N.IdentToken s       -> T.IdentToken s
-    | N.LvalToken (lv, ty) -> T.LvalToken (c_lv lv, to_ty ty)
+    | N.LvalToken (lv, ty) -> T.LvalToken (c_lv lv, ty)
     | N.CstToken c         -> T.CstToken c
   in
 
@@ -84,7 +84,7 @@ let convert to_ty nil_ty npk =
     | N.Set (lv, e, st) -> T.Set (c_lv lv, c_exp e, st)
     | N.Copy (lv1, lv2, sz) -> T.Copy (c_lv lv1, c_lv lv2, sz)
     | N.Guard e -> T.Guard (c_exp e)
-    | N.Decl (s, ty, blk) -> T.Decl (s, to_ty ty, c_blk blk)
+    | N.Decl (s, ty, blk) -> T.Decl (s, ty, to_ty ty, c_blk blk)
     | N.Select (blk1, blk2) -> T.Select (c_blk blk1, c_blk blk2)
     | N.InfLoop blk -> T.InfLoop (c_blk blk)
     | N.DoWith (blk, lbl) -> T.DoWith (c_blk blk, lbl)
@@ -97,7 +97,7 @@ let convert to_ty nil_ty npk =
 
   let c_fundec f =
     let c_argsrets =
-      List.map (fun (s, ty) -> (s, to_ty ty))
+      List.map (fun (s, ty) -> (s, ty, to_ty ty))
     in
     { T.args = c_argsrets f.N.args
     ; T.rets = c_argsrets f.N.rets
