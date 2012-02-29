@@ -65,7 +65,20 @@ let rec unify_now ta tb =
   | Fun (args_a, rets_a), Fun (args_b, rets_b) ->
       List.iter2 unify_now args_a args_b;
       List.iter2 unify_now rets_a rets_b
-    
+
+  | Struct fa, Struct fb ->
+      let sort_fields =
+        List.sort (fun (x, _) (y, _) -> compare x y)
+      in
+      let sfa = sort_fields fa in
+      let sfb = sort_fields fb in
+      let offsets = List.map fst in
+      let types = List.map snd in
+      if offsets sfa = offsets sfb then
+        List.iter2 unify_now (types sfa) (types sfb)
+      else
+        failwith "Struct unification : unsupported case"
+
   | _ -> type_clash sta stb
 
 let unify_queue = Queue.create ()
