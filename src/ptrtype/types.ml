@@ -23,8 +23,10 @@
 
 module T = Tyspeak
 
+type unknown = { id : int }
+
 type var_type =
-  | Unknown of int
+  | Unknown of unknown
   | Instanciated of simple
 
 and simple =
@@ -33,6 +35,7 @@ and simple =
   | Fun of simple list * simple list
   | Ptr of simple
   | Array of simple
+  | Struct of (int * simple) list
   | Var of var_type ref
 
 type variable =
@@ -40,18 +43,30 @@ type variable =
   | VLocal of string
   | VFun of Newspeak.fid
 
+let string_of_variable = function
+  | VGlobal v -> "(g)" ^ v
+  | VLocal v -> "(l)" ^ v
+  | VFun v -> "(f)" ^ v
+
+let string_of_unknown { id = n } =
+    string_of_int n
+
 let rec string_of_simple = function
   | Int -> "Int"
   | Float -> "Float"
   | Ptr s -> "Ptr (" ^ string_of_simple s ^ ")"
   | Array s -> "Array (" ^ string_of_simple s ^ ")"
-  | Var {contents = Unknown n} -> "_a"^string_of_int n
+  | Struct f -> "Struct (" ^ String.concat "," (List.map string_of_field f) ^ ")"
+  | Var {contents = Unknown u} -> "_a"^string_of_unknown u
   | Var {contents = Instanciated s} -> string_of_simple s
   | Fun (args, rets) ->
       let print_lst l =
         "(" ^ String.concat " * " (List.map string_of_simple l) ^ ")"
       in
       print_lst args ^ " -> " ^ print_lst rets
+
+and string_of_field (n, t) =
+    Printf.sprintf "%d : %s" n (string_of_simple t)
 
 let rec shorten = function
   | Var ({contents = Instanciated (Var _ as t)} as vt) ->
@@ -75,10 +90,11 @@ let rec type_eq x y =
 let rec vars_of_typ = function
   | Int | Float -> []
   | Ptr t | Array t -> vars_of_typ t
-  | Var ({contents = Unknown n}) -> [n]
+  | Var ({contents = Unknown {id = n}}) -> [n]
   | Var ({contents = Instanciated t}) -> vars_of_typ t
   | Fun (args, rets) ->
           List.concat (List.map vars_of_typ (rets@args))
+  | Struct f -> List.concat (List.map (fun (_, t) -> vars_of_typ t) f)
 
 let rec type_eq x y =
   match (shorten x, shorten y) with

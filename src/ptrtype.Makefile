@@ -23,7 +23,7 @@
 TARGET=ptrtype
 DIRS=newspeak/ utils/ ptrtype/
 
-MODS=options utils tyspeak env types unification \
+MODS=options utils tyspeak types env unification \
      check infer npk2tpk ptrtype
 
 FILES=version newspeak/temps newspeak/config newspeak/eBigInt \

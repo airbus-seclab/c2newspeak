@@ -22,7 +22,7 @@
  *)
 
 type 'a t =
-  { lvals : (Types.variable * 'a) list
+  { lvals : (Types.variable * (Newspeak.typ option * 'a)) list
   ; lbls  : Newspeak.lbl list
   }
 
@@ -35,12 +35,20 @@ exception Var_not_found of Types.variable
 
 let get env k =
   try
-    List.assoc k env.lvals
+    snd (List.assoc k env.lvals)
   with
     Not_found -> raise (Var_not_found k)
 
-let add lv t env =
-  { env with lvals = (lv, t)::env.lvals }
+let get_npktype env k =
+  try
+    match fst (List.assoc k env.lvals) with
+    | Some nt -> nt
+    | None -> failwith ("No type hint on variable " ^ Types.string_of_variable k)
+  with
+    Not_found -> raise (Var_not_found k)
+
+let add lv nt t env =
+  { env with lvals = (lv, (nt, t))::env.lvals }
 
 let add_lbl lbl env =
   { env with lbls = lbl::env.lbls}

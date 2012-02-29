@@ -46,7 +46,7 @@ let rec unify_now ta tb =
          if na <> nb then
            ra := Instanciated stb
        end
-  | ((Var ({contents = Unknown n} as r)), t)
+  | ((Var ({contents = Unknown {id = n}} as r)), t)
     ->
       begin
         if occurs n t then

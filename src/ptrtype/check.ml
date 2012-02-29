@@ -149,14 +149,22 @@ let rec get_lv_type env = function
         let tlv = get_lv_type env lv in
         match shorten tlv with
         | Array t -> t
+        | Struct fs ->
+            let off = T.static_eval string_of_simple e in
+            begin
+              try
+                List.assoc off fs
+              with
+                Not_found -> failwith ("No field at offset " ^ string_of_int off)
+            end
         | _ ->
-            let msg =
-              Printf.sprintf
-                "%s has type %s but should have an array type"
-                (T.string_of_lval string_of_simple lv)
-                (string_of_simple tlv)
-            in
-            failwith msg
+              let msg =
+                Printf.sprintf
+                  "%s has type %s but should have an array type"
+                  (T.string_of_lval string_of_simple lv)
+                  (string_of_simple tlv)
+              in
+              failwith msg
       end
 
 and check_exp env (be, te) =
@@ -210,8 +218,8 @@ let rec check_stmt env (sk, _loc) =
       let (_be, te) = e in
       check_exp env e;
       same_type te Int
-  | T.Decl (vid, _nty, ty, blk) ->
-      let new_env = Env.add (VLocal vid) ty env in
+  | T.Decl (vid, nty, ty, blk) ->
+      let new_env = Env.add (VLocal vid) (Some nty) ty env in
       check_blk new_env blk
   | T.Select (a, b) ->
       check_blk env a;
@@ -253,7 +261,7 @@ and check_blk env =
 let check_fun (env:Types.simple Env.t) fdec =
   let new_env =
     List.fold_left
-      (fun e (name, _, ty) -> Env.add (VLocal name) ty e)
+      (fun e (name, nty, ty) -> Env.add (VLocal name) (Some nty) ty e)
       env
       (fdec.T.rets@fdec.T.args)
   in
@@ -263,12 +271,12 @@ let env_add_fundecs fdecs env =
   Hashtbl.fold (fun fname fdec e ->
     let extract_types = List.map (fun (_, _, t) -> t) in
     let t = Fun (extract_types fdec.T.args, extract_types fdec.T.rets) in
-    Env.add (VFun fname) t e
+    Env.add (VFun fname) None t e
   ) fdecs env
 
 let env_add_globals globals env =
-  Hashtbl.fold (fun name (_, ty) e ->
-    Env.add (VGlobal name) ty e
+  Hashtbl.fold (fun name (nty, ty) e ->
+    Env.add (VGlobal name) (Some nty) ty e
   ) globals env
 
 let check tpk =

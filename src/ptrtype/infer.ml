@@ -64,31 +64,11 @@ let (new_unknown, reset_unknowns) =
   let n () =
     let v = !c in
     incr c;
-    Var (ref (Unknown v))
+    Var (ref (Unknown {id = v}))
   and r () =
     c := 0
   in
   (n, r)
-
-let rec vars_of_typ = function
-  | Int | Float -> []
-  | Ptr t | Array t -> vars_of_typ t
-  | Var ({contents = Unknown n}) -> [n]
-  | Var ({contents = Instanciated t}) -> vars_of_typ t
-  | Fun (args, rets) ->
-          List.concat (List.map vars_of_typ (rets@args))
-
-let is_atomic_type = function
-  | Int
-  | Float -> true
-  | _ -> false
-
-let occurs n t = List.mem n (vars_of_typ t)
-
-let occurs_check_failed ta tb =
-  let sa = string_of_simple ta in
-  let sb = string_of_simple tb in
-  error ("Occurs check failed : cannot unify "^sa^" and "^sb)
 
 let infer_const = function
   | N.CInt _ -> Int
@@ -155,12 +135,31 @@ and lval_type env = function
       unify (Ptr t) te;
       t
   | T.Shift (lv, e) ->
-      let (_, te) = infer_exp env e in
+      let ((_, te) as exp_off) = infer_exp env e in
       unify te Int;
-      let t = new_unknown () in
       let tlv = lval_type env lv in
-      unify (Array t) tlv;
-      t
+      let var = match lv with
+        | T.Local v -> VLocal v
+        | T.Global v -> VGlobal v
+        | _ -> failwith "Shift(Deref | Shift) not supported"
+      in
+      let nt = Env.get_npktype env var in
+      match nt with
+      | N.Array _ ->
+          begin
+            let t = new_unknown () in
+            unify (Array t) tlv;
+            t
+          end
+      | N.Region _ ->
+          begin
+            let t = new_unknown () in
+            let o = T.static_eval string_of_simple exp_off in
+            unify (Struct [(o, t)]) tlv;
+            t
+          end
+      | N.Scalar _ ->
+          failwith "Cannot shift a Scalar lvalue"
 
 and infer_exp env (e, _) =
   match e with
@@ -227,8 +226,8 @@ let rec infer_stmtkind env sk =
       T.Goto lbl
   | T.Decl (n, nty, _ty, blk) ->
       let var = T.Local n in
-      let t0 = new_unknown () in (* TODO use nty *)
-      let new_env = Env.add (VLocal n) t0 env in
+      let t0 = new_unknown () in
+      let new_env = Env.add (VLocal n) (Some nty) t0 env in
       let blk' = infer_blk new_env blk in
       let ty = lval_type new_env var in
       T.Decl (n, nty, ty, blk')
@@ -287,9 +286,10 @@ let infer_fdec env fname fdec =
   Npkcontext.set_loc fdec.T.position;
   let new_env =
     List.fold_left
-      (fun e (name, _nty, _ty) ->
+      (fun e (name, nty, _ty) ->
         Env.add
           (VLocal name)
+          (Some nty)
           (new_unknown ())
           e
       )
@@ -332,15 +332,15 @@ let env_add_fundecs fdecs env =
     let args' = List.map make_new_type fdec.T.args in
     let rets' = List.map make_new_type fdec.T.rets in
     let t = Fun (args', rets') in
-    Env.add (VFun fname) t e
+    Env.add (VFun fname) None t e
   ) fdecs env
 
 (*
  * Extend an environment from global variables.
  *)
 let env_add_globals globals env =
-  Hashtbl.fold (fun name _ty e ->
-    Env.add (VGlobal name) (new_unknown ()) e
+  Hashtbl.fold (fun name (nty, _ty) e ->
+    Env.add (VGlobal name) (Some nty) (new_unknown ()) e
   ) globals env
 
 let infer tpk =

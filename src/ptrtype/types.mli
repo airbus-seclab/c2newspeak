@@ -21,8 +21,10 @@
  * 12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
  *)
 
+type unknown = { id : int }
+
 type var_type =
-  | Unknown of int
+  | Unknown of unknown
   | Instanciated of simple
 
 and simple =
@@ -31,12 +33,15 @@ and simple =
   | Fun of simple list * simple list
   | Ptr of simple
   | Array of simple
+  | Struct of (int * simple) list
   | Var of var_type ref
 
 type variable =
   | VGlobal of string
   | VLocal of string
   | VFun of Newspeak.fid
+
+val string_of_variable : variable -> string
 
 val type_eq : simple -> simple -> bool
 

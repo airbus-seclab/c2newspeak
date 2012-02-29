@@ -366,3 +366,8 @@ let dump string_of_ty prog =
     StringMap.iter (dump_fundec string_of_ty) !funs;
     dump_globals string_of_ty prog.globals;
     print_string init
+
+let static_eval sty ((be, _t) as e) = match be with
+  | Const (CInt n) -> Nat.to_int n
+  | _ -> failwith ( "static_eval - expression is not static : "
+                  ^ string_of_exp sty e)

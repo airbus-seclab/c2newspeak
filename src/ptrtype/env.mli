@@ -26,7 +26,8 @@ type 'a t
 val empty : 'a t
 
 val get : 'a t -> Types.variable -> 'a
-val add : Types.variable -> 'a -> 'a t -> 'a t
+val get_npktype : 'a t -> Types.variable -> Newspeak.typ
+val add : Types.variable -> Newspeak.typ option -> 'a -> 'a t -> 'a t
 
 val add_lbl : Newspeak.lbl -> 'a t -> 'a t
 val assert_lbl : Newspeak.lbl -> 'a t -> unit
