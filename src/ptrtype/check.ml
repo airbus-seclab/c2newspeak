@@ -153,7 +153,7 @@ let rec get_lv_type env = function
             let off = T.static_eval string_of_simple e in
             begin
               try
-                List.assoc off fs
+                List.assoc off !fs
               with
                 Not_found -> failwith ("No field at offset " ^ string_of_int off)
             end

@@ -155,7 +155,7 @@ and lval_type env = function
           begin
             let t = new_unknown () in
             let o = T.static_eval string_of_simple exp_off in
-            unify (Struct [(o, t)]) tlv;
+            unify (Struct (ref [(o, t)])) tlv;
             t
           end
       | N.Scalar _ ->

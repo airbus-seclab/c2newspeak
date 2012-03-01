@@ -35,7 +35,7 @@ and simple =
   | Fun of simple list * simple list
   | Ptr of simple
   | Array of simple
-  | Struct of (int * simple) list
+  | Struct of (int * simple) list ref
   | Var of var_type ref
 
 type variable =
@@ -56,7 +56,7 @@ let rec string_of_simple = function
   | Float -> "Float"
   | Ptr s -> "Ptr (" ^ string_of_simple s ^ ")"
   | Array s -> "Array (" ^ string_of_simple s ^ ")"
-  | Struct f -> "Struct (" ^ String.concat "," (List.map string_of_field f) ^ ")"
+  | Struct f -> "Struct (" ^ String.concat "," (List.map string_of_field !f) ^ ")"
   | Var {contents = Unknown u} -> "_a"^string_of_unknown u
   | Var {contents = Instanciated s} -> string_of_simple s
   | Fun (args, rets) ->
@@ -94,7 +94,7 @@ let rec vars_of_typ = function
   | Var ({contents = Instanciated t}) -> vars_of_typ t
   | Fun (args, rets) ->
           List.concat (List.map vars_of_typ (rets@args))
-  | Struct f -> List.concat (List.map (fun (_, t) -> vars_of_typ t) f)
+  | Struct f -> List.concat (List.map (fun (_, t) -> vars_of_typ t) !f)
 
 let rec type_eq x y =
   match (shorten x, shorten y) with

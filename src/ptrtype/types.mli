@@ -33,7 +33,7 @@ and simple =
   | Fun of simple list * simple list
   | Ptr of simple
   | Array of simple
-  | Struct of (int * simple) list
+  | Struct of (int * simple) list ref
   | Var of var_type ref
 
 type variable =
