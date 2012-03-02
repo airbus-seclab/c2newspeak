@@ -59,13 +59,10 @@ let compare_lists a b =
     | Some (OnlyL v) -> InBoth (v, w)
     | _ -> invalid_arg "add_r"
   in
-  let after_a =
-    List.fold_left (fun m (k,v) -> insert_or_update (add_l v) k m) IntMap.empty a
+  let iter f l m =
+    List.fold_left (fun m (k,v) -> insert_or_update (f v) k m) m l
   in
-  let after_b =
-    List.fold_left (fun m (k,w) -> insert_or_update (add_r w) k m) after_a b
-  in
-  IntMap.bindings after_b
+  IntMap.bindings (iter add_r b (iter add_l a IntMap.empty))
 
 let occurs n t = List.mem n (vars_of_typ t)
 
