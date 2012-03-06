@@ -76,17 +76,6 @@ let rec shorten = function
   | Var {contents = Instanciated t} -> t
   | t -> t
 
-let rec type_eq x y =
-  match (shorten x, shorten y) with
-  | Int, Int -> true
-  | Float, Float -> true
-  | Ptr px, Ptr py -> type_eq px py
-  | Var {contents = Unknown nx}, Var {contents = Unknown ny} -> nx = ny
-  | Fun (argsa, retsa), Fun (argsb, retsb) ->
-        List.for_all2 type_eq argsa argsb
-     && List.for_all2 type_eq retsa retsb
-  | _ -> false
-
 let rec vars_of_typ = function
   | Int | Float -> []
   | Ptr t | Array t -> vars_of_typ t
