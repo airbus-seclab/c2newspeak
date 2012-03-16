@@ -49,6 +49,13 @@ let insert_or_update
     in
     IntMap.add k (f v) m
 
+(*
+ * Workaround when IntMap.bindings is not available (pre 3.12.0)
+ *)
+let intmap_bindings : 'a IntMap.t -> (IntMap.key * 'a) list
+  = fun m ->
+    IntMap.fold (fun k e l -> (k, e)::l) m []
+
 let compare_lists a b =
   let add_l v = function
     | None -> OnlyL v
@@ -62,7 +69,7 @@ let compare_lists a b =
   let iter f l m =
     List.fold_left (fun m (k,v) -> insert_or_update (f v) k m) m l
   in
-  IntMap.bindings (iter add_r b (iter add_l a IntMap.empty))
+  intmap_bindings (iter add_r b (iter add_l a IntMap.empty))
 
 let occurs n t = List.mem n (vars_of_typ t)
 
