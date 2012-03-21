@@ -1,46 +1,79 @@
-/*
-  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
-  well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans, Olivier Levillain
-  
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-  
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-  
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+#ifndef _SYS_SHM_H
+#define _SYS_SHM_H
 
-  Charles Hymans
-  EADS Innovation Works - SE/CS
-  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
-  email: charles.hymans@penjili.org
-*/
+#include <sys/ipc.h>
 
-#include <stddef.h>
-#include <sys/types.h>
+__BEGIN_DECLS
 
-struct shmid_ds
-{
-  //  struct ipc_perm    shm_perm;	/* Operation permission structure. */
-  size_t             shm_segsz;	/* Size of segment in bytes. */
-  //  pid_t              shm_lpid;	/* Process ID of last operation. */
-  //  pid_t              shm_cpid;	/* Process ID of creator. */
-  //  shmatt_t           shm_nattch;/* Number of current attaches. */
-  //  timestruc_t        shm_atim;	/* Time of last shmat (). */
-  //  timestruc_t        shm_dtim;	/* Time of last shmdt (). */
-  //  timestruc_t        shm_ctim;	/* Time of last change by shmctl (). */
-  //  long               shm_spare4[2];
+#define SHMMAX 0x2000000		 /* max shared seg size (bytes) */
+#define SHMMIN 1			 /* min shared seg size (bytes) */
+#define SHMMNI 4096			 /* max num of segs system wide */
+#define SHMALL (SHMMAX/PAGE_SIZE*(SHMMNI/16)) /* max shm system wide (pages) */
+#define SHMSEG SHMMNI			 /* max shared segs per process */
+
+struct shmid_ds {
+  struct ipc_perm	shm_perm;	/* operation perms */
+  int32_t		shm_segsz;	/* size of segment (bytes) */
+  time_t		shm_atime;	/* last attach time */
+  time_t		shm_dtime;	/* last detach time */
+  time_t		shm_ctime;	/* last change time */
+  pid_t			shm_cpid;	/* pid of creator */
+  pid_t			shm_lpid;	/* pid of last operator */
+  uint16_t		shm_nattch;	/* no. of current attaches */
+  uint16_t 		shm_unused;	/* compatibility */
+  void 			*shm_unused2;	/* ditto - used by DIPC */
+  void			*shm_unused3;	/* unused */
 };
 
-int shmget(key_t key, size_t size, int shmflg);
-int shmctl(int shmid, int cmd, struct shmid_ds *buf);
-void *shmat(int shmid, const void *shmaddr, int shmflg);
-int shmdt(const void *shmaddr);
+/* permission flag for shmget */
+#define SHM_R		0400	/* or S_IRUGO from <linux/stat.h> */
+#define SHM_W		0200	/* or S_IWUGO from <linux/stat.h> */
 
+/* mode for attach */
+#define	SHM_RDONLY	010000	/* read-only access */
+#define	SHM_RND		020000	/* round attach address to SHMLBA boundary */
+#define	SHM_REMAP	040000	/* take-over region on attach */
+
+/* super user shmctl commands */
+#define SHM_LOCK 	11
+#define SHM_UNLOCK 	12
+
+/* ipcs ctl commands */
+#define SHM_STAT 	13
+#define SHM_INFO 	14
+
+/* Obsolete, used only for backwards compatibility */
+struct	shminfo {
+  int32_t shmmax;
+  int32_t shmmin;
+  int32_t shmmni;
+  int32_t shmseg;
+  int32_t shmall;
+};
+
+struct shm_info {
+  int32_t used_ids;
+  unsigned long shm_tot;	/* total allocated shm */
+  unsigned long shm_rss;	/* total resident shm */
+  unsigned long shm_swp;	/* total swapped shm */
+  unsigned long swap_attempts;
+  unsigned long swap_successes;
+};
+
+#if defined(__i386__) || defined(__mips__) || defined(__arm__) || defined(__powerpc__) || defined (__powerpc64__) || defined(__s390__) || defined(__hppa__) || defined(__x86_64__) || defined(__ia64__)
+#define PAGE_SIZE 4096UL
+#define PAGE_SHIFT 12
+#elif defined(__alpha__) || defined(__sparc__)
+/* sun4* has 4k except sun4 architecture, sparc64 has 8k */
+#define PAGE_SIZE 8192UL
+#define PAGE_SHIFT 13
+#endif
+
+extern int shmget(key_t key, int size, int shmflg) __THROW;
+extern void *shmat(int shmid, const void *shmaddr, int shmflg) __THROW;
+extern int shmdt (const void *shmaddr) __THROW;
+extern int shmctl(int shmid, int cmd, struct shmid_ds *buf) __THROW;
+
+__END_DECLS
+
+#endif

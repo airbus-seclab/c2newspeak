@@ -1,38 +1,29 @@
-/*
-  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
-  well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans, Olivier Levillain
-  
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-  
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-  
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+#ifndef _STDARG_H
+#define _STDARG_H
 
-  Charles Hymans
-  EADS Innovation Works - SE/CS
-  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
-  email: charles.hymans@penjili.org
-*/
+#include <sys/cdefs.h>
+#include <endian.h>
 
-typedef char *va_list;
+__BEGIN_DECLS
 
+#if (__GNUC__ > 2) || ((__GNUC__ == 2) && (__GNUC_MINOR__ >= 96))
 
-#define va_start(v,p)   v = __builtin_newspeak_va_arg;
-#define va_arg(v,t)     *((*((t**)(&v)))++)
-#define va_end(v)       
+typedef __builtin_va_list va_list;
+#define va_start(v,l)	__builtin_va_start((v),(l))
+#define va_end		__builtin_va_end
+#define va_arg		__builtin_va_arg
+#define __va_copy(d,s)	__builtin_va_copy((d),(s))
 
-/* deprecated, not standard C:
-#define va_start(v,p)   v = __builtin_newspeak_va_arg;
-#define va_arg(v,t)     *(((t*)v)++)
-#define va_end(v)       
-*/
+#endif
 
+#ifndef va_end
+#include <stdarg-cruft.h>
+#endif
+
+#if !defined(__STRICT_ANSI__) || __STDC_VERSION__ + 0 >= 199900L
+#define va_copy(d,s)	__va_copy(d,s)
+#endif
+
+__END_DECLS
+
+#endif

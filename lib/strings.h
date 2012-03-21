@@ -1,26 +1,27 @@
-/*
-  C2Newspeak: compiles C code into Newspeak. Newspeak is a minimal language 
-  well-suited for static analysis.
-  Copyright (C) 2007  Charles Hymans, Olivier Levillain
-  
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-  
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-  
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+#ifndef _STRINGS_H
+#define _STRINGS_H
 
-  Charles Hymans
-  EADS Innovation Works - SE/CS
-  12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
-  email: charles.hymans@penjili.org
-*/
+#include <stddef.h>
+#include <sys/cdefs.h>
 
-#include <string.h>
+__BEGIN_DECLS
+
+int strcasecmp(const char *s1, const char *s2) __THROW __pure;
+int strncasecmp(const char *s1, const char *s2, size_t n) __THROW __pure;
+int ffs(int i) __THROW __attribute__((__const__));
+
+int    bcmp(const void *, const void *, size_t) __THROW __pure __attribute_dontuse__;
+void   bcopy(const void *, void *, size_t) __THROW __attribute_dontuse__;
+void   bzero(void *, size_t) __THROW __attribute_dontuse__;
+char  *index(const char *, int) __THROW __pure __attribute_dontuse__;
+char  *rindex(const char *, int) __THROW __pure __attribute_dontuse__;
+
+#define bzero(s,n) memset(s,0,n)
+#define bcopy(src,dest,n) memmove(dest,src,n)
+#define bcmp(a,b,n) memcmp(a,b,n)
+#define index(a,b) strchr(a,b)
+#define rindex(a,b) strrchr(a,b)
+
+__END_DECLS
+
+#endif
