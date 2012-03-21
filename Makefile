@@ -46,7 +46,7 @@ $(VERSION.FILE): src/newspeak/newspeak.ml
 
 distrib: $(DISTDIR)
 
-$(DISTDIR): clean-all
+$(DISTDIR): clean
 	$(genversion)
 	-mkdir $(DISTDIR)
 	$(CP) -r doc $(DISTDIR)

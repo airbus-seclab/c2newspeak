@@ -29,6 +29,8 @@
 typedef long int ssize_t;
 typedef long int key_t;
 
+typedef unsigned long int size_t;
+
 typedef unsigned int pthread_t;
 typedef unsigned int pthread_mutex_t;
 typedef unsigned long int useconds_t;
@@ -47,5 +49,4 @@ typedef	unsigned short	uid_t;
 typedef	unsigned short	gid_t;
 
 typedef unsigned char u_char;
-
 #endif	/* _SYS_TYPES_H */
