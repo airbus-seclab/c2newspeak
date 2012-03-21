@@ -1,1 +1,8 @@
-Fatal error: 514.c:31#11: invalid size for array
+Newspeak output
+---------------
+void (514.c:30#5)^main(void) {
+  (514.c:31#11)^{ int32[100000000] 0; }3200000000 x;
+  (514.c:32#2)^x =(int32) 0;
+}
+
+
