@@ -59,13 +59,10 @@ let merge_funs t1 t2 =
   let add_sig fid args_t rets_t =
     try
       let args_t', rets_t' = Hashtbl.find sig_tbl fid in
-	if not (List.for_all2 (=) args_t args_t') 
-	  || not (List.for_all2 (=) rets_t rets_t') then
+	if (args_t, rets_t) <> (args_t', rets_t') then
 	    raise (Invalid_argument ("incompatible signatures for function "^fid))
     with Not_found ->     
       Hashtbl.add sig_tbl fid (args_t, rets_t) 
-      | Invalid_argument _ -> 
-	  raise (Invalid_argument ("incompatible signatures for function "^fid))
   in
   let rec explore_blk blk =
     match blk with

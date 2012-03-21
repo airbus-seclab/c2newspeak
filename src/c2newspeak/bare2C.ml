@@ -62,25 +62,24 @@ let apply_attrs attrs t =
 	  "more than one attribute not handled yet"
 
 let rec normalize_base_typ t =
-  let sdecls =
-    match t with
-	Integer _ | Float _ | Void | Va_arg | Name _ | Enum None 
-      | Typeof _ -> []
-      | Composite v -> normalize_compdef v
-      | Enum Some f -> define_enum f
-  in
-  let t = 
-    match t with
-	Integer k -> T.Int k
-      | Float n -> T.Float n
-      | Void -> T.Void
-      | Va_arg -> T.Va_arg
-      | Name x -> Hashtbl.find typedefs x
-      | Composite (_, (n, _)) -> T.Comp n
-      | Typeof v -> T.Typeof (T.Var v)
-      | Enum _ -> T.Int (Cir.int_kind ())
-  in
-    (sdecls, t)
+  match t with
+    | Integer k -> [], T.Int k
+    | Float n -> [], T.Float n
+    | Void -> [], T.Void
+    | Va_arg -> [], T.Va_arg
+    | Name x -> [], Hashtbl.find typedefs x
+    | Composite ((_, (n, _)) as v) -> normalize_compdef v, T.Comp n
+    | TypeofExpr e -> [], T.Typeof (process_exp e)
+    | Enum None -> [], T.Int (Cir.int_kind ())
+    | Enum (Some f) -> define_enum f, T.Int (Cir.int_kind ())
+    | Label -> [], T.Ptr T.Void
+    | PtrTo t ->
+            let (sdecl, t') = normalize_base_typ t in
+            sdecl, T.Ptr t'
+    | ArrayOf (t, e) ->
+            let (sdecl, t') = normalize_base_typ t in
+            let e' = process_exp e in
+            sdecl, T.Array (t', Some e')
 
 and define_enum e =
   let rec define_enum e n =
@@ -226,7 +225,12 @@ and process_init x =
     | Sequence sequence -> T.Sequence (process_init_sequence sequence)
 
 and process_init_sequence x =
-  List.map (fun (x, i) -> (x, process_init i)) x
+  List.map (fun (d, i) -> (process_designator d, process_init i)) x
+
+and process_designator = function
+    | T.InitAnon -> T.InitAnon
+    | T.InitField f -> T.InitField f
+    | T.InitIndex e -> T.InitIndex (process_exp e)
 
 and process_blk x = 
   let result = ref [] in

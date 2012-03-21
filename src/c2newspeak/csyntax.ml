@@ -74,8 +74,12 @@ and typ =
       
 and init = 
   | Data of exp
-(* TODO: maybe remove the string option here ???? *)
-  | Sequence of (string option * init) list
+  | Sequence of (exp init_designator * init) list
+
+and 'exp init_designator =
+    | InitField of string
+    | InitIndex of 'exp
+    | InitAnon
 
 and stmt = (stmtkind * location)
 

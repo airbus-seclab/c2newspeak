@@ -62,17 +62,6 @@ let next_aligned o x =
   let m = o mod x in
     if m = 0 then o else o + (x - m)
 
-(* TODO: remove put in csyntax2CoreC *)
-(* TODO: code cleanup: find a way to factor this with create_cstr
-   in Npkil *)
-let seq_of_string str =
-  let len = String.length str in
-  let res = ref [(None, Data (TypedC.exp_of_char '\x00', char_typ ()))] in
-    for i = len - 1 downto 0 do
-      res := (None, Data (TypedC.exp_of_char str.[i], char_typ ()))::!res
-    done;
-    !res
-
 (* For detecting integers index, accesses and Addrof (accesss)*)
 let warn_report () =
   Npkcontext.report_accept_warning "Firstparse.translate_array_access" 
@@ -205,15 +194,11 @@ let translate prog =
   (* TODO: this should be simplified because a bit is done already in 
      csyntax2TypedC!!! *)
   and translate_init t x =
-    let res = ref [] in
+    let res : (int * C.typ * C.exp) list ref =
+      ref []
+    in
     let rec translate o t x =
       match (x, t) with
-	  (* TODO: move this case to csyntax2TypedC?? *)
-	  ((Data (Str str, _)|Sequence ([(None, Data (Str str, _))])), 
-	   Array (Int (_, n), _)) when n = !Config.size_of_char ->
-	    let seq = seq_of_string str in
-	      translate o t (Sequence seq)
-
 	| (Data (e, t1), _) -> 
 	    (* TODO: should I be using translate_set here too??? *)
 	    let e = translate_exp false (e, t1) in
@@ -235,7 +220,7 @@ let translate prog =
 	      translate_field_sequence o f seq;
 	      t
 
-	| (Sequence ((None, v)::[]), Comp (TypedC.Known (r, false))) ->
+	| (Sequence ((Csyntax.InitAnon, v)::[]), Comp (TypedC.Known (r, false))) ->
 	    let (r, _, _) = translate_union r in
 	    let (f_o, f_t) = 
 	      match r with
@@ -247,7 +232,7 @@ let translate prog =
 	    let _ = translate (o + f_o) f_t v in
 	      t
 
-	| (Sequence ((Some f, v)::[]), Comp (TypedC.Known (r, false) )) ->
+	| (Sequence ((Csyntax.InitField f, v)::[]), Comp (TypedC.Known (r, false) )) ->
 	    let (r, _, _) = translate_union r in
 	    let (f_o, f_t) = find_field f r in
 	    let _ = translate (o + f_o) f_t v in
@@ -280,8 +265,9 @@ let translate prog =
 	      try 
 		let name, (f_o, t) = 
 		  match fname with 
-		      Some f -> List.find (fun (f', _) -> String.compare f f' = 0) fields
-		    | None -> current
+		      Csyntax.InitField f -> List.find (fun (f', _) -> String.compare f f' = 0) fields
+		    | Csyntax.InitAnon -> current
+		    | Csyntax.InitIndex _e -> assert false
 		in
 		let not_init' = remove name not_init in
 		let f_o' = o + f_o in
@@ -312,16 +298,22 @@ let translate prog =
 	   
     and translate_sequence o t n seq =
       match seq with
-	  (None, hd)::tl when n > 0 -> 
+	  (Csyntax.InitAnon, hd)::tl when n > 0 ->
 	    let _ = translate o t hd in
 	    let o = o + size_of t in
 	      translate_sequence o t (n-1) tl
-	| (Some _, _)::_ ->
+	| (Csyntax.InitField _, _)::_ ->
 	    Npkcontext.report_error 
 	      "Firstpass.translate_init.translate_sequence" 
 	      "anonymous initializer expected for array"
+
+	| (Csyntax.InitIndex offset_expr, v)::tl ->
+            let offset_expr' = translate_exp false offset_expr in
+            let o = size_of t * (Nat.to_int (C.eval_exp offset_expr')) in
+            let _ = translate o t v in
+            translate_sequence o t (n-1) tl
 	      
-	| _::_ -> 
+	| (Csyntax.InitAnon, _)::_ -> 
 	    Npkcontext.report_accept_warning 
 	      "Firstpass.translate_init.translate_sequence" 
 	      "extra initializer for array" Npkcontext.DirtySyntax

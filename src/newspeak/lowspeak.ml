@@ -427,6 +427,43 @@ let string_of_blk x = string_of_blk 0 x
 
 let string_of_stmt x = string_of_blk (x::[])
 
+type visitor_t =
+    { mutable loc : Newspeak.location
+    ; gdecl      : string -> Newspeak.typ -> bool
+    ; func       : Newspeak.fid -> fundec -> bool
+    ; func_after : unit -> unit
+    ; stmt       : stmt -> bool
+    ; funexp     : funexp -> bool
+    ; exp        : Newspeak.location -> exp -> bool
+    ; bexp       : exp -> unit
+    ; lval       : lval -> bool
+    ; unop       : Newspeak.unop -> unit
+    ; binop      : Newspeak.binop -> unit
+    ; size_t     : Newspeak.size_t -> unit
+    ; length     : Newspeak.length -> unit
+    ; typ        : Newspeak.typ -> unit
+    }
+
+let visit_nop =
+  let f2true _ _ = true in
+  let f1unit _ = () in
+  let f1true _ = true in
+  { loc        = Newspeak.unknown_loc
+  ; gdecl      = f2true
+  ; func       = f2true
+  ; func_after = f1unit
+  ; stmt       = f1true
+  ; funexp     = f1true
+  ; exp        = f2true
+  ; bexp       = f1unit
+  ; lval       = f1true
+  ; unop       = f1unit
+  ; binop      = f1unit
+  ; size_t     = f1unit
+  ; length     = f1unit
+  ; typ        = f1unit
+  }
+
 class visitor =
 object 
   val mutable cur_loc = N.unknown_loc
@@ -464,30 +501,24 @@ object
       print_endline ("Warning: "^msg^pos)
 end
 
-let visit_size_t visitor x = visitor#process_size_t x
-
-let visit_length visitor x = visitor#process_length x
-
-let visit_ikind visitor (_, sz) = visit_size_t visitor sz
-
 let visit_scalar_t visitor t =
   match t with
-      N.Int k -> visit_ikind visitor k
-    | N.Float sz -> visit_size_t visitor sz
+      N.Int k -> visitor.size_t (snd k)
+    | N.Float sz -> visitor.size_t sz
     | N.Ptr -> ()
     | N.FunPtr -> ()
 
 let visit_typ visitor t = 
-  visitor#process_typ t;
+  visitor.typ t;
   let rec visit_typ t =
     match t with
         N.Scalar t -> visit_scalar_t visitor t
       | N.Array (t, n) -> 
           visit_typ t;
-          visit_length visitor n
+          visitor.length n
       | N.Region (fields, sz) ->
           List.iter (fun (_, t) -> visit_typ t) fields;
-          visit_size_t visitor sz
+          visitor.size_t sz
   in
     visit_typ t
 
@@ -496,27 +527,27 @@ let visit_ftyp visitor (args, ret) =
   List.iter (visit_typ visitor) ret
 
 let rec visit_lval visitor x =
-  let continue = visitor#process_lval x in
+  let continue = visitor.lval x in
     match x with
         Deref (e, sz) when continue -> 
           visit_exp visitor e;
-          visit_size_t visitor sz
+          visitor.size_t sz
       | Shift (lv, e) when continue ->
           visit_lval visitor lv;
           visit_exp visitor e
       | _ -> ()
   
 and visit_exp visitor x =
-  let continue = visitor#process_exp x in
+  let continue = visitor.exp visitor.loc x in
     if continue then begin
       match x with
           Lval (lv, _) -> visit_lval visitor lv
         | AddrOf lv -> visit_lval visitor lv
         | UnOp (op, e) ->
-            visitor#process_unop op;
+            visitor.unop op;
             visit_exp visitor e
         | BinOp (bop, e1, e2) ->
-            visitor#process_binop bop;
+            visitor.binop bop;
             visit_binop visitor bop;
             visit_exp visitor e1;
             visit_exp visitor e2
@@ -528,11 +559,11 @@ and visit_binop visitor op =
     | N.PlusF  sz
     | N.MinusF sz
     | N.MultF  sz
-    | N.DivF   sz -> visit_size_t visitor sz
+    | N.DivF   sz -> visitor.size_t sz
     | _ -> ()
 
 let visit_funexp visitor x =
-  let continue = visitor#process_funexp x in
+  let continue = visitor.funexp x in
     match x with
         FunDeref (e, t) when continue -> 
           visit_exp visitor e;
@@ -542,8 +573,8 @@ let visit_funexp visitor x =
 let rec visit_blk visitor x = List.iter (visit_stmt visitor) x
     
 and visit_stmt visitor (x, loc) =
-  visitor#set_loc loc;
-  let continue = visitor#process_stmt (x, loc) in
+  visitor.loc <- loc;
+  let continue = visitor.stmt (x, loc) in
     if continue then begin
       match x with
           Set (lv, e, _) -> 
@@ -552,26 +583,24 @@ and visit_stmt visitor (x, loc) =
         | Copy (lv1, lv2, sz) ->
             visit_lval visitor lv1;
             visit_lval visitor lv2;
-            visit_size_t visitor sz
+            visitor.size_t sz
         | Guard b -> 
-            visitor#process_bexp b;
+            visitor.bexp b;
             visit_exp visitor b
         | Decl (_, t, body) -> 
             visit_typ visitor t;
             visit_blk visitor body
         | Call fn -> visit_funexp visitor fn
         | Select (body1, body2) -> 
-            visitor#set_loc loc;
+            visitor.loc <- loc;
             visit_blk visitor body1;
-            visitor#set_loc loc;
+            visitor.loc <- loc;
             visit_blk visitor body2
         | InfLoop x -> visit_blk visitor x
         | DoWith (body, _) -> visit_blk visitor body
         | Goto _ -> ()
-        | UserSpec assertion -> visit_assertion visitor assertion
+        | UserSpec assertion -> List.iter (visit_token visitor) assertion
     end else ()
-
-and visit_assertion visitor x = List.iter (visit_token visitor) x
 
 and visit_token builder x =
   match x with
@@ -581,17 +610,17 @@ and visit_token builder x =
     | _ -> ()
 
 let visit_fun visitor fid declaration =
-  let continue = visitor#process_fun fid declaration in
+  let continue = visitor.func fid declaration in
   if continue then begin
     visit_ftyp visitor declaration.ftyp;
     visit_blk visitor declaration.body;
-    visitor#process_fun_after ()
+    visitor.func_after ()
   end
 
 let visit_init visitor (_, _, e) = visit_exp visitor e
 
 let visit_glb visitor id t =
-  let continue = visitor#process_gdecl id t in
+  let continue = visitor.gdecl id t in
     if continue then visit_typ visitor t
 
 let visit visitor prog =
@@ -599,26 +628,16 @@ let visit visitor prog =
   visit_blk visitor prog.init;
   Hashtbl.iter (visit_fun visitor) prog.fundecs
 
-class fid_addrof_visitor =
-object 
-  inherit visitor
-  val mutable fid_list = []
-
-  method get_fid_list () = fid_list
-
-  method process_exp e = 
-    begin match e with
-        AddrOfFun (id, _) when not (List.mem id fid_list) ->
-          fid_list <- id::fid_list
-      | _ -> ()
-    end;
-    true
-end
-
 let collect_fid_addrof prog =
-  let collector = new fid_addrof_visitor in
-    visit collector prog;
-    collector#get_fid_list ()
+  let fid_list = ref [] in
+  let fid_addrof_visitor =
+    { visit_nop with exp = fun _ -> function
+        | AddrOfFun (id, _) when not (List.mem id !fid_list) ->
+            fid_list := id::!fid_list; true
+        | _ -> true
+    } in
+  visit fid_addrof_visitor prog;
+  !fid_list
 
 let rec negate exp =
   match exp with

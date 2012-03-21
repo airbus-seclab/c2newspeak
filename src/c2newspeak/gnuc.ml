@@ -95,6 +95,8 @@ let _ =
   Hashtbl.add token_tbl "__volatile__" VOLATILE;
   Hashtbl.add token_tbl "__volatile" VOLATILE;
 
+  Hashtbl.add token_tbl "__label__" LABEL;
+
   List.iter (fun x -> Hashtbl.add token_tbl x (IDENTIFIER x)) builtin_names
 
 

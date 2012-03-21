@@ -84,7 +84,7 @@ and exp =
   | Set of (exp * Csyntax.binop option * exp)
   | OpExp of (Csyntax.binop * exp * bool)
   | BlkExp of blk
-  | LocalComposite of ((base_typ * var_modifier) * (string option * init) list * Newspeak.location)
+  | LocalComposite of ((base_typ * var_modifier) * (exp Csyntax.init_designator * init) list * Newspeak.location)
 
 and aux_offset_exp =
     OffComp of string
@@ -104,7 +104,10 @@ and base_typ =
     | Name of string
     | Enum of ((string * exp option) list) option
     | Va_arg
-    | Typeof of string
+    | TypeofExpr of exp
+    | Label (* first class label *)
+    | PtrTo of base_typ (* used so that typeof(int * ) can return a pointer *)
+    | ArrayOf of base_typ * exp (* idem *)
 
 and var_modifier = (int * modifier)
 
@@ -120,8 +123,7 @@ and field = (base_typ * var_modifier * exp option)
 
 and init = 
   | Data of exp
-(* TODO: maybe remove the string option here ???? *)
-  | Sequence of (string option * init) list
+  | Sequence of (exp Csyntax.init_designator * init) list
 
 val exp_of_int: int -> exp
 

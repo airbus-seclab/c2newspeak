@@ -1,3 +1,0 @@
-  - {id: "main:0", value: {a: "{0}"}}
-  - {id: "main:1", value: {a: "{0}", x: "{0}"}}
-  - {id: "main:2", value: {}}

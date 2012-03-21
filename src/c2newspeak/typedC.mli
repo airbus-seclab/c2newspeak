@@ -85,7 +85,7 @@ and array_typ = typ * exp option
 
 and init = 
     | Data of typ_exp
-    | Sequence of (string option * init) list
+    | Sequence of (typ_exp Csyntax.init_designator * init) list
 
 and stmt = (stmtkind * Newspeak.location)
 

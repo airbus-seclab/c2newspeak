@@ -10,7 +10,6 @@ Newspeak is designed for the purpose of static analysis.
     c2newspeak		     compiler from C to Newspeak
     npkstats		     statistics on Newspeak files
     npkstrip		     removes all functions not called from main
-    npksimplify		     performs some newspeak simplifications
 
   This will produce the documentation in html in the doc/ directory. 
   The documentation index file is index.html.

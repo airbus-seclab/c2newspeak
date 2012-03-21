@@ -67,6 +67,18 @@ let report_asm tokens =
   let tokens = ListUtils.to_string (fun x -> x) "' '" tokens in
   let msg = "assembly directive '"^tokens^"'" in
     Npkcontext.report_ignore_warning loc msg Npkcontext.Asm
+
+(*
+ * build_ptrto n t =
+ *    PtrTo (PtrTo (... t))
+ *      \_____________/
+ *          n times
+ *)
+let rec build_ptrto n t =
+  if n < 0 then invalid_arg "build_ptrto"
+  else if n = 0 then t
+  else PtrTo (build_ptrto (n-1) t)
+
 %}
 
 %token BREAK CONST CONTINUE CASE DEFAULT DO ELSE ENUM STATIC 
@@ -81,7 +93,7 @@ let report_asm tokens =
 %token AMPERSAND ARROW AND OR MINUS DIV MOD PLUS MINUSMINUS QMARK
 %token PLUSPLUS STAR LT LTEQ GT GTEQ
 %token SHIFTL SHIFTR BXOR BOR BNOT
-%token ATTRIBUTE EXTENSION VA_LIST CDECL
+%token ATTRIBUTE EXTENSION VA_LIST CDECL LABEL
 %token INLINE ASM RESTRICT 
 %token BUILTIN_CONSTANT_P
 %token FUNNAME 
@@ -174,13 +186,6 @@ function_definition:
 declaration:
   declaration_specifiers 
   init_declarator_list                      { ($1, $2) }
-| typeof_declaration 			    { $1 }
-;;
-
-typeof_declaration:
-type_qualifier_list TYPEOF LPAREN 
-type_specifier pointer RPAREN 
-type_qualifier_list ident_or_tname          { ($4, [( ($5, Variable ($8, get_loc ())), []) , None])}
 ;;
 
 init_declarator_list:
@@ -348,6 +353,8 @@ declaration_modifier:
 asm:
   ASM volatile_option 
   LPAREN asm_statement_list RPAREN         { report_asm $4 }
+| ASM GOTO
+  LPAREN asm_statement_list RPAREN         { report_asm $4 }
 ;;
 
 asm_statement_list:
@@ -362,6 +369,7 @@ asm_statement:
 | string_literal LPAREN expression RPAREN  { $1 } 
 | LBRACKET ident_or_tname RBRACKET 
   string_literal LPAREN expression RPAREN  { $2^" "^$4 }
+| ident_or_tname                           { $1 }
 ;;
 
 iteration_statement:
@@ -507,6 +515,11 @@ expression:
   COLON expression   %prec QMARK           { IfExp ($1, None, $4)}
 | expression assignment_operator
                    expression     %prec EQ { Set ($1, $2, $3) }
+| AND IDENTIFIER { Npkcontext.report_warning
+                     "Parser.expression"
+                     "ignoring address of label, parsing as NULL instead";
+                    Cst (Cir.CInt (Newspeak.Nat.zero), Csyntax.Ptr Csyntax.Void)
+                   }
 ;;
 
 aux_offsetof_member:
@@ -567,6 +580,7 @@ init:
 composite:
   LBRACE init_list RBRACE                  { $2 }
 | LBRACE named_init_list RBRACE            { $2 }
+| LBRACE indexed_init_list RBRACE          { $2 }
 ;;
 
 named_init_list:
@@ -576,13 +590,22 @@ named_init_list:
 ;;
 
 named_init:
-  DOT IDENTIFIER EQ expression             { (Some $2, Data $4) }
-| DOT IDENTIFIER EQ LBRACE init_list RBRACE { (Some $2, Sequence $5) }
+  DOT IDENTIFIER EQ init                   { (InitField $2, $4) }
+;;
+
+indexed_init_list:
+  indexed_init COMMA indexed_init_list     { $1::$3 }
+| indexed_init                             { $1::[] }
+| indexed_init COMMA                       { $1::[] }
+;;
+
+indexed_init:
+  LBRACKET expression RBRACKET EQ init     { (InitIndex $2, $5) }
 ;;
 
 init_list:
-  init COMMA init_list                     { (None, $1)::$3 }
-| init                                     { (None, $1)::[] }
+  init COMMA init_list                     { (InitAnon, $1)::$3 }
+| init                                     { (InitAnon, $1)::[] }
 |                                          {
     Npkcontext.report_strict_warning "Parser.init_list"
       "comma terminated initializer";
@@ -792,7 +815,21 @@ type_specifier:
 | ENUM enum_arguments                      { Enum $2 }
 | VA_LIST                                  { Va_arg }
 | TYPEOF LPAREN type_specifier RPAREN      { $3 }
-| TYPEOF LPAREN IDENTIFIER RPAREN          { Typeof $3 }
+| TYPEOF
+    LPAREN type_specifier pointer RPAREN   { build_ptrto $4 $3 }
+| TYPEOF
+    LPAREN type_specifier
+      LBRACKET expression RBRACKET
+    RPAREN                                 { ArrayOf ($3, $5) }
+| TYPEOF
+    LPAREN
+      expression
+    RPAREN                                 { TypeofExpr $3 }
+| LABEL                                    { Npkcontext.report_warning
+                                               "Parser.type_specifier"
+                                               "accepting local label";
+                                             Label
+                                           }
 ;;
 
 struct_or_union:
@@ -904,9 +941,10 @@ attribute_name:
       | "__pure__" | "pure" | "__gnu_inline__"
       | "__deprecated__" | "deprecated" | "__malloc__" 
       | "__warn_unused_result__" | "warn_unused_result"
-      | "__unused__" | "unused" 
+      | "__unused__" | "unused" | "__used__"
       | "no_instrument_function"
-      | "__artificial__" | "__cold__" | "cold" -> ()
+      | "__artificial__" | "__cold__" | "cold"
+          -> ()
       | "dllimport" -> 
 	  Npkcontext.report_warning "Parser.attribute" 
 	    "ignoring attribute dllimport"
@@ -924,13 +962,20 @@ attribute_name:
     [] 
   }
 | IDENTIFIER LPAREN string_list RPAREN               {
-    if ($1 = "alias") then begin
-      Npkcontext.report_warning "Parser.attribute" 
-      ("ignoring attribute alias")
-    end 
-    else if ($1 <> "__warning__") && ($1 <> "__error__") && ($1 <> "__section__") && ($1 <> "section")
-    then raise Parsing.Parse_error;
-    []
+  match $1 with
+  | "alias" ->
+      begin
+        Npkcontext.report_warning "Parser.attribute"
+        ("ignoring attribute alias");
+        []
+      end
+  | "warning"
+  | "__warning__"
+  | "__error__"
+  | "__section__"
+  | "section"
+    -> []
+  | _ -> raise Parsing.Parse_error
   }
 | IDENTIFIER LPAREN integer_list RPAREN    { 
     match ($1, $3) with
@@ -942,8 +987,26 @@ attribute_name:
       | (("__nonnull__" | "__nonnull"), _) -> []
       | _ -> raise Parsing.Parse_error
   }
+| IDENTIFIER LPAREN SIZEOF LPAREN type_name RPAREN RPAREN
+  {
+    match $1 with
+	"aligned" -> []
+      | _ -> raise Parsing.Parse_error
+  }
+| IDENTIFIER LPAREN LPAREN LPAREN INTEGER RPAREN
+  SHIFTL INTEGER RPAREN RPAREN    {
+    match $1 with
+	"aligned" -> []
+      | _ -> raise Parsing.Parse_error
+  }
 | IDENTIFIER LPAREN LPAREN INTEGER SHIFTL
   LPAREN INTEGER RPAREN RPAREN RPAREN    {
+    match $1 with
+	"__aligned__" -> []
+      | _ -> raise Parsing.Parse_error
+  }
+| IDENTIFIER LPAREN INTEGER SHIFTL
+  LPAREN INTEGER RPAREN RPAREN    {
     match $1 with
 	"__aligned__" -> []
       | _ -> raise Parsing.Parse_error
@@ -1014,7 +1077,7 @@ volatile_option:
 ;;
 
 expression_option:
-  expression                               { Some $1 }
+  expression_sequence                      { Some $1 }
 |                                          { None }
 ;;
 

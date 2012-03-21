@@ -278,8 +278,6 @@ let parse_specification name =
 	    (not ( List.mem body_name !body_tbl))) 
       then body_tbl := body_name::!body_tbl
       ;      
-      (*<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*)
-
 
       let res = File_parse.parse spec_name in
 	if (!Npkcontext.verb_ast) then begin

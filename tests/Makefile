@@ -29,7 +29,7 @@
 
 DIR=c2newspeak mult-files lowspeak npkstats mem_opt npkcheck \
     newspeak npkstrip ada2newspeak options \
-    simpleai npksolver npkmerger ulimit abi
+    simpleai npkmerger ulimit abi ptrtype
 
 .PHONY: $(DIR)
 

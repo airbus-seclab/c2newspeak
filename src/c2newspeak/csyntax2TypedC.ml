@@ -30,14 +30,22 @@ open Csyntax
 module Nat = Newspeak.Nat
 module C = TypedC
 
+(* range a b = [a;a+1;..b-1;b] *)
+let rec range a b =
+  if a > b then
+    []
+  else if a = b then
+    [a]
+  else a::range (a+1) b
 
 let seq_of_string str =
   let len = String.length str in
-  let res = ref [(None, Data (exp_of_char '\x00'))] in
-    for i = len - 1 downto 0 do
-      res := (None, Data (exp_of_char str.[i]))::!res
-    done;
-    !res
+  let init_of_char c =
+    (InitAnon, Data (exp_of_char c))
+  in
+  List.map (fun i -> init_of_char str.[i])
+           (range 0 (len - 1))
+          @[init_of_char '\x00']
 
 let find_field f r =
   try List.assoc f r 
@@ -77,7 +85,7 @@ let process (fname, globals) =
     let rec process (x, t) =
       match (x, t) with
 (* TODO: find a way to simplify/remove this case?? *)
-	  ((Data (Str str)|Sequence ([(None, Data (Str str))])), 
+	  ((Data (Str str)|Sequence ([(InitAnon, Data (Str str))])), 
 	   C.Array (C.Int (_, n), _)) when n = !Config.size_of_char ->
 	    let seq = seq_of_string str in
 	      process (Sequence seq, t)
@@ -446,7 +454,7 @@ let process (fname, globals) =
 (* TODO: remove is_after in TypedC! *)
 	    (C.BlkExp (blk, false), t)
 	      
-  and translate_exp e = 
+  and translate_exp e =
     let (e, t) = translate_lv e in
       match t with
 	  C.Array (t, len) -> 
@@ -718,9 +726,12 @@ let process (fname, globals) =
 
 
   and translate_init t x =
+    let translate_designated_init t =
+      List.map (fun (x, init) -> (translate_designator x, translate_init t init))
+    in
     match (x, t) with
 (* TODO: redundant code with complete_init?? *)
-	((Data (Str str)|Sequence ([(None, Data (Str str))])), 
+	((Data (Str str)|Sequence ([(InitAnon, Data (Str str))])), 
 	 C.Array (C.Int (_, n), _)) when n = !Config.size_of_char ->
 	  let seq = seq_of_string str in
 	    translate_init t (Sequence seq)
@@ -728,15 +739,12 @@ let process (fname, globals) =
       | (Data e, _) -> C.Data (translate_exp e)
 
       | (Sequence seq, C.Array (t, _)) -> 
-	  let seq = 
-	    List.map (fun (x, init) -> (x, translate_init t init)) seq 
-	  in
-	    C.Sequence seq
+          C.Sequence (translate_designated_init t seq)
 	      
       | (Sequence seq, C.Comp (TypedC.Known (f, true))) ->
 	  C.Sequence (translate_field_sequence seq f)
 
-      | (Sequence ((None, init)::[]), C.Comp (TypedC.Known (r, false))) ->
+      | (Sequence ((InitAnon, init)::[]), C.Comp (TypedC.Known (r, false))) ->
 	  let t = 
 	    match r with
 		(_, b)::_ -> b
@@ -744,35 +752,36 @@ let process (fname, globals) =
 		  Npkcontext.report_error "Firstpass.translate_init"
 		    "unexpected empty union"
 	  in
-	  let seq = (None, translate_init t init)::[] in
-	    C.Sequence seq
+          C.Sequence [InitAnon, translate_init t init]
 
-      | (Sequence ((Some f, init)::[]), 
+      | (Sequence ((InitField f, init)::[]), 
 	 C.Comp (TypedC.Known (r, false))) -> 
 	  let t = find_field f r in
-	  let seq = (Some f, translate_init t init)::[] in
+	  let seq = (InitField f, translate_init t init)::[] in
 	    C.Sequence seq
 
       | (Sequence seq, C.Ptr t) ->
-	  let seq = 
-	    List.map (fun (x, init) -> (x, translate_init t init)) seq in
-	    C.Sequence seq
+          C.Sequence (translate_designated_init t seq)
 
       | (Sequence seq, C.Int _) ->
-	  let seq = 
-	    List.map (fun (x, init) -> (x, translate_init t init)) seq in
-	    C.Sequence seq
+          C.Sequence (translate_designated_init t seq)
 
       | (Sequence _, _) ->
 	  Npkcontext.report_error "Csyntax2TypedC.translate_init"
 	    "this type of initialization not implemented yet"
+
+  and translate_designator = function
+    | InitAnon -> InitAnon
+    | InitField f -> InitField f
+    | InitIndex e -> InitIndex (translate_exp e)
 
   and translate_field_sequence seq fields =
     match (fields, seq) with
 	((_, t)::fields, (expected_f, init)::seq) -> 
 	  let init = translate_init t init in
 	  let seq = translate_field_sequence seq fields in
-	    (expected_f, init)::seq
+          let des' = translate_designator expected_f in
+	    (des', init)::seq
       
       | ([], []) -> []
 
