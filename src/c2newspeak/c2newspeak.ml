@@ -58,7 +58,6 @@ let extract_no fname =
   end
 
 let execute () =
-  (* TODO: this code should be factored with ada2newspeak!! into x2newspeak *)
   let nos = List.map extract_no !Npkcontext.input_files in
     if not !Npkcontext.compile_only then begin 
       Linker.link nos;

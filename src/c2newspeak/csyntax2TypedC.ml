@@ -172,13 +172,13 @@ let process (fname, globals) =
 	| C.Comp (C.Known (l, is_struct))   -> C.Comp (C.Known (List.map (fun (s, t) -> (s, update t)) l, is_struct))
 	| C.Ptr t'                          -> C.Ptr (update t')
 	| C.Fun (args, ret) 		    ->
-	    let ret' = update ret in
-	    let args' = 
-	      match args with 
-		  None -> None 
-		| Some l -> Some (List.map (fun (t, x) -> update t, x) l)
-	    in 
-	      C.Fun(args', ret')
+	  let ret' = update ret in
+	  let args' = 
+	    match args with 
+		None -> None 
+	      | Some l -> Some (List.map (fun (t, x) -> update t, x) l)
+	  in 
+	  C.Fun(args', ret')
 	| _                                 -> t
     in
     let args' = 
@@ -844,11 +844,6 @@ let process (fname, globals) =
 	      in
 		(f, (symb, t'))::l	      
 	    in
-	    (* updating the sig of fun whose one of the parameters is
-	       of the form C.Comp (Unknown ...) *)
-	    (* TODO: think about this, but this must be costly *)
-	    let fdecls = Hashtbl.fold update_function_argument symbtbl [] in
-	      List.iter (fun (f, k) -> Hashtbl.replace symbtbl f k) fdecls;
 	      (* updating the type of struct type whose one of the field
 		 is of the form Ptr (C.Comp (Unknown ...)) *)
 	      let comps = Hashtbl.fold (fun x' v l ->
@@ -856,7 +851,13 @@ let process (fname, globals) =
 					    if v' = v then l else (x', v')::l
 				       ) comptbl []
 	      in
-		List.iter (fun (x, v) -> Hashtbl.replace comptbl x v) (List.rev comps);
+	      List.iter (fun (x, v) -> Hashtbl.replace comptbl x v) (List.rev comps);
+	    (* updating the sig of fun whose one of the parameters is
+	       of the form C.Comp (Unknown ...) *)
+	    (* TODO: think about this, but this must be costly *)
+	      let fdecls = Hashtbl.fold update_function_argument symbtbl [] in
+	      List.iter (fun (f, k) -> Hashtbl.replace symbtbl f k) fdecls;
+	     
 		(* udapting the type of var of kind C.Comp (Unknown
 		...)) ; has to be done after the update of struct
 		types *)
