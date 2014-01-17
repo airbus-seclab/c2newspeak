@@ -23,7 +23,7 @@
 # email: charles.hymans@penjili.org
 #
 
-COMMAND=ulimit -s 12505; $(C2NEWSPEAK) `[ -e $*.in ] && cat $*.in` $*.c
+COMMAND=ulimit -s 20000; $(C2NEWSPEAK) `[ -e $*.in ] && cat $*.in` $*.c
 
 TESTS=000
 PREREQ=%.c

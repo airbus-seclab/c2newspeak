@@ -189,17 +189,28 @@ let process (fname, globals) =
     let ret' = update ret in
       args', ret'
   in
-
+  let update_compdef s new_type cdef =
+    let rec update cdef =
+      match cdef with
+	  [] -> []
+      | (v, C.Ptr (C.Comp (C.Unknown s')))::tl when s = s'-> (v, C.Ptr (C.Comp new_type))::(update tl)
+      | c::tl -> c::(update tl)
+    in
+    update cdef
+  in
   let update_struct_type s t =
     let new_type = find_compdef s in
     let rec update t = 
       match t with 
 	  C.Known (fields, true) -> 
 	    let fields' = List.map (fun (n, t) -> 
-				      let t' = 
+				      let t' =
 					match t with 
-					    C.Ptr (C.Comp (C.Unknown s')) when s = s' ->  
+					    C.Ptr (C.Comp (C.Unknown s')) when s = s' -> 
 					      C.Ptr (C.Comp new_type)
+					  | C.Ptr (C.Comp (C.Known (cdef, v)))  ->
+					    let cdef' = update_compdef s new_type cdef in
+					    C.Ptr (C.Comp (C.Known (cdef', v))) 
 					  | _ -> t
 				      in (n, t')) fields in
 	      C.Known (fields', true)
@@ -232,6 +243,15 @@ let process (fname, globals) =
 
 (* TODO: think about this, but it seems to be costly!! *)
   let update_local_vdecls s =
+    let check_update cdef s =
+      let rec check cdef =
+	match cdef with
+	    [] -> false
+	  | (_, C.Ptr (C.Comp (C.Unknown s')))::_ when s = s' -> true
+	  | _::tl -> check tl
+      in
+      check cdef
+    in
     let vars, pvars = 
       Hashtbl.fold (fun
 		      x (e, t) (vars, pvars) ->
@@ -240,6 +260,10 @@ let process (fname, globals) =
 			      x::vars, pvars
 			  | C.Local _, C.Ptr (C.Comp (C.Unknown s')) when s = s' -> 
 			      vars, x::pvars
+			  | C.Local _, C.Ptr (C.Comp ((C.Known (cdef, _)))) ->
+					      if check_update cdef s then
+						vars, x::pvars
+					      else vars, pvars
 			  | _ 							  -> 
 			      vars, pvars	   
 		   ) symbtbl ([], [])

@@ -317,11 +317,7 @@ let translate prog =
 	    Npkcontext.report_accept_warning 
 	      "Firstpass.translate_init.translate_sequence" 
 	      "extra initializer for array" Npkcontext.DirtySyntax
-	      
-	(* TODO:TODO:TODO!! code cleanup: We fill with zeros, because CIL does too. 
-	   But it shouldn't be done like that:
-	   the region should be init to 0 by default and then filled with
-	   values ?? *)
+	
 	| [] when n > 0 -> 
 	    let _ = fill_with_zeros o t in
 	    let o = o + size_of t in
