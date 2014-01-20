@@ -1034,13 +1034,14 @@ attribute_name:
     [] 
   }
 | IDENTIFIER LPAREN IDENTIFIER RPAREN           { 
-    if $1 <> "__mode__" then raise Parsing.Parse_error;
+    if $1 <> "__mode__" && $1 <> "mode" then raise Parsing.Parse_error;
     let imode =
       match $3 with
-          "__QI__" -> !Config.size_of_byte
-	| "__HI__" -> !Config.size_of_byte*2
-	| "__SI__" | "__word__" -> !Config.size_of_byte*4
-	| "__DI__" -> !Config.size_of_byte*8
+          "__QI__" | "QI" -> !Config.size_of_byte
+	| "__HI__" | "HI" -> !Config.size_of_byte*2
+	| "__SI__" | "SI" | "__word__" -> !Config.size_of_byte*4
+	| "__DI__" | "DI" -> !Config.size_of_byte*8
+	| "__TI__" | "TI" -> !Config.size_of_byte*16
 	| _ -> raise Parsing.Parse_error
     in
       imode::[]
