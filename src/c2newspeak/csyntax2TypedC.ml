@@ -53,12 +53,8 @@ let find_field f r =
     Npkcontext.report_error "Firstpass.translate_lv" 
       ("unknown field '"^f^"' in union or structure")
 
-(* TODO: remove the maximum of occurences of symbtbl *)
 
 let process (fname, globals) =
-  (* TODO: find a way to remove Symbtbl and use a standard Hashtbl here! 
-     but first needs to put the whole typing phase before firstpass
-  *)
   let symbtbl = Hashtbl.create 100 in
   let comptbl = Hashtbl.create 100 in
   (* Used to generate static variables names *)
@@ -164,78 +160,43 @@ let process (fname, globals) =
 	Hashtbl.add comptbl name c;
 	c
   in
-
-  let update_fdecl s (args, ret) =
-    let rec update t =
-      match t with 
-	  C.Comp (C.Unknown s') when s = s' -> C.Comp (find_compdef s)
-	| C.Comp (C.Known (l, is_struct))   -> C.Comp (C.Known (List.map (fun (s, t) -> (s, update t)) l, is_struct))
-	| C.Ptr t'                          -> C.Ptr (update t')
-	| C.Fun (args, ret) 		    ->
-	  let ret' = update ret in
-	  let args' = 
-	    match args with 
-		None -> None 
-	      | Some l -> Some (List.map (fun (t, x) -> update t, x) l)
-	  in 
-	  C.Fun(args', ret')
-	| _                                 -> t
-    in
+  let rec update_struct t =
+    match t with 
+	C.Comp (C.Unknown s')  -> C.Comp (find_compdef s')
+      | C.Comp (C.Known (l, is_struct))   -> C.Comp (C.Known (List.map (fun (s, t) -> (s, update_struct t)) l, is_struct))
+      | C.Ptr t'                          -> C.Ptr (update_struct t')
+      | C.Fun (args, ret) 		    ->
+	let ret' = update_struct ret in
+	let args' = 
+	  match args with 
+	      None -> None 
+	    | Some l -> Some (List.map (fun (t, x) -> update_struct t, x) l)
+	in 
+	C.Fun(args', ret')
+      | _                                 -> t
+  in
+  let update_fdecl (args, ret) =  
     let args' = 
       match args with 
-	  Some args -> Some (List.map (fun (t, x) -> update t, x) args)
+	  Some args -> Some (List.map (fun (t, x) -> update_struct t, x) args)
 	| None -> None
     in
-    let ret' = update ret in
+    let ret' = update_struct ret in
       args', ret'
   in
-  let update_compdef s new_type cdef =
-    let rec update cdef =
-      match cdef with
-	  [] -> []
-      | (v, C.Ptr (C.Comp (C.Unknown s')))::tl when s = s'-> (v, C.Ptr (C.Comp new_type))::(update tl)
-      | c::tl -> c::(update tl)
-    in
-    update cdef
-  in
-  let update_struct_type s t =
-    let new_type = find_compdef s in
+  let update_struct_type t =
     let rec update t = 
       match t with 
 	  C.Known (fields, true) -> 
-	    let fields' = List.map (fun (n, t) -> 
-				      let t' =
-					match t with 
-					    C.Ptr (C.Comp (C.Unknown s')) when s = s' -> 
-					      C.Ptr (C.Comp new_type)
-					  | C.Ptr (C.Comp (C.Known (cdef, v)))  ->
-					    let cdef' = update_compdef s new_type cdef in
-					    C.Ptr (C.Comp (C.Known (cdef', v))) 
-					  | _ -> t
-				      in (n, t')) fields in
+	    let fields' = List.map (fun (n, t) -> n, update_struct t) fields in
 	      C.Known (fields', true)
 	| _ -> t
     in
       update t
   in
 
-  let update_vdecl s (x, (v, loc)) =
-    let rec update t =
-      match t with
-	  C.Comp (C.Unknown s') when s = s' -> C.Comp (find_compdef s)
-	| C.Comp t -> C.Comp (update_struct_type s t)
-	| C.Ptr t' -> C.Ptr (update t')
-	| C.Fun (args, ret) 		    ->
-	    let ret' = update ret in
-	    let args' = 
-	      match args with 
-		  None -> None 
-		| Some l -> Some (List.map (fun (t, x) -> update t, x) l)
-	    in 
-	      C.Fun(args', ret')
-	| _ -> t
-    in 
-    let t' = update v.C.t in
+  let update_vdecl (x, (v, loc)) =
+    let t' = update_struct v.C.t in
     let v = { v with C.t = t' } in
       replace_symbol_type x t';
       (x, (v, loc))
@@ -243,14 +204,9 @@ let process (fname, globals) =
 
 (* TODO: think about this, but it seems to be costly!! *)
   let update_local_vdecls s =
-    let check_update cdef s =
-      let rec check cdef =
-	match cdef with
-	    [] -> false
-	  | (_, C.Ptr (C.Comp (C.Unknown s')))::_ when s = s' -> true
-	  | _::tl -> check tl
-      in
-      check cdef
+    let check_update cdef =
+      let t' = update_struct cdef in
+      t' <> cdef
     in
     let vars, pvars = 
       Hashtbl.fold (fun
@@ -258,12 +214,11 @@ let process (fname, globals) =
 			match e, t with 
 			    C.Local _, C.Comp (C.Unknown s') when s = s' 	  -> 
 			      x::vars, pvars
-			  | C.Local _, C.Ptr (C.Comp (C.Unknown s')) when s = s' -> 
+			  | C.Local _, t -> 
+			    if check_update t then
 			      vars, x::pvars
-			  | C.Local _, C.Ptr (C.Comp ((C.Known (cdef, _)))) ->
-					      if check_update cdef s then
-						vars, x::pvars
-					      else vars, pvars
+			    else 
+			      vars, pvars
 			  | _ 							  -> 
 			      vars, pvars	   
 		   ) symbtbl ([], [])
@@ -314,8 +269,6 @@ let process (fname, globals) =
 	(Not, C.Int _) -> (C.Not, C.int_typ ())
       | (Not, C.Ptr _) -> (C.Not, C.int_typ ())
       | (BNot, C.Int k) -> 
-(* TODO: function promote should be in CoreC, not in Cir 
-   (or even in Csyntax rather?) Or even better in Csyntax2CoreC??? *)
 	  let k = C.promote k in
 	    (C.BNot k, C.Int k)
       | _ -> 
@@ -541,7 +494,7 @@ let process (fname, globals) =
       match args_t with
 	  None -> None
 	| Some x -> 
-	    let x = List.map (fun (t, x) -> (translate_typ t, x)) x in
+	    let x = List.map (fun (t, x) -> translate_typ t, x) x in
 	      Some x
     in
     let ret_t = translate_typ ret_t in
@@ -859,33 +812,32 @@ let process (fname, globals) =
 	      fundecls := (f, f', ft, static, body, loc)::(!fundecls)
 		
 	| GlbDecl (x, CDecl d) -> 
-	    translate_cdecl x d;
-	    let update_function_argument f (symb, t) l =
-	      let t' = 
-		match t with
-		    TypedC.Fun ft -> TypedC.Fun (update_fdecl x ft)
-		  | _             -> t
-	      in
-		(f, (symb, t'))::l	      
-	    in
-	      (* updating the type of struct type whose one of the field
-		 is of the form Ptr (C.Comp (Unknown ...)) *)
-	      let comps = Hashtbl.fold (fun x' v l ->
-					  let v' = update_struct_type x v in
-					    if v' = v then l else (x', v')::l
-				       ) comptbl []
-	      in
-	      List.iter (fun (x, v) -> Hashtbl.replace comptbl x v) (List.rev comps);
-	    (* updating the sig of fun whose one of the parameters is
-	       of the form C.Comp (Unknown ...) *)
-	    (* TODO: think about this, but this must be costly *)
-	      let fdecls = Hashtbl.fold update_function_argument symbtbl [] in
-	      List.iter (fun (f, k) -> Hashtbl.replace symbtbl f k) fdecls;
-	     
-		(* udapting the type of var of kind C.Comp (Unknown
+	  translate_cdecl x d;
+	  (* updating the type of struct type whose one of the field
+	     is of the form Ptr (C.Comp (Unknown ...)) *)
+	  let comps = Hashtbl.fold (fun x' v l ->
+	    let v' = update_struct_type v in
+	    if v' = v then l else (x', v')::l
+	  ) comptbl []
+	  in
+	  List.iter (fun (x, v) -> Hashtbl.replace comptbl x v) (List.rev comps);
+	      (* updating the sig of fun whose one of the parameters is
+		 of the form C.Comp (Unknown ...) *)
+	      (* TODO: think about this, but this must be costly *)
+	  let update_function_argument f (symb, t) l =
+	    let t' = 
+	      match t with
+		  TypedC.Fun ft -> TypedC.Fun (update_fdecl ft)
+		| _             -> t
+		in
+	    (f, (symb, t'))::l	      
+	  in
+	  let fdecls = Hashtbl.fold update_function_argument symbtbl [] in
+	  List.iter (fun (f, k) -> Hashtbl.replace symbtbl f k) fdecls;
+	  (* udapting the type of var of kind C.Comp (Unknown
 		...)) ; has to be done after the update of struct
 		types *)
-		glbdecls := List.map (update_vdecl x) !glbdecls
+		glbdecls := List.map update_vdecl !glbdecls
 
 	| GlbDecl (x, EDecl d) -> translate_edecl x d
 

@@ -320,7 +320,7 @@ let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =
   in
     if (not (equals_typ ret_t1 ret_t2)) then begin
       Npkcontext.report_error "TypedC.min_ftyp" 
-	"different return types for function"
+	"different return types for unction"
     end;
     (args_t, ret_t1)
 
