@@ -53,7 +53,7 @@ let has_label stmts lbl =
       | (stmt, _)::stmts -> 
 	  match stmt with
 	      Label lbl' when lbl' = lbl -> true
-	    | Block blk -> (has blk) or (has stmts)
+	    | Block blk -> (has blk)||(has stmts)
 	    | _ -> has stmts
   in
     has stmts
@@ -66,7 +66,7 @@ let has_goto stmts lbl g_offset =
       | (stmt, _)::stmts ->
 	  match stmt with
 	      If (_, [Goto lbl', _], []) when goto_equal lbl lbl' g_offset -> true
-	    | Block blk -> (has blk) or (has stmts)
+	    | Block blk -> (has blk)||(has stmts)
 	    | _ -> has stmts
   in has stmts
       
@@ -82,17 +82,17 @@ let search_lbl stmts lbl =
 	match stmt with 
 	    Label lbl' when lbl = lbl' -> true
 	  | If(_, if_blk, else_blk) -> 
-	      (search if_blk) or (search else_blk) or (search stmts)
+	      (search if_blk)||(search else_blk)||(search stmts)
 		
-	  | For(_,_,blk,_) -> (search blk) or (search stmts)
+	  | For(_,_,blk,_) -> (search blk)||(search stmts)
 	
-	  | DoWhile(blk, _) -> (search blk) or (search stmts)
+	  | DoWhile(blk, _) -> (search blk)||(search stmts)
 	
-	  | Block blk -> (search blk) or (search stmts)
+	  | Block blk -> (search blk)||(search stmts)
 	      
 	  | CSwitch (_, cases, default) ->
 	      (List.exists (fun (_, blk, _) -> search blk) cases) 
-	      or (search default) or (search stmts)
+	     ||(search default)||(search stmts)
 		
 	  | _ -> search stmts
   in search stmts
@@ -200,7 +200,7 @@ exception Indirect
 exception Direct
 exception Sibling
 
-let rec related stmts lbl g_offset =
+let related stmts lbl g_offset =
   let rec goto_or_label previous =
     match previous with
 	In -> raise Sibling
@@ -373,7 +373,7 @@ let rec split_lbl stmts lbl =
 
 	  | _ -> let before, stmts' = split_lbl stmts' lbl in (stmt, l)::before, stmts'
 
-let rec extract_first_forward_goto lbl g_offset blk =
+let extract_first_forward_goto lbl g_offset blk =
   let rec extract stmts =
     match stmts with
 	[] -> raise Not_found
@@ -601,7 +601,7 @@ let out_if_else stmts lbl level g_offset =
   in out stmts
       
       
-let rec out_switch_loop stmts lbl level g_offset =
+let out_switch_loop stmts lbl level g_offset =
   (* returns the stmt list whose 'goto lbl' stmt has been deleted
      and replaced by some stmt according to the algo of Figure 4
      (Moving a goto out of a switch) *)
@@ -930,7 +930,7 @@ and inward lbl g_offset g_loc stmts =
        
 
        
-let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc vdecls =
+let lifting_and_inward stmts lbl l_level g_level g_offset g_loc vdecls =
   let rec split_goto stmts =
     match stmts with
 	[] -> raise Not_found
@@ -1015,7 +1015,7 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc vdecls =
 			  let blk', b = lifting_and_inward blk in 
 			  let c = (e, blk', l) in
 			  let cases', b' = if b then cases, b else iter cases in
-			    c::cases', (b or b')
+			    c::cases', (b||b')
 		  in 
 		  let cases', b = iter cases in
 		  let blk', b' = if b then blk, b else lifting_and_inward blk in
@@ -1045,7 +1045,7 @@ let rec lifting_and_inward stmts lbl l_level g_level g_offset g_loc vdecls =
     fst (lifting_and_inward stmts)
 
 
-let rec compute_level stmts lbl id =
+let compute_level stmts lbl id =
   let rec compute n stmts =
     match stmts with
 	[] -> -1, -1
@@ -1114,7 +1114,7 @@ let elimination stmts lbl gotos vdecls =
     List.iter move gotos;
     !stmts
 
-let rec renaming_block_variables stmts =
+let renaming_block_variables stmts =
   let names = Hashtbl.create 10 in
   let stack = ref [[]] in
     
@@ -1169,7 +1169,7 @@ let rec renaming_block_variables stmts =
       | Set (e1, op, e2) -> Set (replace_exp e1, op, replace_exp e2)
       | OpExp (op, e, b) -> OpExp (op, replace_exp e, b)
   in
-  let rec replace_decl decl =
+  let replace_decl decl =
     let rec rinit init =
       match init with
 	  Data e -> Data (replace_exp e)
@@ -1186,7 +1186,7 @@ let rec renaming_block_variables stmts =
 	| _ -> decl
   in
 
-  let rec replace_assert a =
+  let replace_assert a =
     let replace a = 
       match a with
 	  IdentToken s ->  IdentToken (find s) 

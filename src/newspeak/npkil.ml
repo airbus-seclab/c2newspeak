@@ -28,19 +28,19 @@
 
 (* TODO: should count local variables from beginning of function !! *)
 
-open Newspeak
+module N = Newspeak
 
 type t = {
   globals: (string, gdecl) Hashtbl.t;
   init: blk;
-  fundecs: (fid, fundec) Hashtbl.t;
-  src_lang: src_lang
+  fundecs: (N.fid, fundec) Hashtbl.t;
+  src_lang: N.src_lang
 }
 
 and gdecl = {
   global_type: typ;
   storage: storage;
-  global_position: location;
+  global_position: N.location;
   is_used: bool
 }
 
@@ -54,7 +54,7 @@ and fundec =  {
   arg_identifiers: string list;
   function_type: ftyp;
   body: blk;
-  position: location;
+  position: N.location;
 }
 
 and stmtkind =
@@ -63,8 +63,8 @@ and stmtkind =
   | Guard of exp
   | Select of (blk * blk)
   | InfLoop of blk
-  | DoWith of (blk * lbl)
-  | Goto of lbl
+  | DoWith of (blk * N.lbl)
+  | Goto of N.lbl
 (* TODO: remove return value *)
 (* in arguments, ftyp, fun exp, outputs *)
   | Call of (exp list * ftyp * fn * lval list )
@@ -83,7 +83,7 @@ and token =
   | LvalToken of (lval * typ)
   | CstToken of Newspeak.cst
 
-and stmt = stmtkind * location
+and stmt = stmtkind * N.location
 
 and blk = stmt list
 
@@ -92,54 +92,54 @@ and vid = int
 and lval =
     Local of string
   | Global of string
-  | Deref of (exp * size_t)
+  | Deref of (exp * N.size_t)
   | Shift of (lval * exp)
   | Str of string
 
 and exp =
-    Const of cst
+    Const of N.cst
   | Lval of (lval * typ)
   | AddrOf of (lval * tmp_nat)
-  | AddrOfFun of (fid * ftyp)
+  | AddrOfFun of (N.fid * ftyp)
   | UnOp of (unop * exp)
-  | BinOp of (binop * exp * exp)
+  | BinOp of (N.binop * exp * exp)
 
 and fn =
-    FunId of fid
+    FunId of N.fid
   | FunDeref of exp
 
 and unop =
 (* right bound is excluded! *)
-      Belongs_tmp of (Nat.t * tmp_nat)
-    | Coerce of bounds
+      Belongs_tmp of (N.Nat.t * tmp_nat)
+    | Coerce of N.bounds
     | Not
-    | BNot of bounds
-    | PtrToInt of ikind
-    | IntToPtr of ikind
-    | Cast of (scalar_t * scalar_t)
+    | BNot of N.bounds
+    | PtrToInt of N.ikind
+    | IntToPtr of N.ikind
+    | Cast of (N.scalar_t * N.scalar_t)
 
 and typ = 
-    Scalar of scalar_t
+    Scalar of N.scalar_t
   | Array of (typ * tmp_size_t)
-  | Region of (field list * size_t)
+  | Region of (field list * N.size_t)
 
 and tmp_size_t = int option
 
 and ftyp = typ list * typ list
 
-and field = offset * typ
+and field = N.offset * typ
 
 and tmp_nat = 
     Unknown (* flexible array *)
-  | Known of Nat.t
+  | Known of N.Nat.t
   | Length of string (* length of global array *)
   | Mult of (tmp_nat * int)
 
 module String_set = 
   Set.Make (struct type t = string let compare = Pervasives.compare end)
 
-let zero = Const (CInt Nat.zero)
-let zero_f = Const (CFloat (0., "0."))
+let zero = Const (N.CInt N.Nat.zero)
+let zero_f = Const (N.CFloat (0., "0."))
 
 let make_int_coerce t e = UnOp (Coerce (Newspeak.domain_of_typ t), e)
 
@@ -156,15 +156,15 @@ let string_of_size_t = string_of_int
 
 let string_of_sign_t sg =
   match sg with
-      Unsigned -> "u"
-    | Signed -> ""
+      N.Unsigned -> "u"
+    | N.Signed -> ""
 
 let string_of_scalar s =
   match s with
-      Int (sg,sz) -> (string_of_sign_t sg)^"int"^(string_of_size_t sz)
-    | Float sz -> "float" ^ (string_of_size_t sz)
-    | Ptr -> "ptr"
-    | FunPtr -> "fptr"
+      N.Int (sg,sz) -> (string_of_sign_t sg)^"int"^(string_of_size_t sz)
+    | N.Float sz -> "float" ^ (string_of_size_t sz)
+    | N.Ptr -> "ptr"
+    | N.FunPtr -> "fptr"
 
 let string_of_tmp_size sz =
   match sz with
@@ -186,11 +186,11 @@ let string_of_fid fid = fid
 let rec string_of_tmp_nat x =
   match x with
       Unknown 	  -> "?"
-    | Known i 	  -> Nat.to_string i
+    | Known i 	  -> N.Nat.to_string i
     | Length v 	  -> "len("^v^")"
     | Mult (v, n) -> "("^(string_of_tmp_nat v)^" * "^(string_of_int n)^")"
 
-let string_of_unop op =
+let string_of_unop (op: unop) =
   match op with
       Belongs_tmp (l, u) ->
 	"belongs["^l^","^(string_of_tmp_nat u)^"-1]"
@@ -199,7 +199,7 @@ let string_of_unop op =
 	"("^(string_of_scalar typ')^" <= "^(string_of_scalar typ)^")"
     | Not -> "!"
     | BNot _ -> "~"
-    | PtrToInt i -> "("^(string_of_scalar (Int i))^")"
+    | PtrToInt i -> "("^(string_of_scalar (N.Int i))^")"
     | IntToPtr _ -> "(ptr)"
 	  
 let rec string_of_lval lv =
@@ -218,11 +218,11 @@ and string_of_exp e =
     | AddrOfFun (fid, _) -> "&fun"^(string_of_fid fid)
 
     | UnOp (Not, BinOp (op, e1, e2)) ->
-	"("^(string_of_exp e2)^" "^(string_of_binop op)^
+	"("^(string_of_exp e2)^" "^(N.string_of_binop op)^
 	  " "^(string_of_exp e1)^")"
 
     | BinOp (op, e1, e2) ->
-	"("^(string_of_exp e1)^" "^(string_of_binop op)^
+	"("^(string_of_exp e1)^" "^(N.string_of_binop op)^
 	  " "^(string_of_exp e2)^")"
 	  
     | UnOp (op, exp) -> (string_of_unop op)^" "^(string_of_exp exp)
@@ -397,9 +397,9 @@ let read fname =
 	prog
 
 let string_of_cast t1 t2 =
-  match (t1, t2) with
-      (Int _, Ptr) -> "from integer to pointer"
-    | (Ptr, Int _) -> "from pointer to integer"
+  match t1, t2 with
+      N.Int _, N.Ptr -> "from integer to pointer"
+    | N.Ptr, N.Int _ -> "from pointer to integer"
     | _ -> (string_of_scalar t1)^" -> "^(string_of_scalar t2)
 
 let print_castor_err t t' =
@@ -408,30 +408,30 @@ let print_castor_err t t' =
 
 (* TODO: code cleanup: this could be also used by cilcompiler ? *)
 let cast t e t' =
-    match (t, t') with
+    match t, t' with
       _ when t = t' -> e
-    | (Int _, (Ptr|FunPtr)) when e = zero -> Const Nil
-    | (Ptr, Int ((_, n) as k)) when (n = !Config.size_of_ptr) -> 
+    | N.Int _, (N.Ptr|N.FunPtr) when e = zero -> Const N.Nil
+    | N.Ptr, N.Int ((_, n) as k) when n = !Config.size_of_ptr -> 
 	print_castor_err t t';
 	UnOp (PtrToInt k, e)
-    | (Int ((_, n) as k), Ptr) when (n = !Config.size_of_ptr) -> 
+    | N.Int ((_, n) as k), N.Ptr when (n = !Config.size_of_ptr) -> 
 	print_castor_err t t';
 	UnOp (IntToPtr k, e)
-    | (FunPtr, Ptr) ->
+    | N.FunPtr, N.Ptr ->
 	print_castor_err t t';
 	UnOp (Cast (t, t'), e)
-    | (Ptr, FunPtr) ->
+    | N.Ptr, N.FunPtr ->
 	print_castor_err t t';
 	UnOp (Cast (t, t'), e)
-    | (Float _, Float _) | (Int _, Float _) -> UnOp (Cast (t, t'), e)
-    | (Float _, Int (sign, _)) -> 
-	if (sign = Unsigned) then begin
+    | N.Float _, N.Float _ | N.Int _, N.Float _ -> UnOp (Cast (t, t'), e)
+    | N.Float _, N.Int (sign, _) -> 
+	if (sign = N.Unsigned) then begin
 	  Npkcontext.report_warning "Npkil.cast"
 	    ("cast from float to unsigned integer: "
 	      ^"sign may be lost: "^(string_of_cast t t'))
 	end;
 	UnOp (Cast (t, t'), e)
-    | (Int (_, n), FunPtr) when (n = !Config.size_of_ptr) -> 
+    | N.Int (_, n), N.FunPtr when n = !Config.size_of_ptr -> 
 	print_castor_err t t';
 	UnOp (Cast (t, t'), e)
     | _ -> 
@@ -440,10 +440,10 @@ let cast t e t' =
 
 let rec negate e =
   match e with
-    | UnOp (Not, BinOp (Eq t, e1, e2)) -> BinOp (Eq t, e1, e2)
+    | UnOp (Not, BinOp (N.Eq t, e1, e2)) -> BinOp (N.Eq t, e1, e2)
     | UnOp (Not, e) -> e
-    | BinOp (Gt t, e1, e2) -> UnOp (Not, BinOp (Gt t, e1, e2))
-    | BinOp (Eq t, e1, e2) -> UnOp (Not, BinOp (Eq t, e1, e2))
+    | BinOp (N.Gt t, e1, e2) -> UnOp (Not, BinOp (N.Gt t, e1, e2))
+    | BinOp (N.Eq t, e1, e2) -> UnOp (Not, BinOp (N.Eq t, e1, e2))
     | UnOp (Coerce i, e) -> UnOp (Coerce i, negate e)
     | _ -> UnOp (Not, e)
 

@@ -27,8 +27,6 @@
   email : charles . hymans AT eads . net
 *)
 
-open Ada_utils
-
 let parse fname =
   Npkcontext.print_debug ("Parsing " ^ fname ^ "...");
   let (ast:AdaSyntax.compilation_unit) = File_parse.parse fname in

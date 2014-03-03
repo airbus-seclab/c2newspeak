@@ -1,6 +1,6 @@
 
-L = {H=0093423b, U=4, trait = Signed I[-2147483648;2147483647], range = <unlimited>}
-R = {H=000008d2, U=6, trait = Float 6, range = <unlimited>}
+L = {H=00cb3550, U=4, trait = Signed I[-2147483648;2147483647], range = <unlimited>}
+R = {H=33f64f6c, U=6, trait = Float 6, range = <unlimited>}
 Newspeak output
 ---------------
 void t497a.inc_in(int32 x, int32 y) {

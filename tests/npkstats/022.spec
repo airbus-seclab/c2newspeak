@@ -17,6 +17,6 @@ f
 ======
 Function statistics
 Remaining functions: 
-main
 f
+main
 ======

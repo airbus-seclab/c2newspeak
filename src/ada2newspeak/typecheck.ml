@@ -44,10 +44,6 @@ let expect ?desc t1 t2 =
           ^ T.print t2
           )
 
-let t_assert x msg =
-  if not x then
-    error ("Type assertion failed : " ^ msg)
-
 let type_of_binop op t1 t2 = match op with
   | Eq    -> expect ~desc:"binary =" t1 t2;
              T.boolean

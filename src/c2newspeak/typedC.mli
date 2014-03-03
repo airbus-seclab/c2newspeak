@@ -173,8 +173,6 @@ val exp_of_char	 : char -> exp
 
 val exp_of_int	 : int -> exp
 
-val ftyp_of_typ	 : typ -> ftyp
-
 val deref_typ	 : typ -> typ
 
 val min_ftyp	 : ftyp -> ftyp -> ftyp

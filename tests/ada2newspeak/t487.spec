@@ -1,6 +1,6 @@
 
-L = {H=13037cd5, U=8, trait = Signed I[-128;127], range = <unlimited>}
-R = {H=0093423b, U=4, trait = Signed I[-2147483648;2147483647], range = <unlimited>}
+L = {H=2e06a9f9, U=8, trait = Signed I[-128;127], range = <unlimited>}
+R = {H=00cb3550, U=4, trait = Signed I[-2147483648;2147483647], range = <unlimited>}
 Newspeak output
 ---------------
 void t487(void) {

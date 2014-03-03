@@ -1,6 +1,6 @@
-int x;
-int y;
 int z;
+int y;
+int x;
 void main() {
 29:   z = (x + y);
 30:   z = (x - y);

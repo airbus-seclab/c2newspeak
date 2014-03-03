@@ -26,8 +26,6 @@
   email: sarah(dot)zennou(at)eads(dot)net
 *)
 
-open Newspeak
-
 type 'ty t = {
   globals: 'ty globals;
   init: 'ty blk;
@@ -104,17 +102,17 @@ and 'ty funexp =
 (*---------*)
 (* Display *)
 (*---------*)
-
+module N = Newspeak
 module StringMap = Map.Make(String)
 
 (* Types *)
 
 let string_of_scalar s =
   match s with
-      Int (sg, sz) -> (string_of_sign_t sg)^"int"^(string_of_size_t sz)
-    | Float sz 	   -> "float" ^ (string_of_size_t sz)
-    | Ptr 	   -> "ptr"
-    | FunPtr 	   -> "fptr"
+      N.Int (sg, sz) -> (N.string_of_sign_t sg)^"int"^(N.string_of_size_t sz)
+    | N.Float sz 	   -> "float" ^ (N.string_of_size_t sz)
+    | N.Ptr 	   -> "ptr"
+    | N.FunPtr 	   -> "fptr"
 
 let string_of_list print l =
   "(" ^ (String.concat ", " (List.map print l)) ^ ")"
@@ -148,42 +146,35 @@ let string_of_loc (fname, line, carac) =
   if (line < 0) || (carac < 0) then fname
   else (fname^":"^(string_of_int line)^"#"^(string_of_int carac))
 
-let dummy_loc fname =
-  if fname = ""
-  then invalid_arg "Newspeak.dummy_loc: invalid function name for location";
-  (fname, -1, -1)
-
 let unknown_loc = ("", -1, -1)
 
 (* Expressions *)
 let string_of_cst c =
   match c with
-      CInt c -> Nat.to_string c
-    | CFloat (_, s) -> s
-    | Nil -> "nil"
+      N.CInt c -> N.Nat.to_string c
+    | N.CFloat (_, s) -> s
+    | N.Nil -> "nil"
 
-let string_of_bounds (l, u) = "["^(Nat.to_string l)^","^(Nat.to_string u)^"]"
+let string_of_bounds (l, u) = "["^(N.Nat.to_string l)^","^(N.Nat.to_string u)^"]"
 
 let string_of_unop op =
   match op with
-      Belongs r        -> "belongs"^(string_of_bounds r)
-    | Coerce r 	       -> "coerce"^(string_of_bounds r)
-    | Focus sz 	       -> "focus"^(string_of_size_t sz)
-    | Cast (typ, typ') ->
+      N.Belongs r        -> "belongs"^(string_of_bounds r)
+    | N.Coerce r 	       -> "coerce"^(string_of_bounds r)
+    | N.Focus sz 	       -> "focus"^(N.string_of_size_t sz)
+    | N.Cast (typ, typ') ->
         "("^(string_of_scalar typ')^" <= "^(string_of_scalar typ)^")"
-    | Not 	       -> "!"
-    | BNot _ 	       -> "~"
-    | PtrToInt i       -> "("^(string_of_scalar (Int i))^")"
-    | IntToPtr _       -> "(ptr)"
+    | N.Not 	       -> "!"
+    | N.BNot _ 	       -> "~"
+    | N.PtrToInt i       -> "("^(string_of_scalar (N.Int i))^")"
+    | N.IntToPtr _       -> "(ptr)"
 
 let rec string_of_lval sty lv =
   match lv with
     | Local name     -> name
     | Global name    -> name
-    | Deref (e, sz)  -> "["^(string_of_exp sty e)^"]"^(string_of_size_t sz)
+    | Deref (e, sz)  -> "["^(string_of_exp sty e)^"]"^(N.string_of_size_t sz)
     | Shift (lv, sh) -> (string_of_lval sty lv)^" + "^(string_of_exp sty sh)
-
-and string_of_args sty args = string_of_list (string_of_exp sty) args
 
 and string_of_exp sty (e, ty) =
   "(" ^ string_of_bexp sty e ^ " : " ^ sty ty ^ ")"
@@ -368,6 +359,6 @@ let dump string_of_ty prog =
     print_string init
 
 let static_eval sty ((be, _t) as e) = match be with
-  | Const (CInt n) -> Nat.to_int n
+  | Const (N.CInt n) -> N.Nat.to_int n
   | _ -> failwith ( "static_eval - expression is not static : "
                   ^ string_of_exp sty e)

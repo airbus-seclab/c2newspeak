@@ -351,7 +351,7 @@ let translate prog =
 	    in
 	    let sz = size_of t in
 	    let o = ref o in
-	      for i = 0 to n - 1 do
+	      for _i = 0 to n - 1 do
 		fill_with_zeros !o t;
 		o := !o + sz
 	      done
@@ -570,7 +570,7 @@ let translate prog =
 	      let o', _ = find_field f r in
 		o+o', translate t, s
       in
-      let rec check f tab =
+      let check f tab =
 	let translate_cmp c =
 	  match c with
 	      Unknown s ->

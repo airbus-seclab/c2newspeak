@@ -107,15 +107,7 @@ let make_enum list_val =
   let list_assoc = make_id list_val 0 in
   Enum list_assoc
 
-let make_range exp_b_inf exp_b_sup =
-  IntegerRange(exp_b_inf, exp_b_sup)
 
-let report_perror s =
-  Npkcontext.report_error "parser" s
-
-let extract_name = function
-  | (Some x,_,_) -> x
-  | _ -> report_perror "No name"
 %}
 %token EOF
 
@@ -404,8 +396,8 @@ instr :
 | RETURN                                   { ReturnSimple, $1 }
 | lvalue                                   { LvalInstr(fst $1),snd $1 }
 | lvalue ASSIGN expr                       { Assign (fst $1, $3), $2 }
-| EXIT                                     { Exit, $1 }
-| EXIT WHEN expr                           { If($3,[Exit,$1],[]), $1 }
+| EXIT                                     { AdaSyntax.Exit, $1 }
+| EXIT WHEN expr                           { If($3,[AdaSyntax.Exit,$1],[]), $1 }
 | IF expr THEN instr_list
   instruction_else END IF                  { (If($2, $4, $5), $1) }
 | loop_label iteration_scheme LOOP

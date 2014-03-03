@@ -73,8 +73,6 @@ let is_safe_add x y =
 	let z = Int32.add x y in
          (Int64.compare (Int64.add (Int64.of_int32 x) (Int64.of_int32 y)) (Int64.of_int32 z) == 0) 
     | _ -> false
-
-let is_safe_mul _ _ = false
 	
 let implies _ = false
 

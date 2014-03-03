@@ -22,7 +22,6 @@
   email: etienne.millon AT gmail . com
 
 *)
-open AdaSyntax
 
 module T = AdaTypes
 
@@ -256,7 +255,7 @@ struct
  *                                                                            *
  ******************************************************************************)
 		   
- let rec find_symbols t id =
+ let find_symbols t id =
    List.map (fun (wh,_,_,x) -> wh,x) (
      Symset.elements
        (Symset.filter (fun (_,m,_,_) -> m = id)
@@ -273,7 +272,7 @@ struct
 
      
  let find_param_type t_find arg = 
-   let  n =  match arg.param_type with
+   let  n =  match arg.AdaSyntax.param_type with
      | [] -> Npkcontext.report_error
     	 "symboltbl:find_subprogram" "unreachable"
      | x::[]    -> None  , x 
@@ -323,7 +322,7 @@ struct
            |  [], _  -> (* end of positional parameters *)
 		List.for_all ( fun x -> 
 		    try    
-		      let typo  = Hashtbl.find argtbl x.formal_name in
+		      let typo  = Hashtbl.find argtbl x.AdaSyntax.formal_name in
 			T.is_compatible typo (make_subt x) 
 			  (*Dans le doute, mais ne marche pas pour
 			    les renaming (nouveaux "formal_name" *)
@@ -635,9 +634,6 @@ let exit_context s =
   else
     Npkcontext.report_error "exit_context" "Stack too small"
 
-let push_saved_context s ctx =
-  Tree.push ctx s.s_stack
-
 let library s =
   Tree.nth s 1
 
@@ -829,7 +825,7 @@ let rec find_subprogram_aux s ?(silent=false) (pack,n) n_args xpect t_find use =
 	      let nb_args = List.length n_args in 
 		
 	      let no_default param = 
-		match param.default_value with 
+		match param.AdaSyntax.default_value with 
 		    None -> true | _ -> false 
 	      in
 		if (  List.for_all (fun  (_,(_,x,_)) -> 
@@ -980,8 +976,8 @@ let add_subprogram s n v rt =
 
 let rec make_name_of_lval lv =
   match lv with
-    | Var x -> [x]
-    | SName (pf, tl) -> make_name_of_lval pf @ [tl]
+    | AdaSyntax.Var x -> [x]
+    | AdaSyntax.SName (pf, tl) -> make_name_of_lval pf @ [tl]
     | _ -> invalid_arg "make_name_of_lval"
 
 

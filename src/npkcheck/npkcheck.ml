@@ -58,7 +58,7 @@ let subtyp t1 t2 =
 	  Newspeak.contains d2 d1
     | _ -> t1 = t2
 
-let rec hastype t e =
+let hastype t e =
   match (e, t) with
       (Const (N.CInt i),   N.Int k) -> N.belongs i (N.domain_of_typ k)
     | (Const (N.CFloat _), N.Float _) -> true
@@ -98,7 +98,7 @@ let checker ptr_sz =
       in
         true)
   ; bexp = (fun x ->
-      let rec check x =
+      let check x =
         match x with
             BinOp ((N.Gt _|N.Eq _), _, _) 
           | UnOp (N.Not, BinOp ((N.Gt _|N.Eq _), _, _)) -> ()

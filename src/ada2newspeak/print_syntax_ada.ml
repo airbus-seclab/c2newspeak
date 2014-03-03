@@ -38,9 +38,6 @@ let list_to_string l to_string sep crochet =
   let r = String.concat sep (List.map to_string l) in
   if crochet then "[" ^ r ^ "]" else r
 
-let ident_list_to_string l =
-  list_to_string l (fun x -> x) "." false
-
 let option_to_string a to_string = match a with
   | None -> "None"
   | Some(a') -> "Some("^(to_string a')^")"
@@ -51,13 +48,6 @@ let mode_to_string mode = match mode with
   | In -> "in"
   | Out -> "out"
   | InOut -> "in out"
-
-let ikind_to_string (s,taille) =
-  let string_signe = match s with
-    | Newspeak.Signed -> "Signed"
-    | Newspeak.Unsigned -> "Unsigned"
-  in
-    "("^string_signe^", "^(string_of_int taille)^")"
 
 let uop_to_string op = match op with
   | UPlus  -> "U+"
@@ -160,12 +150,6 @@ and exp_pair_to_string (e1,e2) =
   ^ exp_to_string e2
   ^ ")"
 
-and contrainte_to_string contrainte = match contrainte with
-  |  IntegerRangeConstraint(v1,v2) ->
-       "IntegerRangeConstraint("^(Newspeak.string_of_bounds (v1,v2))^")"
-  |  FloatRangeConstraint(s1,s2) ->
-       "FloatRangeConstraint("^string_of_float s1^", "^string_of_float s2^")"
-
 and iteration_scheme_to_string scheme = match scheme with
   | NoScheme -> "NoScheme"
   | While(exp) -> "While("^(exp_to_string exp)^")"
@@ -207,7 +191,7 @@ and instr_to_string instr = match instr with
       ^(block_to_string instr_then)^",\n"
       ^(block_to_string instr_else)^")"
 
-  | Exit -> "Exit"
+  | AdaSyntax.Exit -> "Exit"
   | Loop(scheme, block) ->
       "Loop("^(iteration_scheme_to_string scheme)^",\n"
       ^(block_to_string block)^")"
@@ -357,7 +341,7 @@ let compil_unit_to_string (context,lib_item,loc) =
   ^",\n\n"^(library_item_to_string lib_item)
   ^",\n\n"^(line_of_loc loc)^")\n"
 
-let rec ast_to_string programme =
+let ast_to_string programme =
   list_to_string programme compil_unit_to_string "" false
 
 let print_ast programme = print_string (ast_to_string programme)

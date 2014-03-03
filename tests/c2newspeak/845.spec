@@ -5,7 +5,7 @@ Warning: 845.c:72#81: cast to void accepted
 Warning: 845.c:72#131: expression of type signed integer used as an array index accepted
 Warning: 845.c:72#131: the order of execution of side-effects in expressions not specified, picking a random one, be careful
 Warning: 845.c:72#1: dirty cast from integer to pointer accepted
-Warning: 845.c:66#99: extern global variable __per_cpu_offset accepted
+Warning: 845.c:67#21: extern global variable __per_cpu_offset accepted
 Newspeak output
 ---------------
 int32 (845.c:69#18)^!845.c.0.hlt_works(int32 cpu) {

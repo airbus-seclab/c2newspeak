@@ -1,5 +1,5 @@
-Warning: t434b.ads:4#8: multiple definitions of global variable t434b.c_s, in file t434b.ads variable t434b.c_s should probably be extern accepted
 Warning: t434b.ads:3#8: multiple definitions of global variable t434b.c_x, in file t434b.ads variable t434b.c_x should probably be extern accepted
+Warning: t434b.ads:4#8: multiple definitions of global variable t434b.c_s, in file t434b.ads variable t434b.c_s should probably be extern accepted
 Newspeak output
 ---------------
 void t434.mm(void) {

@@ -196,7 +196,7 @@ let process (fname, globals) =
       args', ret'
   in
   let update_struct_type t s =
-    let rec update t = 
+    let update t = 
       match t with 
 	  C.Known (fields, v) -> 
 	    let fields' = ref [] in
@@ -806,7 +806,7 @@ let process (fname, globals) =
 
   
     
-  let rec translate_globals x = 
+  let translate_globals x = 
     let glbdecls = ref [] in
     let fundecls = ref [] in
     let specs = ref [] in

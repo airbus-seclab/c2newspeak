@@ -24,8 +24,7 @@
 *)
 
 (* TODO: remove size_of, put in csyntax *)
-open Newspeak
-open Npkil
+module Npk = Newspeak
 
 let vcnt = ref 0
 
@@ -50,7 +49,7 @@ and token =
   | LvalToken of typ_lv
   | CstToken of cst
 
-and ginfo = typ * location * Npkil.storage
+and ginfo = typ * Npk.location * Npkil.storage
 
 and field = (string * (int * typ))
 
@@ -58,7 +57,7 @@ and fundec = {
   arg_identifiers: string list;
   function_type: ftyp;
   body: blk;
-  position: location;
+  position: Npk.location;
 }
 
 and typ =
@@ -75,7 +74,7 @@ and ftyp = typ list * typ
 
 and blk = stmt list
 
-and stmt = (stmtkind * location)
+and stmt = stmtkind * Npk.location
 
 and stmtkind =
   | Block of (blk * Newspeak.lbl option)   (* DoWith construct *)
@@ -91,7 +90,7 @@ and stmtkind =
 
 and typ_lv = (lv * typ)
 
-and typ_exp = (exp * scalar_t)
+and typ_exp = (exp * Npk.scalar_t)
 
 (* TODO: maybe still keep together lv and exp ?? *)
 and lv =
@@ -130,7 +129,7 @@ and funexp =
 
 (* TODO: change cst to Newspeak.cst??? *)
 and cst =
-    | CInt of Nat.t
+    | CInt of Npk.Nat.t
     | CFloat of (float * string)
 
 let rec string_of_typ t =
@@ -149,7 +148,7 @@ let string_of_ftyp (args_t, ret_t) =
 
 let rec string_of_exp margin e =
   match e with
-      Const (CInt i) -> EBigInt.string_of_big_int (Nat.to_big_int i)
+      Const (CInt i) -> EBigInt.string_of_big_int (Npk.Nat.to_big_int i)
     | Const _ -> "cst"
     | Lval (lv, _) -> string_of_lv margin lv
     | AddrOf (lv, t) -> "&("^(string_of_lv margin lv)^")_"^(string_of_typ t)
@@ -230,7 +229,7 @@ let create_tmp loc t =
   let v = Local x in
     (decl, v)
 	
-let exp_of_int i = Const (CInt (Nat.of_int i))
+let exp_of_int i = Const (CInt (Npk.Nat.of_int i))
 
 let exp_of_float x = Const (CFloat (x, string_of_float x))
 
@@ -257,8 +256,8 @@ let rec size_of_typ t =
 
 (* TODO: if possible remove int_kind, and  int_typ, they are
    in csyntax rather *)
-let int_kind () = (Signed, !Config.size_of_int)
-let int_typ () = Scalar (Int (int_kind ()))
+let int_kind () = (Npk.Signed, !Config.size_of_int)
+let int_typ () = Scalar (Npk.Int (int_kind ()))
 
 let concat_effects blk1 blk2 =
   if (blk1 <> []) && (blk2 <> []) then begin
@@ -473,22 +472,22 @@ and normalize_blk x =
 
 let is_mask op e1 e2 =
     match op, e1, e2 with
-	BAnd _, _, Unop(BNot _, _) 
-      | BAnd _, Unop(BNot _, _), _ -> true
+	Npk.BAnd _, _, Unop(Npkil.BNot _, _) 
+      | Npk.BAnd _, Unop(Npkil.BNot _, _), _ -> true
       | _ 			   -> false
 
 
 let rec mask e1 e2 = 
   let e1, e2 = 
     match e1, e2 with
-	Unop(BNot _, e1'), e2  -> e1', e2
-      | e1, Unop(BNot _, e2') -> e1, e2'
+	Unop(Npkil.BNot _, e1'), e2  -> e1', e2
+      | e1, Unop(Npkil.BNot _, e2') -> e1, e2'
       | _, _ -> Npkcontext.report_error "Cir.eval_exp" "static expression expected"
   in
-  let n1 = Nat.to_big_int (eval_exp e1) in
+  let n1 = Npk.Nat.to_big_int (eval_exp e1) in
   let n2 = 
     try 
-      Nat.to_int (eval_exp e2) 
+      Npk.Nat.to_int (eval_exp e2) 
     with _ -> Npkcontext.report_error "Cir.eval_exp" "static expression expected"
   in
   let l = [ 1; 3; 7; 15; 31; 63; 127; 
@@ -506,52 +505,52 @@ let rec mask e1 e2 =
 and eval_exp e =
   let apply_bop op v1 v2 =
     match op with
-	PlusI -> EBigInt.add_big_int v1 v2
-      | MinusI -> EBigInt.sub_big_int v1 v2
-      | MultI -> EBigInt.mult_big_int v1 v2
-      | DivI -> 
+	Npk.PlusI -> EBigInt.add_big_int v1 v2
+      | Npk.MinusI -> EBigInt.sub_big_int v1 v2
+      | Npk.MultI -> EBigInt.mult_big_int v1 v2
+      | Npk.DivI -> 
 	  if (EBigInt.compare_big_int v2 EBigInt.zero_big_int = 0) 
 	  then Npkcontext.report_error "Cir.eval_exp" "division by zero";
 	  EBigInt.div_big_int v1 v2
-      | Shiftlt -> 
+      | Npk.Shiftlt -> 
 	  let p = EBigInt.power_int_positive_big_int 2 v2 in
 	    EBigInt.mult_big_int v1 p
-      | Shiftrt -> 
+      | Npk.Shiftrt -> 
 	  let p = EBigInt.power_int_positive_big_int 2 v2 in
 	    EBigInt.div_big_int v1 p
-      | Eq (Int _) ->
+      | Npk.Eq (Npk.Int _) ->
 	  if EBigInt.compare_big_int v1 v2 = 0 then EBigInt.unit_big_int
 	  else EBigInt.zero_big_int
-      | Gt (Int _) -> 
+      | Npk.Gt (Npk.Int _) -> 
 	  if EBigInt.compare_big_int v1 v2 > 0 then EBigInt.unit_big_int
 	  else EBigInt.zero_big_int
-      | PlusPI -> EBigInt.add_big_int v1 v2
-      | BAnd _ ->
+      | Npk.PlusPI -> EBigInt.add_big_int v1 v2
+      | Npk.BAnd _ ->
 	  if EBigInt.sign_big_int v1 < 0 || EBigInt.sign_big_int v2 < 0 then 
 	    Npkcontext.report_error "Cir.eval_exp" "static expression expected";
 	  EBigInt.and_big_int v1 v2
-      | BOr _ -> 
+      | Npk.BOr _ -> 
 	  if EBigInt.sign_big_int v1 < 0 || EBigInt.sign_big_int v2 < 0 then
 	    Npkcontext.report_error "Cir.eval_exp" "static expression expected"; 
 	  EBigInt.or_big_int v1 v2
-      | BXor _ -> 
+      | Npk.BXor _ -> 
 	  if EBigInt.sign_big_int v1 < 0 || EBigInt.sign_big_int v2 < 0 then 
 	    Npkcontext.report_error "Cir.eval_exp" "static expression expected";
 	      EBigInt.xor_big_int v1 v2
       | _ -> 
 	  Npkcontext.report_error "Cir.eval_exp" "static expression expected"
   in
-  let rec eval_exp e =
+  let rec eval_exp (e: exp) =
     match e with
-	Const (CInt i) -> Nat.to_big_int i
+	Const (CInt i) -> Npk.Nat.to_big_int i
       | Binop (op, e1, e2) -> 
 	  if is_mask op e1 e2 then mask e1 e2
 	  else apply_bop op (eval_exp e1) (eval_exp e2)
-      | Unop (Cast (Ptr, Int _), e) -> eval_exp e
-      | Unop (Cast (Int _, Ptr), e) -> eval_exp e
-      | Unop (Coerce b, e) -> 
+      | Unop (Npkil.Cast (Npk.Ptr, Npk.Int _), e) -> eval_exp e
+      | Unop (Npkil.Cast (Npk.Int _, Npk.Ptr), e) -> eval_exp e
+      | Unop (Npkil.Coerce b, e) -> 
 	  let i = eval_exp e in
-	    if Newspeak.belongs (Nat.of_big_int i) b then i 
+	    if Newspeak.belongs (Npk.Nat.of_big_int i) b then i 
 	    else Npkcontext.report_error "Cir.eval_exp" "integer overflow"
       | _ -> 
 	  Npkcontext.report_error "Cir.eval_exp" "static expression expected"
@@ -561,7 +560,7 @@ and eval_exp e =
       Npkcontext.report_error "Cir.eval_exp" 
 	"expression without side-effects expected"
     end;
-    Nat.of_big_int (eval_exp e)
+    Npk.Nat.of_big_int (eval_exp e)
 
 module Int =
 struct
@@ -704,11 +703,11 @@ let cast (e, t) t' =
   match (t, e, t') with
     | _ when t = t' -> e
 	(* TODO: this should be probably put in firstpass *)
-    | (Fun, Lval lv, Scalar (FunPtr|Ptr|Int _ as t')) -> 
-	Unop (Npkil.Cast (FunPtr, t'), AddrOf lv)
-    | (_, Const (CInt i), Scalar (Int k))
+    | (Fun, Lval lv, Scalar (Npk.FunPtr|Npk.Ptr|Npk.Int _ as t')) -> 
+	Unop (Npkil.Cast (Npk.FunPtr, t'), AddrOf lv)
+    | (_, Const (CInt i), Scalar (Npk.Int k))
 	when Newspeak.belongs i (Newspeak.domain_of_typ k) -> e
-    | (Scalar (Int _), _, Scalar (Int k)) -> 
+    | (Scalar (Npk.Int _), _, Scalar (Npk.Int k)) -> 
 	Unop (Npkil.Coerce (Newspeak.domain_of_typ k), e)
     | (Scalar t, _, Scalar t') -> Unop (Npkil.Cast (t, t'), e)
     | (Void, _, _) -> 
@@ -736,9 +735,6 @@ and is_sublen l1 l2 =
 and is_subfield (f1, (o1, t1)) (f2, (o2, t2)) =
   (f1 = f2) && (o1 = o2) && (is_subtyp t1 t2)
 
-and is_subftyp (args1, ret1) (args2, ret2) =
-  try (is_subtyp ret1 ret2) && (List.for_all2 is_subtyp args1 args2)
-  with Invalid_argument _ -> false
 
 (* a large block has at least 3 instructions or has a call *)
 (* according to test 505, this number should be:
@@ -797,8 +793,8 @@ let is_large_blk x =
 
 let length_of_array len lv =
   match (len, lv) with
-      (Some len, _) -> Known (Nat.of_int len)
-    | (None, Global v) -> Length v
+      (Some len, _) -> Npkil.Known (Npk.Nat.of_int len)
+    | (None, Global v) -> Npkil.Length v
     | _ -> 
 	Npkcontext.report_error "Cir.length_of_array" 
 	  "unknown length of array"
@@ -812,7 +808,7 @@ let rec remove_fst_deref lv =
   match lv with
       Shift (lv, i) ->
 	let e = remove_fst_deref lv in
-	  Binop (PlusPI, e, i) 
+	  Binop (Npk.PlusPI, e, i) 
     | Deref (e, _) -> e
     | _ -> 
 	Npkcontext.report_error "Cir.remove_fst_deref" "pointer deref expected"
@@ -849,6 +845,6 @@ let build_if loc (e, blk1, blk2) =
 
 let exp_is_false e =
   match e with
-      Const CInt n when Nat.compare n Nat.zero = 0 -> true
-    | Unop (Npkil.Not, Const CInt n) when Nat.compare n Nat.zero <> 0 -> true
+      Const CInt n when Npk.Nat.compare n Npk.Nat.zero = 0 -> true
+    | Unop (Npkil.Not, Const CInt n) when Npk.Nat.compare n Npk.Nat.zero <> 0 -> true
     | _ -> false

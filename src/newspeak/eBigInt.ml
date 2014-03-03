@@ -13,10 +13,6 @@
 
 (* $Id: big_int.ml 10327 2010-04-29 13:53:01Z xleroy $ *)
 
-let rec gcd_int i1 i2 =
-  if i2 = 0 then abs i1 else gcd_int i2 (i1 mod i2)
-;;
-
 let rec num_bits_int_aux n =
   if n = 0 then 0 else succ(num_bits_int_aux (n lsr 1));;
 
@@ -28,11 +24,6 @@ let length_of_int = Sys.word_size - 2;;
 
 let monster_int = 1 lsl length_of_int;;
 let biggest_int = monster_int - 1;;
-let least_int = - biggest_int;;
-
-let compare_int n1 n2 =
-  if n1 == n2 then 0 else if n1 > n2 then 1 else -1;;
-
 
 open Nat
 
@@ -473,7 +464,7 @@ let power_base_nat base nat off len =
     and l = num_bits_int n - 2 in
     let p = ref (1 lsl l) in
       blit_nat res 0 power_base pmax 1;
-      for i = l downto 0 do
+      for _i = l downto 0 do
         let len = num_digits_nat res 0 n in
         let len2 = min n (2 * len) in
         let succ_len2 = succ len2 in
@@ -518,7 +509,7 @@ let power_big_int_positive_int bi n =
          and l = num_bits_int n - 2 in
          let p = ref (1 lsl l) in
          blit_nat res 0 bi.abs_value 0 bi_len;
-         for i = l downto 0 do
+         for _i = l downto 0 do
            let len = num_digits_nat res 0 res_len in
            let len2 = min res_len (2 * len) in
            set_to_zero_nat res2 0 len2;

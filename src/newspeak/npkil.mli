@@ -26,16 +26,15 @@
   email: olivier.levillain@penjili.org
 *)
 
-open Newspeak
-
 (* TODO: extern storage not well handled !!! 
    By default, we accept extern as if they were declared but not defined 
 *)
+
 type t = {
   globals: (string, gdecl) Hashtbl.t;
   init: blk;
-  fundecs: (fid, fundec) Hashtbl.t;
-  src_lang: src_lang
+  fundecs: (Newspeak.fid, fundec) Hashtbl.t;
+  src_lang: Newspeak.src_lang
 }
 
 and assertion = token list
@@ -49,7 +48,7 @@ and token =
 and gdecl = {
   global_type: typ;
   storage: storage;
-  global_position: location;
+  global_position: Newspeak.location;
   is_used: bool
 }
 
@@ -64,13 +63,13 @@ and fundec = {
   arg_identifiers: string list;
   function_type: ftyp;
   body: blk;
-  position: location;
+  position: Newspeak.location;
 }
 
 and typ = 
     Scalar of Newspeak.scalar_t
   | Array of (typ * tmp_size_t)
-  | Region of (field list * size_t)
+  | Region of (field list * Newspeak.size_t)
 
 and ftyp = typ list * typ list
 
@@ -102,35 +101,35 @@ and vid = int
 and lval =
     Local of string
   | Global of string
-  | Deref of (exp * size_t)
+  | Deref of (exp * Newspeak.size_t)
   | Shift of (lval * exp)
   | Str of string
 
 and exp =
-    Const of cst
+    Const of Newspeak.cst
   | Lval of (lval * typ)
   | AddrOf of (lval * tmp_nat)
-  | AddrOfFun of (fid * ftyp)
+  | AddrOfFun of (Newspeak.fid * ftyp)
   | UnOp of (unop * exp)
-  | BinOp of (binop * exp * exp)
+  | BinOp of (Newspeak.binop * exp * exp)
 
 and fn =
-    FunId of fid
+    FunId of Newspeak.fid
   | FunDeref of exp
 
 and unop =
-    Belongs_tmp of (Nat.t * tmp_nat)
+    Belongs_tmp of (Newspeak.Nat.t * tmp_nat)
   | Coerce of Newspeak.bounds
   | Not
   | BNot of Newspeak.bounds
-  | PtrToInt of ikind
-  | IntToPtr of ikind
-  | Cast of (scalar_t * scalar_t)
+  | PtrToInt of Newspeak.ikind
+  | IntToPtr of Newspeak.ikind
+  | Cast of (Newspeak.scalar_t * Newspeak.scalar_t)
 
 (* TODO: code cleanup: think about this! *)
 and tmp_nat =
     Unknown (* flexible array *)
-  | Known of Nat.t
+  | Known of Newspeak.Nat.t
   | Length of string
   | Mult of (tmp_nat * int)
 
@@ -153,7 +152,7 @@ val zero_f : exp
 
 (** [make_int_coerce t e] wraps e into a coerce expression using
     integer bounds of type t *)
-val make_int_coerce : sign_t * size_t -> exp -> exp
+val make_int_coerce : Newspeak.sign_t * Newspeak.size_t -> exp -> exp
 
 val negate : exp -> exp
 

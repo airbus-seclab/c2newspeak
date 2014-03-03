@@ -100,67 +100,9 @@ and exp =
   | UnOp of (N.unop * exp)
   | BinOp of (N.binop * exp * exp)
 
-let bind_var x t body =
-  let rec bind_in_lval n lv =
-    match lv with
-        Local x -> Local x
-      | Global y when x = y -> Local n
-      | Deref (e, sz) -> Deref (bind_in_exp n e, sz)
-      | Shift (lv, e) -> Shift (bind_in_lval n lv, bind_in_exp n e)
-      | _ -> lv
 
-  and bind_in_exp n e =
-    match e with
-        Lval (lv, t) -> Lval (bind_in_lval n lv, t)
-      | AddrOf lv -> AddrOf (bind_in_lval n lv)
-      | UnOp (op, e) -> UnOp (op, bind_in_exp n e)
-      | BinOp (op, e1, e2) -> BinOp (op, bind_in_exp n e1, bind_in_exp n e2)
-      | _ -> e
-  in
-
-  let rec bind_in_blk n x = List.map (bind_in_stmt n) x
-
-  and bind_in_stmt n (x, loc) = (bind_in_stmtkind n x, loc)
-
-  and bind_in_stmtkind n x =
-    match x with
-        Set (lv, e, t) ->
-          let lv = bind_in_lval n lv in
-          let e = bind_in_exp n e in
-            Set (lv, e, t)
-      | Guard b -> Guard (bind_in_exp n b)
-      | Copy (lv1, lv2, sz) ->
-          let lv1 = bind_in_lval n lv1 in
-          let lv2 = bind_in_lval n lv2 in
-            Copy (lv1, lv2, sz)
-      | Decl (x, t, body) -> 
-          let body = bind_in_blk (n+1) body in
-            Decl (x, t, body)
-      | Select (body1, body2) -> 
-          Select (bind_in_blk n body1, bind_in_blk n body2)
-      | InfLoop body -> 
-          let body = bind_in_blk n body in
-            InfLoop body
-      | DoWith (body, lbl) -> 
-          let body = bind_in_blk n body in
-            DoWith (body, lbl)
-      | Call (FunDeref (e, t)) ->
-          let e = bind_in_exp n e in
-            Call (FunDeref (e, t))
-      | _ -> x
-  in
-
-  let body = bind_in_blk 0 body in
-    Decl (x, t, body)
   
 let exp_of_int x = Const (N.CInt (N.Nat.of_int x))
-
-let new_id =
-  let c = ref 0 in
-  fun _ ->
-    incr c;
-    !c
-
 
 (***************************************************)
 
@@ -327,7 +269,7 @@ let string_of_blk offset x =
 
   let rec dump_stmt only (sk, loc) =
     match sk with
-        Set (lv, e, sc) ->
+        Set (lv, e, sc) -> 
           dump_line_at loc ((string_of_lval lv)^" =("^(string_of_scalar sc)^
                         ") "^(string_of_exp e)^";")
       | Guard b -> dump_line_at loc ("guard("^(string_of_exp b)^");")
@@ -616,8 +558,6 @@ let visit_fun visitor fid declaration =
     visit_blk visitor declaration.body;
     visitor.func_after ()
   end
-
-let visit_init visitor (_, _, e) = visit_exp visitor e
 
 let visit_glb visitor id t =
   let continue = visitor.gdecl id t in
@@ -920,15 +860,6 @@ let rec simplify_stmt actions (x, loc) =
     List.iter (fun x -> stmt := x#process_stmtkind !stmt) actions;
     (!stmt, loc)
       
-and simplify_choose_elt actions (cond, body) = 
-  let cond = List.map (simplify_exp actions) cond in
-  let body = simplify_blk actions body in
-    (cond, body)
-      
-(* TODO: clean up simplifications, systematic:
-   have a class list of simplifications, instead of applying a list,
-   have an option to continue,
-   suppress simplify_arithmexp *)
 and simplify_exp actions e =
   let e = 
     match e with
@@ -1069,12 +1000,6 @@ and build_ftyp builder (args, ret) =
   let ret = List.map (build_typ builder) ret in
     (args, ret)
 
-and build_cell builder (o, t, e) =
-  let o = build_size_t builder o   in
-  let t = build_scalar_t builder t in
-  let e = build_exp builder e      in
-    (o, t, e)
-
 and build_offset builder o = builder#process_offset o
 
 and build_size_t builder sz = builder#process_size_t sz
@@ -1144,11 +1069,6 @@ and build_token builder x =
   match x with
       LvalToken (lv, t) -> LvalToken ((build_lval builder lv), t)
     | _ -> x
-
-and build_choice builder (cond, body) =
-  let cond = List.map (build_exp builder) cond in
-  let body = build_blk builder body in
-    (cond, body)
 
 and build_funexp builder fn =
   match fn with

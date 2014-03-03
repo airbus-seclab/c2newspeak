@@ -22,10 +22,9 @@
   12, rue Pasteur - BP 76 - 92152 Suresnes Cedex - France
   email: charles.hymans@penjili.org
 *)
+module N = Newspeak
 
-open Newspeak
-
-type t = (global * location) list
+type t = (global * N.location) list
 
 and assertion = spec_token list
 
@@ -81,14 +80,14 @@ and 'exp init_designator =
     | InitIndex of 'exp
     | InitAnon
 
-and stmt = (stmtkind * location)
+and stmt = (stmtkind * N.location)
 
 and blk = stmt list
 
 and stmtkind =
     LocalDecl of (string * decl)
   | If of (exp * blk * blk)
-  | CSwitch of (exp * (exp * blk * location) list * blk)
+  | CSwitch of (exp * (exp * blk * N.location) list * blk)
       (* init, while exp is true do blk and then blk, 
 	 continue jumps before the second blk 
 	 init may cotain break or continue stmt!
@@ -161,17 +160,17 @@ and offset_exp =
   | OField of aux_offset_exp * string
   | OArray of aux_offset_exp * string * exp
 
-let char_typ () = Int (char_kind ())
+let char_typ () = Int (N.char_kind ())
   
-let int_typ () = Int (Signed, !Config.size_of_int)
+let int_typ () = Int (N.Signed, !Config.size_of_int)
 
-let long_typ () = Int (Signed, !Config.size_of_long)
+let long_typ () = Int (N.Signed, !Config.size_of_long)
 
-let uint_typ () = Int (Unsigned, !Config.size_of_int)
+let uint_typ () = Int (N.Unsigned, !Config.size_of_int)
 
-let exp_of_char c = Cst (Cir.CInt (Nat.of_int (Char.code c)), char_typ ())
+let exp_of_char c = Cst (Cir.CInt (N.Nat.of_int (Char.code c)), char_typ ())
 
-let exp_of_int i = Cst (Cir.CInt (Nat.of_int i), int_typ ())
+let exp_of_int i = Cst (Cir.CInt (N.Nat.of_int i), int_typ ())
 
 let nat_of_lexeme base x =
   let read_digit c = (int_of_char c) - (int_of_char '0') in
@@ -188,11 +187,11 @@ let nat_of_lexeme base x =
       | Some ("0x"|"0X") -> (read_hex_digit, 16)
       | _ -> Npkcontext.report_error "Csyntax.nat_of_lexeme" "invalid base"
   in
-  let v = ref Nat.zero in
+  let v = ref N.Nat.zero in
   let add_digit c =
     let d = read_digit c in
-      v := Nat.mul_int base !v;
-      v := Nat.add_int d !v
+      v := N.Nat.mul_int base !v;
+      v := N.Nat.add_int d !v
   in
     String.iter add_digit x;
     !v
@@ -203,9 +202,9 @@ let int_cst_of_lexeme (base, x, sign, min_sz) =
   let possible_signs = 
     match (base, sign) with
 (* TODO: not in conformance with standard. strange *)
-	(None, None) -> [Signed; Unsigned]
-      | (Some _, None) -> [Signed; Unsigned]
-      | (_, Some ('u'|'U')) -> Unsigned::[]
+	(None, None) -> [N.Signed; N.Unsigned]
+      | (Some _, None) -> [N.Signed; N.Unsigned]
+      | (_, Some ('u'|'U')) -> [N.Unsigned]
       | _ -> 
 	  Npkcontext.report_error "Csyntax.int_cst_of_lexeme" 
 	    "unreachable statement"
@@ -225,20 +224,20 @@ let int_cst_of_lexeme (base, x, sign, min_sz) =
       && (Newspeak.belongs x (Newspeak.domain_of_typ (sign, sz))))
   in
   let ikind_tbl =
-    [(Signed, !Config.size_of_int); (Unsigned, !Config.size_of_int); 
-     (Signed, !Config.size_of_long); (Unsigned, !Config.size_of_long); 
-     (Signed, !Config.size_of_longlong); (Unsigned, !Config.size_of_longlong)
+    [(N.Signed, !Config.size_of_int); (N.Unsigned, !Config.size_of_int); 
+     (N.Signed, !Config.size_of_long); (N.Unsigned, !Config.size_of_long); 
+     (N.Signed, !Config.size_of_longlong); (N.Unsigned, !Config.size_of_longlong)
     ]    
   in
   let k = 
     try List.find is_kind ikind_tbl 
     with Not_found -> 
       Npkcontext.report_error "Csyntax.int_cst_of_lexeme"
-	("unexpected integer constant: "^(Nat.to_string x))
+	("unexpected integer constant: "^(N.Nat.to_string x))
   in
     (Cir.CInt x, Int k)
 
-let char_cst_of_lexeme x = (Cir.CInt (Nat.of_int x), char_typ ())
+let char_cst_of_lexeme x = (Cir.CInt (N.Nat.of_int x), char_typ ())
 
 (* ANSI C: 6.4.4.2 *)
 let float_cst_of_lexeme (value, suffix) =
@@ -288,8 +287,8 @@ let rec string_of_typ margin t =
     | Int (sgn, sz) -> 
 	let sgn = 
 	  match sgn with
-	      Unsigned -> "unsigned "
-	    | Signed -> ""
+	      N.Unsigned -> "unsigned "
+	    | N.Signed -> ""
 	in
 	let sz = string_of_int sz in
 	  sgn^"int"^sz
@@ -305,7 +304,7 @@ let rec string_of_typ margin t =
 	
 and string_of_exp margin e =
   match e with
-      Cst (Cir.CInt c, _) -> Newspeak.Nat.to_string c
+      Cst (Cir.CInt c, _) -> N.Nat.to_string c
     | Cst _ -> "Cst"
     | Var x -> x
     | RetVar -> "!RetVar"

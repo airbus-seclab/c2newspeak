@@ -116,8 +116,6 @@ and stmtkind =
 
 and lbl = string
 
-and static = bool
-
 and exp = 
     | Cst of (Cir.cst * typ)
     | Local of string
@@ -324,7 +322,7 @@ let min_ftyp (args_t1, ret_t1) (args_t2, ret_t2) =
     end;
     (args_t, ret_t1)
 
-let rec min_typ t1 t2 =
+let min_typ t1 t2 =
   match (t1, t2) with
       (Array (_, None), Array _) -> t2
     | _ -> t1

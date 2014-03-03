@@ -33,8 +33,6 @@ module  T  = AdaTypes
 module TC  = Typecheck
 module Sym = Symboltbl
 
-let (%+) = Nat.add
-let (%-) = Nat.sub
 
 let set_package = ref None
 
@@ -1336,7 +1334,7 @@ and normalize_basic_decl item loc =
 and normalize_package_spec (name, list_decl) =
   Sym.set_current gtbl name;
   Sym.enter_context ~name ~desc:"Package spec" gtbl;
-  let rec normalize_decls decls =
+  let normalize_decls decls =
      List.flatten (List.map (fun (decl, loc) ->
 			      Npkcontext.set_loc loc;
 			      List.map (fun x -> (x,loc))
@@ -1709,7 +1707,7 @@ and normalize_instr ?return_type ?(force_lval = false) (instr,loc) =
 	    | _ -> 	basic_loop ()
     end
       
-  | Exit -> [Ast.Exit, loc]
+  | AdaSyntax.Exit -> [Ast.Exit, loc]
   | Case (e, choices, default) ->
       let case_exp = normalize_exp e in
       let (_, case_t) = case_exp in 
@@ -2234,7 +2232,7 @@ and normalize_body body  = match body with
 	  Sym.set_current gtbl name;
 	  Sym.enter_context ~name ~desc:"Package body" gtbl;
 	  let (nname,nspec) = 
-	    let rec normalize_decls decls =
+	    let normalize_decls decls =
 	    List.flatten (List.map (fun (decl, loc) ->
 				      Npkcontext.set_loc loc;
 				      List.map (fun x -> (x,loc))

@@ -1,17 +1,17 @@
 
-L = {H=000008d2, U=6, trait = Float 6, range = <unlimited>}
-R = {H=13037cd5, U=8, trait = Signed I[-128;127], range = <unlimited>}
+L = {H=33f64f6c, U=6, trait = Float 6, range = <unlimited>}
+R = {H=2e06a9f9, U=8, trait = Signed I[-128;127], range = <unlimited>}
 Warning: t455.adb:5#8: UNSOUND static evaluation of cast
 
-L = {H=000008d2, U=6, trait = Float 6, range = <unlimited>}
-R = {H=13037cd5, U=8, trait = Signed I[-128;127], range = <unlimited>}
+L = {H=33f64f6c, U=6, trait = Float 6, range = <unlimited>}
+R = {H=2e06a9f9, U=8, trait = Signed I[-128;127], range = <unlimited>}
 
-L = {H=000008d2, U=6, trait = Float 6, range = <unlimited>}
-R = {H=13037cd5, U=8, trait = Signed I[-128;127], range = <unlimited>}
+L = {H=33f64f6c, U=6, trait = Float 6, range = <unlimited>}
+R = {H=2e06a9f9, U=8, trait = Signed I[-128;127], range = <unlimited>}
 Warning: t455.adb:6#8: UNSOUND static evaluation of cast
 
-L = {H=000008d2, U=6, trait = Float 6, range = <unlimited>}
-R = {H=13037cd5, U=8, trait = Signed I[-128;127], range = <unlimited>}
+L = {H=33f64f6c, U=6, trait = Float 6, range = <unlimited>}
+R = {H=2e06a9f9, U=8, trait = Signed I[-128;127], range = <unlimited>}
 Newspeak output
 ---------------
 void t455(void) {

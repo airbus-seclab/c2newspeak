@@ -171,7 +171,7 @@ let translate prog =
 
   let translate_assertion x = List.map translate_token x in
 
-  (* TOOD: find a way to factor prefix_args and suffix_rets!! *)
+ 
   let prefix_args loc f args args_ids ft =
     let rec add args =
       match args with
@@ -182,77 +182,37 @@ let translate prog =
 	      pop tmp_var;
 	      let full_call = (set, loc)::(call, loc)::[] in
 		L.Decl (x, t, full_call)
-(* TODO: (arg::args, t::args_t, x::args_ids) -> *)
-(* TODO: push tmp_var;
-            let set = begin match arg with
-              | In    e -> Some (translate_set (Local tmp_var, e, t))
-              | Out   _ -> None
-            end in
-            let call = add (args, args_t, args_ids) in
-            let copy_out = match arg with
-              | In    _ -> None
-              | Out   l -> Some (translate_set (l, Lval (Local tmp_var, t), t))
-            in
-              pop tmp_var;
-              let call_with_copyout = 
-		match copy_out with
-		  | None   -> (call, loc)::[]
-		  | Some c -> (call, loc)::(c, loc)::[]
-              in
-              let full_call = match set with
-		| None   -> call_with_copyout
-		| Some s -> (s, loc)::call_with_copyout
-              in
-		L.Decl (x, t, full_call)
-*)
 
-
-        (*BEFORE | ([], []) -> L.Call (translate_fn f ft)*)
-	| ([], _) -> L.Call (translate_fn f ft) (************************CHECK THIS HACK*)
-
-	| _ -> (*BEFORE*)
-	    (* Npkcontext.report_error "hpk2npk.prefix_args"
-              "Mismatching  number of parameters"
-	    *) raise Not_found
-
-	    
+	| ([], _) -> L.Call (translate_fn f ft)
+	| _ -> raise Not_found	    
     in
       add (args, args_ids)
   in
 
   let suffix_rets fid loc f (args, ret_vars) args_ids ft =
-    let  (*rec*)rec add rets =
+    let rec add rets =
       match rets with
-          (* TODO: should have one list instead of two here!!! *)
-          (lv, t)::titi(*[]*) -> 
+          (lv, t)::titi -> 
             push tmp_var;
             let e = Lval (Local tmp_var, t) in
 
 	    (* TO DO:  Cast back for ADA in translate_set *)
 	    let set = translate_set (lv, e, t) in  
 
-            (*BEFORE
-	    let call = prefix_args loc f args args_ids ft in*)
 	    let call = add titi in 
-	    (*BEFORE*)
-	    (* !!!!!!!!!       !!!!!!!!!!!!    tmp var !!!! *)
 
             let x = Temps.to_string (new_id ()) (Temps.Value_of fid) in
               pop tmp_var;
 	      L.Decl (x, t, (call, loc)::(set, loc)::[])
         | [] -> prefix_args loc f args args_ids ft
-	    (*BEFORE 
-	      | _ -> Npkcontext.report_error "Npk2lpk.suffix_rets" 
-	      "case not implemented yet"
-	    *)
-
+	    
     in
-    (*   AFTER   *)
     let add_fst rets =
       match rets with
           (Local v, _)::[] when Hashtbl.find env v = !stack_height -> begin
 	    try 
-	      prefix_args loc f args args_ids ft
+	      prefix_args loc f args args_ids ft 
+
 	    with _ -> 
 	      (*Not_found due to the mix btw 
 		returned_val et Out param Ada*)
@@ -261,13 +221,6 @@ let translate prog =
 	    
         | _ ->  add rets
     in
-    (* BEFORE     
-	let add_fst rets =
-	match rets with
-        (Local v, _)::[] when Hashtbl.find env v = !stack_height -> 
-	prefix_args loc f args args_ids ft
-        | _ ->  add rets             in
-    *)
       add_fst ret_vars
   in
 
@@ -286,7 +239,7 @@ let translate prog =
                       let fundec = Hashtbl.find prog.fundecs fid in
                         List.map fst fundec.args
                     with Not_found -> 
-		      default_args_ids fid (List.length args)
+		      default_args_ids fid (List.length args) 
                   in 
 		    (fid, args_ids)
 	      | FunDeref _ -> 
@@ -294,7 +247,7 @@ let translate prog =
                     (fid, default_args_ids fid (List.length args))
           in
 	  let ft = (List.map snd args, List.map snd ret_vars) in
-            suffix_rets fid loc f (args, ret_vars) args_ids ft
+          suffix_rets fid loc f (args, ret_vars) args_ids ft
 
       | DoWith (body, lbl) -> L.DoWith (translate_blk body, lbl)
       | Goto lbl -> L.Goto lbl
@@ -303,7 +256,7 @@ let translate prog =
           let body = translate_blk body in
             pop x;
             L.Decl (x, t, body)
-      | Set (lv, e, t) ->
+      | Set (lv, e, t) -> 
 	  translate_set (lv, e, Scalar t)
       | Copy (dst, src, sz) -> 
 	  L.Copy (translate_lval dst, translate_lval src, sz)

@@ -395,7 +395,7 @@ let translate compil_unit =
                        translate_block r
              in
                  (C.Goto Params.ret_lbl, loc)::tr_reste
-           | Exit -> (C.Goto Params.brk_lbl, loc)::(translate_block r)
+           | Ast.Exit -> (C.Goto Params.brk_lbl, loc)::(translate_block r)
            | Assign(lv,exp) ->
                (translate_affect lv exp loc)::(translate_block r)
            | If(condition,instr_then,instr_else) ->
@@ -410,7 +410,7 @@ let translate compil_unit =
                  ::(translate_block r)
            | Loop(While(cond), body) ->
                translate_block
-                 ((Loop(NoScheme,(If(cond,[],[Exit,loc]),loc)::body),
+                 ((Loop(NoScheme,(If(cond,[],[Ast.Exit,loc]),loc)::body),
                    loc)::r)
            | ProcedureCall (sc, name, args) -> begin
                let fname = C.Fname (concat_resolved_name sc name) in

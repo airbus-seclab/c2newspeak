@@ -774,7 +774,7 @@ let coerce_types a b =
   | Univ_int    , Signed   _ -> b
   | _ -> a
 
-let rec is_compatible one another =
+let is_compatible one another =
   if (is_unknown one || is_unknown another) then
     Npkcontext.report_warning "is_compatible"
         "testing compatibility against unknown type";

@@ -648,41 +648,6 @@ object
   method process_offset (x: offset) = x
 end
 
-class simplify_labels =
-object (self)
-  inherit builder
-    
-  val mutable stack = []
-
-  method private bind lbl lbl' = stack <- (lbl, lbl')::stack
-
-  method private pop () =
-    match stack with
-        _::tl -> stack <- tl
-      | _ -> invalid_arg "Newspeak.simplify_labels.pop: unexpected empty stack"
-
-  method private find lbl = List.assoc lbl stack
-
-  method enter_stmtkind x =
-    match x with
-        DoWith ((DoWith (_, lbl1), _)::[], lbl2) ->
-          self#bind lbl1 lbl1;
-          self#bind lbl2 lbl1
-      | DoWith (_, lbl) -> self#bind lbl lbl
-      | _ -> ()
-
-  method process_stmtkind x =
-    match x with
-      | Goto lbl -> Goto (self#find lbl)
-      | DoWith ((DoWith (body, lbl1), _)::[], _) ->
-          self#pop ();
-          self#pop ();
-          DoWith (body, lbl1)
-      | DoWith _ -> 
-          self#pop ();
-          x
-      | _ -> x
-end
 
 class simplify_coerce =
 object 
@@ -838,7 +803,8 @@ let simplify_gotos blk =
           stack := tl
       | [] -> invalid_arg "Newspeak.simplify_gotos: unexpected empty stack"
   in
-  let rec has_no_guard_with_goto blk =
+
+  let has_no_guard_with_goto blk =
     let rec last_is_goto blk =
       match blk with
 	  [] -> false
@@ -981,15 +947,6 @@ let rec simplify_stmt actions (x, loc) =
     List.iter (fun x -> stmt := x#process_stmtkind !stmt) actions;
     (!stmt, loc)
       
-and simplify_choose_elt actions (cond, body) = 
-  let cond = List.map (simplify_exp actions) cond in
-  let body = simplify_blk actions body in
-    (cond, body)
-      
-(* TODO: clean up simplifications, systematic:
-   have a class list of simplifications, instead of applying a list,
-   have an option to continue,
-   suppress simplify_arithmexp *)
 and simplify_exp actions e =
   let e = 
     match e with
@@ -1131,17 +1088,6 @@ and build_formal_ftyp builder (args, ret) =
   let ret 	       = List.map build_arg ret in
     (args, ret)
 
-and build_ftyp builder (args, ret) =
-  let args = List.map (build_typ builder) args in
-  let ret  = List.map (build_typ builder) ret in
-    (args, ret)
-
-and build_cell builder (o, t, e) =
-  let o = build_size_t builder o in
-  let t = build_scalar_t builder t in
-  let e = build_exp builder e in
-    (o, t, e)
-
 and build_offset builder o = builder#process_offset o
 
 and build_size_t builder sz = builder#process_size_t sz
@@ -1213,10 +1159,6 @@ and build_token builder x =
       LvalToken (lv, t) -> LvalToken ((build_lval builder lv), t)
     | _ -> x
 
-and build_choice builder (cond, body) =
-  let cond = List.map (build_exp builder) cond in
-  let body = build_blk builder body in
-    (cond, body)
 
 and build_funexp builder fn =
   match fn with
@@ -1460,8 +1402,6 @@ let visit_fun visitor fid ft =
     visit_blk visitor ft.body;
     visitor#process_fun_after ()
   end
-
-let visit_init visitor (_, _, e) = visit_exp visitor e
 
 let visit_glb visitor id t =
   let continue = visitor#process_gdecl id t in

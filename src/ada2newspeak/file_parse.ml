@@ -25,8 +25,6 @@
 
 *)
 
-open Ada_utils
-
 let parse (fname:string): AdaSyntax.compilation_unit =
   let cin =
     try open_in fname

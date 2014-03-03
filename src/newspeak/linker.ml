@@ -44,14 +44,7 @@ module N = Newspeak
 (* TODO: should make these globals, local to linking, here they eat memory. *)
 (* Association table global -> Newspeak.typ *)
 let globals = Hashtbl.create 100
-let funspecs = Hashtbl.create 100
 let cstr_init = ref []
-
-let scalar_of_typ t =
-  match t with
-      Scalar t -> t
-    | _ -> 
-        Npkcontext.report_error "Linker.scalar_of_typ" "scalar type expected"
 
 let get_glob_typ name =
   try
@@ -73,10 +66,6 @@ and generate_field (offs, t) = (offs, generate_typ t)
 
 and generate_ftyp (args, rets) =
     (List.map generate_typ args, List.map generate_typ rets)
-
-and generate_init_field (sz, sca, e) = 
-  let e = generate_exp e in
-    (sz, sca, e)
 
 and generate_lv lv =
   match lv with

@@ -125,7 +125,7 @@ struct
 	    Some (Map.add x v s)
      
   let exp_to_eq e s =
-    let rec translate e =
+    let translate e =
       match e with
 	| BinOp (Eq, Lval Global x, e) -> (x, EQ, eval_exp s e)
 	| BinOp (Gt, e, Lval Global x) -> (x, GT, eval_exp s e)

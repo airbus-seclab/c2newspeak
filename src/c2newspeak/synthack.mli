@@ -1,5 +1,3 @@
-open Newspeak
-
 val init_tbls: unit -> unit
 
 val declare_new_type: BareSyntax.var_modifier -> unit

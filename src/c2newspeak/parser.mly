@@ -26,7 +26,7 @@
 %{
 
 open Csyntax
-open BareSyntax
+module Bare = BareSyntax
 open Lexing
 (* TODO: should return the bare tree without doing any normalization, simplifications error reporting other than parsing errors *)
 
@@ -77,7 +77,7 @@ let report_asm tokens =
 let rec build_ptrto n t =
   if n < 0 then invalid_arg "build_ptrto"
   else if n = 0 then t
-  else PtrTo (build_ptrto (n-1) t)
+  else Bare.PtrTo (build_ptrto (n-1) t)
 
 %}
 
@@ -149,9 +149,9 @@ parse:
 ;;
 
 translation_unit:
-  NPK translation_unit                      { (GlbUserSpec $1, get_loc ())::$2 }
+  NPK translation_unit                      { (Bare.GlbUserSpec $1, get_loc ())::$2 }
 | external_declaration translation_unit     { $1@$2 }
-| SEMICOLON translation_unit                { (GlbSkip, get_loc ())::$2 }
+| SEMICOLON translation_unit                { (Bare.GlbSkip, get_loc ())::$2 }
 |                                           { [] }
 ;;
 
@@ -168,14 +168,14 @@ function_declarator:
   old_parameter_declaration_list           { 
     Npkcontext.report_accept_warning "Parser.declarator"
       "deprecated style of function definition" Npkcontext.DirtySyntax;
-    ($1, Function ($2, build_funparams $4 $6))
+    ($1, Bare.Function ($2, build_funparams $4 $6))
   }
 | direct_declarator 
   LPAREN identifier_list RPAREN
   old_parameter_declaration_list           { 
     Npkcontext.report_accept_warning "Parser.declarator"
       "deprecated style of function definition" Npkcontext.DirtySyntax;
-    (0, Function ($1, build_funparams $3 $5))
+    (0, Bare.Function ($1, build_funparams $3 $5))
   }
 ;;
 
@@ -189,7 +189,7 @@ declaration:
 ;;
 
 init_declarator_list:
-                                            { (((0, Abstract), []), None)::[] }
+                                            { (((0, Bare.Abstract), []), None)::[] }
 | non_empty_init_declarator_list            { $1 }
 ;;
 
@@ -220,15 +220,15 @@ declarator:
 ;;
 
 direct_declarator:
-  ident_or_tname                           { (0, Variable ($1, get_loc ())) }
+  ident_or_tname                           { (0, Bare.Variable ($1, get_loc ())) }
 | LPAREN declarator RPAREN                 { $2 }
 | direct_declarator LBRACKET 
-      expression_sequence RBRACKET         { (0, Array ($1, Some $3)) }
+      expression_sequence RBRACKET         { (0, Bare.Array ($1, Some $3)) }
 | direct_declarator LBRACKET 
-      type_qualifier_list RBRACKET         { (0, Array ($1, None)) }
+      type_qualifier_list RBRACKET         { (0, Bare.Array ($1, None)) }
 | direct_declarator 
-  LPAREN parameter_list RPAREN             { (0, Function ($1, $3)) }
-| direct_declarator LPAREN RPAREN          { (0, Function ($1, [])) }
+  LPAREN parameter_list RPAREN             { (0, Bare.Function ($1, $3)) }
+| direct_declarator LPAREN RPAREN          { (0, Bare.Function ($1, [])) }
 ;;
 
 identifier_list:
@@ -248,7 +248,7 @@ struct_declarator:
 | COLON expression                         { 
     Npkcontext.report_accept_warning "Parser.struct_declarator"
       "anonymous field declaration in structure" Npkcontext.DirtySyntax;
-    ((0, Abstract), Some $2) 
+    ((0, Bare.Abstract), Some $2) 
   }
 ;;
 
@@ -277,11 +277,11 @@ parameter_declaration:
   declaration_specifiers declarator        { ($1, $2) }
 | declaration_specifiers 
   abstract_declarator                      { ($1, $2) }
-| declaration_specifiers                   { ($1, (0, Abstract)) }
+| declaration_specifiers                   { ($1, (0, Bare.Abstract)) }
 ;;
 
 type_name:
-  declaration_specifiers                   { ($1, (0, Abstract)) }
+  declaration_specifiers                   { ($1, (0, Bare.Abstract)) }
 | declaration_specifiers
   abstract_declarator                      { ($1, $2) }
 ;;
@@ -313,13 +313,13 @@ statement:
 ;;
 
 bare_statement:
-  IDENTIFIER COLON statement               { LabeledStmt ($1, $3) }
+  IDENTIFIER COLON statement               { Bare.LabeledStmt ($1, $3) }
 | IF LPAREN expression_sequence RPAREN statement
-  else_branch_option                       { If ($3, $5, $6) }
-| switch_stmt                              { CSwitch $1 }
+  else_branch_option                       { Bare.If ($3, $5, $6) }
+| switch_stmt                              { Bare.CSwitch $1 }
 | iteration_statement                      { $1 }
-| NPK                                      { UserSpec $1 }
-| compound_statement                       { Block $1 }
+| NPK                                      { Bare.UserSpec $1 }
+| compound_statement                       { Bare.Block $1 }
 | simple_statement SEMICOLON               { $1 }
 ;;  
 
@@ -329,19 +329,19 @@ else_branch_option:
 ;;
   
 simple_statement:
-  declaration_modifier declaration         { LocalDecl ($1, $2) }
+  declaration_modifier declaration         { Bare.LocalDecl ($1, $2) }
 | TYPEDEF declaration                      { 
     declare_new_type $2;
-    Typedef $2
+    Bare.Typedef $2
   }
-| RETURN expression_sequence               { Return (Some $2) }
-| RETURN                                   { Return None }
-| expression_sequence                      { Exp $1 }
-| BREAK                                    { Break }
-| CONTINUE                                 { Continue }
-| GOTO IDENTIFIER                          { Goto $2 }
-| asm                                      { Asm }
-|                                          { Skip }
+| RETURN expression_sequence               { Bare.Return (Some $2) }
+| RETURN                                   { Bare.Return None }
+| expression_sequence                      { Bare.Exp $1 }
+| BREAK                                    { Bare.Break }
+| CONTINUE                                 { Bare.Continue }
+| GOTO IDENTIFIER                          { Bare.Goto $2 }
+| asm                                      { Bare.Asm }
+|                                          { Bare.Skip }
 ;;
 
 declaration_modifier:
@@ -377,12 +377,12 @@ iteration_statement:
   LPAREN assignment_expression_list_option SEMICOLON 
          expression_option SEMICOLON
          assignment_expression_list_option RPAREN
-  statement                                { For ($3, $5, $9, $7) }
+  statement                                { Bare.For ($3, $5, $9, $7) }
 | WHILE LPAREN expression_sequence RPAREN 
-  statement                                { While ($3, $5) }
+  statement                                { Bare.While ($3, $5) }
 | DO statement
   WHILE LPAREN expression_sequence 
-  RPAREN SEMICOLON                         { DoWhile ($2, $5) }
+  RPAREN SEMICOLON                         { Bare.DoWhile ($2, $5) }
 ;;
 
 assignment_expression_list_option:
@@ -416,8 +416,8 @@ case_list:
 
 assignment_expression_list:
   expression COMMA 
-  assignment_expression_list               { (Exp $1, get_loc ())::$3 }
-| expression                               { (Exp $1, get_loc ())::[] }
+  assignment_expression_list               { (Bare.Exp $1, get_loc ())::$3 }
+| expression                               { (Bare.Exp $1, get_loc ())::[] }
 ;;
 
 // TODO: put these function in BareSyntax rather than Csyntax
@@ -433,26 +433,26 @@ string_literal:
 ;;
 
 expression:
-  IDENTIFIER                               { Var $1 }
-| constant                                 { Cst $1 }
-| string_literal                           { Str $1 }
-| FUNNAME                                  { FunName }
+  IDENTIFIER                               { Bare.Var $1 }
+| constant                                 { Bare.Cst $1 }
+| string_literal                           { Bare.Str $1 }
+| FUNNAME                                  { Bare.FunName }
 | LPAREN expression_sequence RPAREN        { $2 }
 | LPAREN compound_statement RPAREN         { 
     Npkcontext.report_accept_warning "Parser.relational_expression"
       "block within expression" Npkcontext.DirtySyntax;
-    BlkExp $2
+    Bare.BlkExp $2
   }
 | expression 
-  LBRACKET expression_sequence RBRACKET    { Index ($1, $3) }
+  LBRACKET expression_sequence RBRACKET    { Bare.Index ($1, $3) }
 | expression 
-  LPAREN argument_expression_list RPAREN   { Call ($1, $3) }
-| expression DOT ident_or_tname            { Field ($1, $3) }
+  LPAREN argument_expression_list RPAREN   { Bare.Call ($1, $3) }
+| expression DOT ident_or_tname            { Bare.Field ($1, $3) }
 | expression ARROW ident_or_tname          { 
-    Field (Index ($1, BareSyntax.exp_of_int 0), $3) 
+    Bare.Field (Bare.Index ($1, Bare.exp_of_int 0), $3) 
   }
-| expression PLUSPLUS                      { OpExp (Plus, $1, true) }
-| expression MINUSMINUS                    { OpExp (Minus, $1, true) }
+| expression PLUSPLUS                      { Bare.OpExp (Plus, $1, true) }
+| expression MINUSMINUS                    { Bare.OpExp (Minus, $1, true) }
 // GNU C
 | BUILTIN_CONSTANT_P 
   LPAREN expression_sequence RPAREN        { 
@@ -462,75 +462,75 @@ expression:
   }
 | OFFSETOF 
   LPAREN type_name COMMA 
-  offsetof_member RPAREN                   { Offsetof ($3, $5) }
+  offsetof_member RPAREN                   { Bare.Offsetof ($3, $5) }
 // TODO: factor all these cases => prefix_operator
-| PLUSPLUS   expression    %prec prefix_OP { OpExp (Plus, $2, false) }
-| MINUSMINUS expression    %prec prefix_OP { OpExp (Minus, $2, false) }
-| AMPERSAND  expression    %prec prefix_OP { AddrOf $2 }
+| PLUSPLUS   expression    %prec prefix_OP { Bare.OpExp (Plus, $2, false) }
+| MINUSMINUS expression    %prec prefix_OP { Bare.OpExp (Minus, $2, false) }
+| AMPERSAND  expression    %prec prefix_OP { Bare.AddrOf $2 }
 | STAR       expression    %prec prefix_OP { 
-    Index ($2, BareSyntax.exp_of_int 0) 
+    Bare.Index ($2, BareSyntax.exp_of_int 0) 
   }
 // TODO: factor these with unop non-terminal
-| BNOT       expression    %prec prefix_OP { Unop (BNot, $2) }
-| NOT        expression    %prec prefix_OP { Unop (Not, $2) }
-| MINUS      expression    %prec prefix_OP { BareSyntax.neg $2 }
+| BNOT       expression    %prec prefix_OP { Bare.Unop (BNot, $2) }
+| NOT        expression    %prec prefix_OP { Bare.Unop (Not, $2) }
+| MINUS      expression    %prec prefix_OP { Bare.neg $2 }
 | PLUS       expression                    { $2 }
-| SIZEOF     expression    %prec prefix_OP { SizeofE $2 }
+| SIZEOF     expression    %prec prefix_OP { Bare.SizeofE $2 }
 | SIZEOF LPAREN type_name RPAREN 
-                           %prec prefix_OP { Sizeof $3 }
+                           %prec prefix_OP { Bare.Sizeof $3 }
 | EXTENSION expression     %prec prefix_OP { $2 }
 | LPAREN type_name RPAREN expression
-                           %prec prefix_OP { Cast ($4, $2) }
+                           %prec prefix_OP { Bare.Cast ($4, $2) }
 | LPAREN type_name RPAREN composite        { 
 (* TODO: remove get_loc, use npkcontext.get_loc rather *)
-    LocalComposite ($2, $4, get_loc ())
+    Bare.LocalComposite ($2, $4, get_loc ())
   }
 // TODO: factor these as binop non-terminal??
-| expression STAR      expression          { Binop (Mult, $1, $3) }
-| expression DIV       expression          { Binop (Div, $1, $3) }
-| expression MOD       expression          { Binop (Mod, $1, $3) }
-| expression PLUS      expression          { Binop (Plus, $1, $3) }
-| expression MINUS     expression          { Binop (Minus, $1, $3) }
-| expression SHIFTL    expression          { Binop (Shiftl, $1, $3) }
-| expression SHIFTR    expression          { Binop (Shiftr, $1, $3) }
-| expression GT        expression          { Binop (Gt, $1, $3) }
-| expression GTEQ      expression          { Unop (Not, Binop (Gt, $3, $1)) }
-| expression LT        expression          { Binop (Gt, $3, $1) }
-| expression LTEQ      expression          { Unop (Not, Binop (Gt, $1, $3)) }
-| expression EQEQ      expression          { Binop (Eq, $1, $3) }
-| expression NOTEQ     expression          { Unop (Not, Binop (Eq, $1, $3)) }
-| expression AMPERSAND expression          { Binop (BAnd, $1, $3) }
-| expression BXOR      expression          { Binop (BXor, $1, $3) }
-| expression BOR       expression          { Binop (BOr, $1, $3) }
-| expression AND       expression          { And ($1, $3) }
-| expression OR expression                 { Or ($1, $3) }
+| expression STAR      expression          { Bare.Binop (Mult, $1, $3) }
+| expression DIV       expression          { Bare.Binop (Div, $1, $3) }
+| expression MOD       expression          { Bare.Binop (Mod, $1, $3) }
+| expression PLUS      expression          { Bare.Binop (Plus, $1, $3) }
+| expression MINUS     expression          { Bare.Binop (Minus, $1, $3) }
+| expression SHIFTL    expression          { Bare.Binop (Shiftl, $1, $3) }
+| expression SHIFTR    expression          { Bare.Binop (Shiftr, $1, $3) }
+| expression GT        expression          { Bare.Binop (Gt, $1, $3) }
+| expression GTEQ      expression          { Bare.Unop (Not, Bare.Binop (Gt, $3, $1)) }
+| expression LT        expression          { Bare.Binop (Gt, $3, $1) }
+| expression LTEQ      expression          { Bare.Unop (Not, Bare.Binop (Gt, $1, $3)) }
+| expression EQEQ      expression          { Bare.Binop (Eq, $1, $3) }
+| expression NOTEQ     expression          { Bare.Unop (Not, Bare.Binop (Eq, $1, $3)) }
+| expression AMPERSAND expression          { Bare.Binop (BAnd, $1, $3) }
+| expression BXOR      expression          { Bare.Binop (BXor, $1, $3) }
+| expression BOR       expression          { Bare.Binop (BOr, $1, $3) }
+| expression AND       expression          { Bare.And ($1, $3) }
+| expression OR expression                 { Bare.Or ($1, $3) }
 // TODO: factor the two rules for QMARK
 | expression QMARK expression_sequence
     COLON expression           %prec QMARK {
 	Npkcontext.report_strict_warning "Parser.expression"
 	  "conditional expression";
-      IfExp ($1, Some $3, $5)
+      Bare.IfExp ($1, Some $3, $5)
   }
 | expression QMARK 
-  COLON expression   %prec QMARK           { IfExp ($1, None, $4)}
+  COLON expression   %prec QMARK           { Bare.IfExp ($1, None, $4)}
 | expression assignment_operator
-                   expression     %prec EQ { Set ($1, $2, $3) }
+                   expression     %prec EQ { Bare.Set ($1, $2, $3) }
 | AND IDENTIFIER { Npkcontext.report_warning
                      "Parser.expression"
                      "ignoring address of label, parsing as NULL instead";
-                    Cst (Cir.CInt (Newspeak.Nat.zero), Csyntax.Ptr Csyntax.Void)
+                    Bare.Cst (Cir.CInt (Newspeak.Nat.zero), Csyntax.Ptr Csyntax.Void)
                    }
 ;;
 
 aux_offsetof_member:
-  IDENTIFIER                               { OffComp $1 }
-| aux_offsetof_member DOT IDENTIFIER       { OffField ($1, $3) }
+  IDENTIFIER                               { Bare.OffComp $1 }
+| aux_offsetof_member DOT IDENTIFIER       { Bare.OffField ($1, $3) }
 
 offsetof_member:
-  IDENTIFIER                               { OIdent $1 }
-| aux_offsetof_member DOT IDENTIFIER       { OField ($1, $3) }
+  IDENTIFIER                               { Bare.OIdent $1 }
+| aux_offsetof_member DOT IDENTIFIER       { Bare.OField ($1, $3) }
 | aux_offsetof_member DOT IDENTIFIER 
-  LBRACKET expression RBRACKET             { OArray ($1, $3, $5) }
+  LBRACKET expression RBRACKET             { Bare.OArray ($1, $3, $5) }
 ;;
 
 expression_sequence:
@@ -539,7 +539,7 @@ expression_sequence:
     Npkcontext.report_accept_warning "Parser.expression"
       "comma in expression" Npkcontext.DirtySyntax;
     let loc = get_loc () in
-      BlkExp ((Exp $1, loc)::(Exp $3, loc)::[])
+      Bare.BlkExp ((Bare.Exp $1, loc)::(Bare.Exp $3, loc)::[])
   }
 ;;
 
@@ -573,8 +573,8 @@ nonempty_argument_expression_list:
 ;;
 
 init:
-  expression                               { Data $1 }
-| composite                                { Sequence $1 }
+  expression                               { Bare.Data $1 }
+| composite                                { Bare.Sequence $1 }
 ;;
 
 composite:
@@ -614,7 +614,7 @@ init_list:
 ;;
 
 abstract_declarator:
-  pointer                                  { ($1, Abstract) }
+  pointer                                  { ($1, Bare.Abstract) }
 | direct_abstract_declarator               { $1 }
 | pointer direct_abstract_declarator       { 
     let (ptr, decl) = $2 in
@@ -625,15 +625,15 @@ abstract_declarator:
 // TODO: try to factor cases more
 direct_abstract_declarator:
   LPAREN abstract_declarator RPAREN        { $2 }
-| LBRACKET type_qualifier_list RBRACKET    { (0, Array ((0, Abstract), None)) }
+| LBRACKET type_qualifier_list RBRACKET    { (0, Bare.Array ((0, Bare.Abstract), None)) }
 | LBRACKET expression_sequence RBRACKET    { 
-    (0, Array ((0, Abstract), Some $2)) 
+    (0, Bare.Array ((0, Bare.Abstract), Some $2)) 
   }
 | direct_abstract_declarator 
-  LBRACKET expression_sequence RBRACKET    { (0, Array ($1, Some $3)) }
+  LBRACKET expression_sequence RBRACKET    { (0, Bare.Array ($1, Some $3)) }
 | direct_abstract_declarator 
-  LPAREN parameter_list RPAREN             { (0, Function ($1, $3)) }
-| direct_abstract_declarator LPAREN RPAREN { (0, Function ($1, [])) }
+  LPAREN parameter_list RPAREN             { (0, Bare.Function ($1, $3)) }
+| direct_abstract_declarator LPAREN RPAREN { (0, Bare.Function ($1, [])) }
 ;;
 
 pointer:
@@ -653,7 +653,7 @@ parameter_list:
 | parameter_declaration                    { $1::[] }
 | ELLIPSIS                                 {
     let loc = get_loc () in
-      (Va_arg, (0, Variable ("__builtin_newspeak_va_arg", loc)))::[] 
+      (Bare.Va_arg, (0, Bare.Variable ("__builtin_newspeak_va_arg", loc)))::[] 
   }
 ;;
 
@@ -730,105 +730,105 @@ ftyp:
 ;;
 
 type_specifier:
-  VOID                                    { Void }
-| CHAR                                    { Integer (Newspeak.char_kind ()) }
-| ityp                                    { Integer (Newspeak.Signed, $1) }
-| SIGNED CHAR                             { Integer (Newspeak.Signed, !Config.size_of_char) }
+  VOID                                    { Bare.Void }
+| CHAR                                    { Bare.Integer (Newspeak.char_kind ()) }
+| ityp                                    { Bare.Integer (Newspeak.Signed, $1) }
+| SIGNED CHAR                             { Bare.Integer (Newspeak.Signed, !Config.size_of_char) }
 | SIGNED ityp                             {
     Npkcontext.report_strict_warning "Parser.type_specifier" 
       "signed specifier not necessary";
-    Integer (Newspeak.Signed, $2)
+    Bare.Integer (Newspeak.Signed, $2)
   }
-| UNSIGNED CHAR                           { Integer (Newspeak.Unsigned, !Config.size_of_char) }
+| UNSIGNED CHAR                           { Bare.Integer (Newspeak.Unsigned, !Config.size_of_char) }
 | LONG LONG UNSIGNED INT                  {
     Npkcontext.report_strict_warning "Parser.type_specifier"
       ("'long long unsigned int' is not normalized : "
       ^"use 'unsigned long long int' instead");
-    Integer (Newspeak.Unsigned, !Config.size_of_longlong)
+    Bare.Integer (Newspeak.Unsigned, !Config.size_of_longlong)
   }
-| UNSIGNED ityp                           { Integer (Newspeak.Unsigned, $2) }
+| UNSIGNED ityp                           { Bare.Integer (Newspeak.Unsigned, $2) }
 | UNSIGNED                                { 
     Npkcontext.report_strict_warning "Parser.type_specifier"
       "unspecified integer kind";
-    Integer (Newspeak.Unsigned, !Config.size_of_int)
+    Bare.Integer (Newspeak.Unsigned, !Config.size_of_int)
   }
 
 | LONG SIGNED INT                         {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long signed int' is not normalized: "
        ^"use 'signed long int' instead");
-    Integer (Newspeak.Signed, !Config.size_of_long)
+    Bare.Integer (Newspeak.Signed, !Config.size_of_long)
   }
 
 | LONG SIGNED                             {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long signed' is not normalized: "
        ^"use 'signed long int' instead");
-    Integer (Newspeak.Signed, !Config.size_of_long)
+    Bare.Integer (Newspeak.Signed, !Config.size_of_long)
   }
 
 | LONG UNSIGNED INT                        {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long unsigned int' is not normalized: "
        ^"use 'unsigned long int' instead");
-    Integer (Newspeak.Unsigned, !Config.size_of_long)
+    Bare.Integer (Newspeak.Unsigned, !Config.size_of_long)
   }
 
 | LONG UNSIGNED                            {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'long unsigned' is not normalized: "
        ^"use 'unsigned long int' instead");
-    Integer (Newspeak.Unsigned, !Config.size_of_long)
+    Bare.Integer (Newspeak.Unsigned, !Config.size_of_long)
   }
 
 | SHORT SIGNED INT                         {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short signed int' is not normalized: "
        ^"use 'signed short int' instead");
-    Integer (Newspeak.Signed, !Config.size_of_short)
+    Bare.Integer (Newspeak.Signed, !Config.size_of_short)
   }
 
 | SHORT SIGNED                             {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short signed' is not normalized: "
        ^"use 'signed short int' instead");
-    Integer (Newspeak.Signed, !Config.size_of_short)
+    Bare.Integer (Newspeak.Signed, !Config.size_of_short)
   }
 
 | SHORT UNSIGNED INT                       {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short unsigned int' is not normalized: "
        ^"use 'unsigned short int' instead");
-    Integer (Newspeak.Unsigned, !Config.size_of_short)
+    Bare.Integer (Newspeak.Unsigned, !Config.size_of_short)
   }
 
 | SHORT UNSIGNED                           {
   Npkcontext.report_strict_warning "Parser.type_specifier" 
       ("'short unsigned' is not normalized: "
        ^"use 'unsigned short int' instead");
-    Integer (Newspeak.Unsigned, !Config.size_of_short)
+    Bare.Integer (Newspeak.Unsigned, !Config.size_of_short)
   }
 
-| ftyp                                     { Float $1 }
-| struct_or_union composite_arguments      { Composite ($1, $2) }
-| TYPEDEF_NAME                             { Name $1 }
-| ENUM enum_arguments                      { Enum $2 }
-| VA_LIST                                  { Va_arg }
+| ftyp                                     { Bare.Float $1 }
+| struct_or_union composite_arguments      { Bare.Composite ($1, $2) }
+| TYPEDEF_NAME                             { Bare.Name $1 }
+| ENUM enum_arguments                      { Bare.Enum $2 }
+| VA_LIST                                  { Bare.Va_arg }
 | TYPEOF LPAREN type_specifier RPAREN      { $3 }
 | TYPEOF
     LPAREN type_specifier pointer RPAREN   { build_ptrto $4 $3 }
 | TYPEOF
     LPAREN type_specifier
       LBRACKET expression RBRACKET
-    RPAREN                                 { ArrayOf ($3, $5) }
+    RPAREN                                 { Bare.ArrayOf ($3, $5) }
 | TYPEOF
     LPAREN
       expression
-    RPAREN                                 { TypeofExpr $3 }
+    RPAREN                                 { Bare.TypeofExpr $3 }
 | LABEL                                    { Npkcontext.report_warning
                                                "Parser.type_specifier"
                                                "accepting local label";
-                                             Label
+                                             Bare.Label
                                            }
 ;;
 
@@ -856,29 +856,29 @@ enum_values:
 //Section that is dependent on version of the compiler (standard ANSI or GNU)
 //TODO: find a way to factor some of these, possible!!!
 external_declaration:
-  function_definition                      { (FunctionDef (false, $1), get_loc ())::[] }
-| STATIC function_definition               { (FunctionDef (true, $2), get_loc ())::[] }
-| INLINE STATIC function_definition        { (FunctionDef (true, $3), get_loc ())::[] }
+  function_definition                      { (Bare.FunctionDef (false, $1), get_loc ())::[] }
+| STATIC function_definition               { (Bare.FunctionDef (true, $2), get_loc ())::[] }
+| INLINE STATIC function_definition        { (Bare.FunctionDef (true, $3), get_loc ())::[] }
 | ATTRIBUTE LPAREN LPAREN attribute_name_list 
-  RPAREN RPAREN STATIC function_definition { (FunctionDef (true, $8), get_loc ())::[] }
+  RPAREN RPAREN STATIC function_definition { (Bare.FunctionDef (true, $8), get_loc ())::[] }
 | extension_option
   EXTERN function_definition               {
     Npkcontext.report_ignore_warning "Parser.external_declaration" 
       "extern function definition" Npkcontext.ExternFunDef;
     let ((b, m), _) = $3 in
-      (GlbDecl ((false, false), (b, ((m, []), None)::[])), get_loc ())::[]
+      (Bare.GlbDecl ((false, false), (b, ((m, []), None)::[])), get_loc ())::[]
   }
 | global_declaration SEMICOLON             { $1 }
 ;;
 
 global_declaration:
-  STATIC declaration                       { (GlbDecl ((true, false), $2), get_loc ())::[] }
-| EXTENSION declaration                    { (GlbDecl ((false, false), $2), get_loc ())::[] }
-| declaration                              { (GlbDecl ((false, false), $1), get_loc ())::[] }
-| extension_option EXTERN declaration      { (GlbDecl ((false, true), $3), get_loc ())::[] }
+  STATIC declaration                       { (Bare.GlbDecl ((true, false), $2), get_loc ())::[] }
+| EXTENSION declaration                    { (Bare.GlbDecl ((false, false), $2), get_loc ())::[] }
+| declaration                              { (Bare.GlbDecl ((false, false), $1), get_loc ())::[] }
+| extension_option EXTERN declaration      { (Bare.GlbDecl ((false, true), $3), get_loc ())::[] }
 | extension_option TYPEDEF declaration     { 
     declare_new_type $3;
-    (GlbTypedef $3, get_loc ())::[] 
+    (Bare.GlbTypedef $3, get_loc ())::[] 
   }
 | asm                                      { [] }
 ;;
@@ -916,7 +916,7 @@ field_declaration:
 | declaration_specifiers                   { 
     Npkcontext.report_accept_warning "Parser.field_declaration"
       "anonymous field declaration in structure" Npkcontext.DirtySyntax;
-    flatten_field_decl ($1, ((0, Abstract), None)::[]) 
+    flatten_field_decl ($1, ((0, Bare.Abstract), None)::[]) 
   }
 ;;
 
