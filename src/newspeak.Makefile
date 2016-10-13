@@ -29,7 +29,7 @@ INSTALL.FILES=newspeak/temps.cmi newspeak/config.cmi newspeak/eBigInt.cmi \
 	      newspeak/newspeak.cmi \
 	      utils/standardApplication.cmi newspeak/npkcontext.cmi \
               newspeak/lowspeak.cmi newspeak/npk2lpk.cmi newspeak/npkil.cmi \
-	      newspeak.cma newspeak.cmxa newspeak.a
+		Npk.cmx
 
 all: $(INSTALL.FILES)
 	$(CP) $(INSTALL.FILES) ../bin
@@ -44,9 +44,9 @@ newspeak.cma: $(FILES.CMO)
 	@echo "Building library            "newspeak.cma
 	@$(OCAMLC) nums.cma str.cma -a $(FILES.CMO) -o newspeak.cma
 
-newspeak.a newspeak.cmxa: $(FILES.CMX)
+Npk.cmx: $(FILES.CMX)
 	@echo "Building library            "newspeak.cmx
-	$(OCAMLOPT) -a $(FILES.CMX) -o newspeak.cmxa
+	$(OCAMLOPT) -pack $(FILES.CMX) -o Npk.cmx
 
 CLEANFILES=newspeak.a newspeak.cma newspeak.cmxa newspeak/newspeak.cmo \
            newspeak/npkil.cmo
