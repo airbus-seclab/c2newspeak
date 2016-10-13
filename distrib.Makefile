@@ -61,6 +61,8 @@ bin/lib/assert.h:
 	@-mkdir bin/lib
 	@echo "Copying libraries in        "bin/lib
 	@$(CP) -r lib/* bin/lib
+	-mkdir `ocamlc -where`/newspeak
+	$(CP) bin/npk.* `ocamlc -where`/newspeak
 
 bin:
 	@mkdir bin
