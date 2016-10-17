@@ -81,7 +81,7 @@ clean:
 
 %.cmo: %.ml
 	@echo "Compiling source            "$<
-	@$(OCAMLC) -for-pack Npk $(INCLUDE) $(LIBA) -c $<
+	@$(OCAMLC) $(INCLUDE) $(LIBA) -c $<
 
 %.cmx: %.ml
 	@echo "Compiling source            "$<
