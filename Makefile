@@ -57,7 +57,6 @@ $(DISTDIR): clean
 	tar czf $(DISTFILE) $(DISTDIR)
 
 
-
 check:
 	$(MAKE) -C tests
 

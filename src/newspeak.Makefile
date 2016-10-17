@@ -45,13 +45,15 @@ newspeak.cma: $(FILES.CMO)
 	@$(OCAMLC) nums.cma str.cma -a $(FILES.CMO) -o newspeak.cma
 
 npk.cmxa: $(FILES.CMX)
-	@echo "Building library            "newspeak.cmx
+	@echo "Building library            "npk.cmxa
 	$(OCAMLOPT) -pack $(FILES.CMX) -o npk.cmxa
 
-install:
-	$(CP) npk.* `ocamlc -where`  
+install-pack:
+	-mkdir `ocamlc -where`/newspeak
+	$(CP) bin/npk.* `ocamlc -where`/newspeak
 
-CLEANFILES=newspeak.a newspeak.cma newspeak.cmxa newspeak/newspeak.cmo \
+
+CLEANFILES=newspeak.a newspeak.cma npk.cmxa npk.cmi newspeak/newspeak.cmo \
            newspeak/npkil.cmo
 
 TARGET=newspeak
