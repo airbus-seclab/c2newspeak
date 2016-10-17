@@ -1,0 +1,5 @@
+description = "Newspeak intermediate language"
+requires = ""
+version = "1"
+archive(byte) = ""
+archive(native) = "npk.cmxa"
