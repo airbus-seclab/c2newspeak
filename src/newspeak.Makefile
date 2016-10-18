@@ -29,7 +29,7 @@ INSTALL.FILES=newspeak/temps.cmi newspeak/config.cmi newspeak/eBigInt.cmi \
 	      newspeak/newspeak.cmi \
 	      utils/standardApplication.cmi newspeak/npkcontext.cmi \
               newspeak/lowspeak.cmi newspeak/npk2lpk.cmi newspeak/npkil.cmi \
-	      npk.cmx npk.o
+	      npk.cmx npk.cmi npk.o
 
 all: $(INSTALL.FILES)
 	$(CP) $(INSTALL.FILES) ../bin
@@ -47,9 +47,10 @@ newspeak.cma: $(FILES.CMO)
 npk.cmx: $(FILES.CMX)
 	@echo "Building pack            "npk.cmx
 	$(OCAMLOPT) -pack $(FILES.CMX) -o npk.cmx
+	$(OCAMLC) -pack $(FILES.CMI) -o npk.cmi
 
 install-pkg:
-	ocamlfind install newspeak META $(INSTALL.FILES)
+	ocamlfind install newspeak META npk.cmx npk.cmi npk.o
 
 
 CLEANFILES=newspeak.a newspeak.cma npk.cmxa npk.cmi newspeak/newspeak.cmo \
