@@ -27,10 +27,10 @@
 ifdef WITH_BISECT
 INSTRUMENT_CMA=$(shell ocamlc -where)/bisect/bisect_pp.cmo
 LIBX+=-I +bisect -pp 'camlp4o -unsafe str.cma $(INSTRUMENT_CMA)'
-OCAMLOPTFLAGS=-w Ael  -inline 100 -noassert
+OCAMLOPTFLAGS=-w Ael  -inline 100 -noassert -runtime-variant _pic
 EXTRALINKFLAGS=-I +bisect bisect.cmxa
 else
-OCAMLOPTFLAGS=-w Ael  -inline 100 -noassert -unsafe
+OCAMLOPTFLAGS=-w Ael  -inline 100 -noassert -runtime-variant _pic -unsafe
 endif
 
 #utils
