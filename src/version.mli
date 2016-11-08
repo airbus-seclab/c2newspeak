@@ -23,7 +23,6 @@
   email: charles.hymans@penjili.org
 *)
 
-val date: string
+
 val version: string
-val revision: string
 val newspeak_hash: string
