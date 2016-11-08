@@ -54,7 +54,6 @@ let comment_string =
   
 let version_string =
   software^" version "^Version.version
-  ^" build "^Version.revision^" ("^Version.date^").\n"
   ^"Software under "^licence^". Copyright "^copyright^".\n"
   ^"Architect: Charles Hymans\n"
   ^"Authors: "^authors^".\n"

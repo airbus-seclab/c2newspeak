@@ -67,7 +67,6 @@ let comment_string = String.concat "\n"
  ; " ambiguous language. First implementation by Jasmine Duchon." ]
 
 let version_string =
-  software ^ " version " ^ Version.version
-           ^ " build "   ^ Version.revision ^ " (" ^ Version.date ^ ").\n"
+  software ^ " version " ^ Version.version ^ ".\n"
            ^ "Software under " ^ licence ^ ". Copyright " ^ copyright ^ ".\n"
            ^ "Authors " ^ authors ^ ".\n"

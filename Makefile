@@ -33,11 +33,8 @@ CLEANFILES+=$(VERSION.FILE) $(DISTDIR) $(DISTFILE)
 
 NEWSPEAK_HASH=$(shell md5sum src/newspeak/newspeak.ml | cut -c 1-32)
 
-REV=$(shell git rev-list HEAD -1)
 genversion=\
-# git rev-list HEAD 'let date = "{date|shortdate}"\n' > $(VERSION.FILE); \
-# echo "let version = \"$(VERSION)\"\\n" >> $(VERSION.FILE); \
-# git rev-list HEAD 'let revision = "{node|short}"\n' >> $(VERSION.FILE); \
+echo "let version = \"$(VERSION)\"\\n" >> $(VERSION.FILE); \
 echo "let newspeak_hash=\"$(NEWSPEAK_HASH)\"" >> $(VERSION.FILE)
 
 #Version number generation
