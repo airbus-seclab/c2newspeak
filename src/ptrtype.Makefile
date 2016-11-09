@@ -26,7 +26,7 @@ DIRS=newspeak/ utils/ ptrtype/
 MODS=options utils tyspeak types env unification \
      check infer npk2tpk ptrtype
 
-FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
+FILES=version newspeak/temps newspeak/conf newspeak/eBigInt \
      newspeak/newspeak utils/standardApplication newspeak/npkcontext \
      newspeak/lowspeak  newspeak/npk2lpk $(addprefix ptrtype/, $(MODS))
 LIBX=nums.cmxa str.cmxa

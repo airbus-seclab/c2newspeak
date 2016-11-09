@@ -82,7 +82,7 @@ let process (fname, globals) =
       match (x, t) with
 (* TODO: find a way to simplify/remove this case?? *)
 	  ((Data (Str str)|Sequence ([(InitAnon, Data (Str str))])), 
-	   C.Array (C.Int (_, n), _)) when n = !Config.size_of_char ->
+	   C.Array (C.Int (_, n), _)) when n = !Conf.size_of_char ->
 	    let seq = seq_of_string str in
 	      process (Sequence seq, t)
 
@@ -723,7 +723,7 @@ let process (fname, globals) =
     match (x, t) with
 (* TODO: redundant code with complete_init?? *)
 	((Data (Str str)|Sequence ([(InitAnon, Data (Str str))])), 
-	 C.Array (C.Int (_, n), _)) when n = !Config.size_of_char ->
+	 C.Array (C.Int (_, n), _)) when n = !Conf.size_of_char ->
 	  let seq = seq_of_string str in
 	    translate_init t (Sequence seq)
 	      

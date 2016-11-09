@@ -81,8 +81,8 @@ let check_array_type_length typ =
 	    match s with
 		N.Int (_, sz) -> Nat.of_int sz
 	      | N.Float sz -> Nat.of_int sz
-	      | N.Ptr -> Nat.of_int (!Config.size_of_ptr)
-	      | N.FunPtr -> Nat.of_int (!Config.size_of_ptr)
+	      | N.Ptr -> Nat.of_int (!Conf.size_of_ptr)
+	      | N.FunPtr -> Nat.of_int (!Conf.size_of_ptr)
 	  end
       | C.Struct (_, sz) -> Nat.of_int sz
       | C.Union (_, sz) -> Nat.of_int sz
@@ -90,7 +90,7 @@ let check_array_type_length typ =
   in
     try 
       let sz = length typ in 
-	if Nat.compare sz (Nat.of_int !Config.max_array_length) > 0 then
+	if Nat.compare sz (Nat.of_int !Conf.max_array_length) > 0 then
 	  Npkcontext.report_error "Firstpass.translate_typ" 
 	    "invalid size for array"
     with Exit -> ()
@@ -473,7 +473,7 @@ let translate prog =
 	      translate (Binop ((Plus, Ptr t), (base, Ptr t), e))
 
 	| AddrOf (Field ((_e, t), _f) as lv, _)
-               when !Config.arithmetic_in_structs_allowed ->
+               when !Conf.arithmetic_in_structs_allowed ->
             addr_of (translate_lv lv, t)
 
 	| AddrOf (lv, t) -> addr_of (translate_lv lv, t)
@@ -548,7 +548,7 @@ let translate prog =
 	| Offsetof (t, f) -> 
 	    let (r, _, _) = translate_comp (TypedC.comp_of_typ t) in
 	    let o 	  = find_offset_field f r in
-	      C.exp_of_int (o / !Config.size_of_byte)
+	      C.exp_of_int (o / !Conf.size_of_byte)
 		
     and find_offset_field f r =
       let translate c =
@@ -831,7 +831,7 @@ let translate prog =
 	      Npkcontext.report_error "Firstpass.translate_typ" 
 		"invalid size for array"
 	  in
-	    if (i < 0) || (i > !Config.max_array_length) then begin
+	    if (i < 0) || (i > !Conf.max_array_length) then begin
 	      (* TODO: should print the expression e?? *)
 	      Npkcontext.report_error "Firstpass.translate_typ" 
 		"invalid size for array"

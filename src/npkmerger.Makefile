@@ -26,7 +26,7 @@
 
 TARGET=npkmerger
 DIRS=newspeak/ utils/ npkmerger/
-FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
+FILES=version newspeak/temps newspeak/conf newspeak/eBigInt \
       utils/standardApplication newspeak/newspeak npkmerger/npkmerger
 LIBX=nums.cmxa str.cmxa
 

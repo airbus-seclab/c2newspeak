@@ -173,9 +173,9 @@ and offset_exp =
 
 let char_typ () = Int (Newspeak.char_kind ())
 
-let int_kind () = (Newspeak.Signed, !Config.size_of_int)
+let int_kind () = (Newspeak.Signed, !Conf.size_of_int)
 
-let uint_typ () = Int (Newspeak.Unsigned, !Config.size_of_int)
+let uint_typ () = Int (Newspeak.Unsigned, !Conf.size_of_int)
 let int_typ () = Int (int_kind ())
 
 (* TODO: put in cir *)
@@ -331,5 +331,5 @@ let min_typ t1 t2 =
 	
 let promote k = 
   match k with
-      (_, n) when n < !Config.size_of_int -> int_kind ()
+      (_, n) when n < !Conf.size_of_int -> int_kind ()
     | _ -> k

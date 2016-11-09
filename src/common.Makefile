@@ -85,7 +85,7 @@ clean:
 
 %.cmx: %.ml
 	@echo "Compiling source            "$<
-	@$(OCAMLOPT) -for-pack Npk $(INCLUDE) $(LIBX) -c $<
+	@$(OCAMLOPT) $(INCLUDE) $(LIBX) -c $<
 
 %.mli %.ml: %.mly
 	@echo "Compiling parser            "$<

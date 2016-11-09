@@ -162,11 +162,11 @@ and offset_exp =
 
 let char_typ () = Int (N.char_kind ())
   
-let int_typ () = Int (N.Signed, !Config.size_of_int)
+let int_typ () = Int (N.Signed, !Conf.size_of_int)
 
-let long_typ () = Int (N.Signed, !Config.size_of_long)
+let long_typ () = Int (N.Signed, !Conf.size_of_long)
 
-let uint_typ () = Int (N.Unsigned, !Config.size_of_int)
+let uint_typ () = Int (N.Unsigned, !Conf.size_of_int)
 
 let exp_of_char c = Cst (Cir.CInt (N.Nat.of_int (Char.code c)), char_typ ())
 
@@ -211,9 +211,9 @@ let int_cst_of_lexeme (base, x, sign, min_sz) =
   in
   let min_sz =
     match min_sz with
-	None -> !Config.size_of_int
-      | Some ("L"|"l") -> !Config.size_of_long
-      | Some "LL" -> !Config.size_of_longlong
+	None -> !Conf.size_of_int
+      | Some ("L"|"l") -> !Conf.size_of_long
+      | Some "LL" -> !Conf.size_of_longlong
       | _ -> 
 	  Npkcontext.report_error "Csyntax.int_cst_of_lexeme" 
 	    "unreachable statement"
@@ -224,9 +224,9 @@ let int_cst_of_lexeme (base, x, sign, min_sz) =
       && (Newspeak.belongs x (Newspeak.domain_of_typ (sign, sz))))
   in
   let ikind_tbl =
-    [(N.Signed, !Config.size_of_int); (N.Unsigned, !Config.size_of_int); 
-     (N.Signed, !Config.size_of_long); (N.Unsigned, !Config.size_of_long); 
-     (N.Signed, !Config.size_of_longlong); (N.Unsigned, !Config.size_of_longlong)
+    [(N.Signed, !Conf.size_of_int); (N.Unsigned, !Conf.size_of_int); 
+     (N.Signed, !Conf.size_of_long); (N.Unsigned, !Conf.size_of_long); 
+     (N.Signed, !Conf.size_of_longlong); (N.Unsigned, !Conf.size_of_longlong)
     ]    
   in
   let k = 
@@ -252,9 +252,9 @@ let float_cst_of_lexeme (value, suffix) =
    the float??? *)
   let (lexeme, sz) = 
     match suffix with
-	None -> (value, !Config.size_of_double)
-      | Some 'F' -> (value^"F", !Config.size_of_float)
-      | Some 'L' | Some 'l' -> (value^"L", !Config.size_of_longdouble)
+	None -> (value, !Conf.size_of_double)
+      | Some 'F' -> (value^"F", !Conf.size_of_float)
+      | Some 'L' | Some 'l' -> (value^"L", !Conf.size_of_longdouble)
       | _ -> 
 	  Npkcontext.report_error "Csyntax.float_cst_of_lexeme" 
 	    "unknown suffix for float"

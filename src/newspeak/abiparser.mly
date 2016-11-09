@@ -51,43 +51,43 @@ let check () =
   Hashtbl.iter (fun optname optval ->
     remaining_opts := StrSet.remove optname !remaining_opts;
     match (optname, optval) with
-    | "size_of_void", OptInt n when n > 0 -> Config.size_of_void := n
+    | "size_of_void", OptInt n when n > 0 -> Conf.size_of_void := n
 
-    | "size_of_byte",       OptInt n when n > 0 -> Config.size_of_byte := n
-    | "size_of_ptr",        OptInt n when n > 0 -> Config.size_of_ptr := n
-    | "size_of_char",       OptInt n when n > 0 -> Config.size_of_char := n
-    | "size_of_short",      OptInt n when n > 0 -> Config.size_of_short := n
-    | "size_of_int",        OptInt n when n > 0 -> Config.size_of_int := n
-    | "size_of_long",       OptInt n when n > 0 -> Config.size_of_long := n
-    | "size_of_longlong",   OptInt n when n > 0 -> Config.size_of_longlong := n
-    | "size_of_float",      OptInt n when n > 0 -> Config.size_of_float := n
-    | "size_of_double",     OptInt n when n > 0 -> Config.size_of_double := n
-    | "size_of_longdouble", OptInt n when n > 0 -> Config.size_of_longdouble := n
+    | "size_of_byte",       OptInt n when n > 0 -> Conf.size_of_byte := n
+    | "size_of_ptr",        OptInt n when n > 0 -> Conf.size_of_ptr := n
+    | "size_of_char",       OptInt n when n > 0 -> Conf.size_of_char := n
+    | "size_of_short",      OptInt n when n > 0 -> Conf.size_of_short := n
+    | "size_of_int",        OptInt n when n > 0 -> Conf.size_of_int := n
+    | "size_of_long",       OptInt n when n > 0 -> Conf.size_of_long := n
+    | "size_of_longlong",   OptInt n when n > 0 -> Conf.size_of_longlong := n
+    | "size_of_float",      OptInt n when n > 0 -> Conf.size_of_float := n
+    | "size_of_double",     OptInt n when n > 0 -> Conf.size_of_double := n
+    | "size_of_longdouble", OptInt n when n > 0 -> Conf.size_of_longdouble := n
 
-    | "align_of_ptr",        OptInt n when n > 0 -> Config.align_of_ptr := n
-    | "align_of_char",       OptInt n when n > 0 -> Config.align_of_char := n
-    | "align_of_short",      OptInt n when n > 0 -> Config.align_of_short := n
-    | "align_of_int",        OptInt n when n > 0 -> Config.align_of_int := n
-    | "align_of_long",       OptInt n when n > 0 -> Config.align_of_long := n
-    | "align_of_longlong",   OptInt n when n > 0 -> Config.align_of_longlong := n
-    | "align_of_float",      OptInt n when n > 0 -> Config.align_of_float := n
-    | "align_of_double",     OptInt n when n > 0 -> Config.align_of_double := n
-    | "align_of_longdouble", OptInt n when n > 0 -> Config.align_of_longdouble := n
+    | "align_of_ptr",        OptInt n when n > 0 -> Conf.align_of_ptr := n
+    | "align_of_char",       OptInt n when n > 0 -> Conf.align_of_char := n
+    | "align_of_short",      OptInt n when n > 0 -> Conf.align_of_short := n
+    | "align_of_int",        OptInt n when n > 0 -> Conf.align_of_int := n
+    | "align_of_long",       OptInt n when n > 0 -> Conf.align_of_long := n
+    | "align_of_longlong",   OptInt n when n > 0 -> Conf.align_of_longlong := n
+    | "align_of_float",      OptInt n when n > 0 -> Conf.align_of_float := n
+    | "align_of_double",     OptInt n when n > 0 -> Conf.align_of_double := n
+    | "align_of_longdouble", OptInt n when n > 0 -> Conf.align_of_longdouble := n
 
-    | "is_char_type_signed", OptBool b -> Config.is_char_type_signed := b
+    | "is_char_type_signed", OptBool b -> Conf.is_char_type_signed := b
 
     | "is_little_endian", OptBool b ->
-        Config.is_little_endian := b
+        Conf.is_little_endian := b
 
     | "arithmetic_in_structs_allowed", OptBool b ->
-        Config.arithmetic_in_structs_allowed := b
+        Conf.arithmetic_in_structs_allowed := b
 
     | "unaligned_ptr_deref_allowed", OptBool b ->
-        Config.unaligned_ptr_deref_allowed := b
+        Conf.unaligned_ptr_deref_allowed := b
 
     | _ -> failwith ("Invalid option or type for : " ^ optname)
   ) opt_table;
-  Config.max_array_length := !Config.max_sizeof / !Config.size_of_byte;
+  Conf.max_array_length := !Conf.max_sizeof / !Conf.size_of_byte;
   if not (StrSet.is_empty !remaining_opts) then
     begin
       print_endline "The following options are missing :";

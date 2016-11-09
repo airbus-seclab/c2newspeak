@@ -131,7 +131,7 @@ and init =
   | Data of exp
   | Sequence of (exp Csyntax.init_designator * init) list
 
-let int_typ () = Csyntax.Int (Signed, !Config.size_of_int)
+let int_typ () = Csyntax.Int (Signed, !Conf.size_of_int)
 
 let exp_of_int i = Cst (Cir.CInt (Nat.of_int i), int_typ ())
 

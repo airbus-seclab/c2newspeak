@@ -25,17 +25,17 @@
 #
 
 #TODO: think about it, but npkcontext should not be part of INSTALL.FILES
-INSTALL.FILES=newspeak/temps.cmi newspeak/config.cmi newspeak/eBigInt.cmi \
+INSTALL.FILES=newspeak/temps.cmi newspeak/conf.cmi newspeak/eBigInt.cmi \
 	      newspeak/newspeak.cmi \
 	      utils/standardApplication.cmi newspeak/npkcontext.cmi \
               newspeak/lowspeak.cmi newspeak/npk2lpk.cmi newspeak/npkil.cmi \
-	      npk.cmx npk.cmi npk.o
+		newspeak.cma newspeak.cmxa newspeak.o
 
 all: $(INSTALL.FILES)
 	$(CP) $(INSTALL.FILES) ../bin
 
-FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
-      newspeak/newspeak utils/standardApplication \
+FILES=version newspeak/temps newspeak/conf newspeak/eBigInt \
+      utils/listUtils newspeak/newspeak utils/standardApplication \
       newspeak/npkcontext newspeak/lowspeak newspeak/npk2lpk newspeak/npkil
 FILES.CMO=$(addsuffix .cmo,$(FILES))
 FILES.CMX=$(addsuffix .cmx,$(FILES))
@@ -44,18 +44,14 @@ newspeak.cma: $(FILES.CMO)
 	@echo "Building library            "newspeak.cma
 	@$(OCAMLC) nums.cma str.cma -a $(FILES.CMO) -o newspeak.cma
 
-npk.cmx: $(FILES.CMX)
-	@echo "Building pack            "npk.cmx
-	$(OCAMLOPT) -pack $(FILES.CMX) -o npk.cmx
-	$(OCAMLC) -pack $(FILES.CMI) -o npk.cmi
+newspeak.cmxa: $(FILES.CMX)
+	@echo "Building library "newspeak.cmxa
+	@$(OCAMLOPT) -a $(FILES.CMX) -o newspeak.cmxa
 
-install-pkg:
-	ocamlfind install newspeak META npk.cmx npk.cmi npk.o
+newspeak.o: $(FILES.CMX)
+	@$(OCAMLOPT) -output-obj nums.cmxa str.cmxa $(FILES.CMX) -o newspeak.o
 
-
-CLEANFILES=newspeak.a newspeak.cma npk.cmxa npk.cmi newspeak/newspeak.cmo \
-           newspeak/npkil.cmo
-
+CLEANFILES=newspeak.cmxa newspeak.cma newspeak.o
 TARGET=newspeak
 DIRS=utils/ newspeak/
 LIBX=nums.cmxa str.cmxa

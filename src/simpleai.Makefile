@@ -30,7 +30,7 @@ LIBX=nums.cmxa str.cmxa
 all: ../bin/$(TARGET)
 
 FILES=version utils/strSet \
-      newspeak/temps newspeak/config newspeak/eBigInt newspeak/newspeak \
+      newspeak/temps newspeak/conf newspeak/eBigInt newspeak/newspeak \
       utils/standardApplication \
       newspeak/npkcontext newspeak/lowspeak newspeak/npk2lpk \
       simpleai/context simpleai/simple \

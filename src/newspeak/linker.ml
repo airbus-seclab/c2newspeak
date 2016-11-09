@@ -90,7 +90,7 @@ and add_glb_cstr str =
 	(* TODO: think about it, this code is 
 	   redundant with initialization in typedC2Cir *)
 	let offset = ref 0 in
-	let size = !Config.size_of_char in
+	let size = !Conf.size_of_char in
 	  for i = 0 to len - 1 do
 	    let e = exp_of_char str.[i] in
 (* TODO: factor creation of lv *)
@@ -149,10 +149,10 @@ and generate_tmp_nat x =
           Nat.mul_int n i
 
 and generate_addr_of lv sz =
-  if (sz > !Config.max_sizeof) then begin
+  if (sz > !Conf.max_sizeof) then begin
     Npkcontext.report_error "Link.generate_exp" 
       ("size too large: maximum allowed is "
-       ^(string_of_int !Config.max_sizeof)^" bits")
+       ^(string_of_int !Conf.max_sizeof)^" bits")
   end;
   N.UnOp (N.Focus sz, N.AddrOf (generate_lv lv))
 	    
@@ -390,32 +390,32 @@ let reject_backward_gotos prog =
 
 let make_abi () = {
   N.endianness =
-    if !Config.is_little_endian then
+    if !Conf.is_little_endian then
       N.LittleEndian
     else
       N.BigEndian;
 
-  N.arithmetic_in_structs_allowed = !Config.arithmetic_in_structs_allowed;
-  N.unaligned_ptr_deref_allowed = !Config.unaligned_ptr_deref_allowed;
-  N.max_sizeof = !Config.max_sizeof;
-  N.max_array_length = !Config.max_array_length;
+  N.arithmetic_in_structs_allowed = !Conf.arithmetic_in_structs_allowed;
+  N.unaligned_ptr_deref_allowed = !Conf.unaligned_ptr_deref_allowed;
+  N.max_sizeof = !Conf.max_sizeof;
+  N.max_array_length = !Conf.max_array_length;
   N.types = {
     N.char_signedness =
-      if !Config.is_char_type_signed then
+      if !Conf.is_char_type_signed then
         N.Signed
       else
         N.Unsigned;
-    N.size_of_byte = !Config.size_of_byte;
-    N.sa_void       = {N.size = !Config.size_of_void      ; N.align = !Config.align_of_void      };
-    N.sa_char       = {N.size = !Config.size_of_char      ; N.align = !Config.align_of_char      };
-    N.sa_ptr        = {N.size = !Config.size_of_ptr       ; N.align = !Config.align_of_ptr       };
-    N.sa_short      = {N.size = !Config.size_of_short     ; N.align = !Config.align_of_short     };
-    N.sa_int        = {N.size = !Config.size_of_int       ; N.align = !Config.align_of_int       };
-    N.sa_long       = {N.size = !Config.size_of_long      ; N.align = !Config.align_of_long      };
-    N.sa_longlong   = {N.size = !Config.size_of_longlong  ; N.align = !Config.align_of_longlong  };
-    N.sa_float      = {N.size = !Config.size_of_float     ; N.align = !Config.align_of_float     };
-    N.sa_double     = {N.size = !Config.size_of_double    ; N.align = !Config.align_of_double    };
-    N.sa_longdouble = {N.size = !Config.size_of_longdouble; N.align = !Config.align_of_longdouble};
+    N.size_of_byte = !Conf.size_of_byte;
+    N.sa_void       = {N.size = !Conf.size_of_void      ; N.align = !Conf.align_of_void      };
+    N.sa_char       = {N.size = !Conf.size_of_char      ; N.align = !Conf.align_of_char      };
+    N.sa_ptr        = {N.size = !Conf.size_of_ptr       ; N.align = !Conf.align_of_ptr       };
+    N.sa_short      = {N.size = !Conf.size_of_short     ; N.align = !Conf.align_of_short     };
+    N.sa_int        = {N.size = !Conf.size_of_int       ; N.align = !Conf.align_of_int       };
+    N.sa_long       = {N.size = !Conf.size_of_long      ; N.align = !Conf.align_of_long      };
+    N.sa_longlong   = {N.size = !Conf.size_of_longlong  ; N.align = !Conf.align_of_longlong  };
+    N.sa_float      = {N.size = !Conf.size_of_float     ; N.align = !Conf.align_of_float     };
+    N.sa_double     = {N.size = !Conf.size_of_double    ; N.align = !Conf.align_of_double    };
+    N.sa_longdouble = {N.size = !Conf.size_of_longdouble; N.align = !Conf.align_of_longdouble};
 
   }
 }
@@ -441,7 +441,7 @@ let link npkos =
       N.globals = globals;
       N.init = init;
       N.fundecs = fundecs;
-      N.ptr_sz = !Config.size_of_ptr;
+      N.ptr_sz = !Conf.size_of_ptr;
       N.src_lang = src_lang;
       N.abi = make_abi ();
     } 

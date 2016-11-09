@@ -26,7 +26,7 @@
 
 TARGET=npkstats
 DIRS=newspeak/ utils/ npkstats/
-FILES=version newspeak/temps newspeak/config newspeak/eBigInt \
+FILES=version newspeak/temps newspeak/conf newspeak/eBigInt \
       newspeak/newspeak utils/standardApplication newspeak/npkcontext \
       newspeak/lowspeak newspeak/npk2lpk npkstats/maxcount npkstats/funstats \
       npkstats/libfuns npkstats/npkstats

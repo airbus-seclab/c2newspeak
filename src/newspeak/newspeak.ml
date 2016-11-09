@@ -1508,9 +1508,9 @@ let return_value = Temps.return_value
 
 let char_kind () =
   let char_signedness =
-   if !Config.is_char_type_signed then Signed else Unsigned
+   if !Conf.is_char_type_signed then Signed else Unsigned
   in
-    (char_signedness, !Config.size_of_char)
+    (char_signedness, !Conf.size_of_char)
 
 let char_typ () = Int (char_kind ())
   

@@ -237,7 +237,7 @@ let exp_of_float x = Const (CFloat (x, string_of_float x))
    put in csyntax *)
 let rec size_of_typ t = 
   match t with
-      Scalar t -> Newspeak.size_of_scalar !Config.size_of_ptr t
+      Scalar t -> Newspeak.size_of_scalar !Conf.size_of_ptr t
     | Array (t, Some n) -> 
 	let sz = (size_of_typ t) in
 	  if n > max_int / sz then begin
@@ -246,17 +246,17 @@ let rec size_of_typ t =
 	  end;
 	  sz * n
     | Struct (_, n) | Union (_, n) -> n
-    | Fun -> !Config.size_of_char
+    | Fun -> !Conf.size_of_char
     | Array _ -> 
 	Npkcontext.report_error "Csyntax.size_of_typ" "unknown size of array"
     | Void -> 
 	if not !Npkcontext.accept_gnuc then
 	  Npkcontext.report_accept_warning "Csyntax.size_of_typ" "unknown size of void" Npkcontext.GnuC;
-	!Config.size_of_void
+	!Conf.size_of_void
 
 (* TODO: if possible remove int_kind, and  int_typ, they are
    in csyntax rather *)
-let int_kind () = (Npk.Signed, !Config.size_of_int)
+let int_kind () = (Npk.Signed, !Conf.size_of_int)
 let int_typ () = Scalar (Npk.Int (int_kind ()))
 
 let concat_effects blk1 blk2 =
