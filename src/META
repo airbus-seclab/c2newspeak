@@ -1,6 +1,0 @@
-description = "Newspeak intermediate language"
-if_exists = "npk.cmi"
-requires = ""
-version = "1"
-archive(byte) = ""
-archive(native) = "npk.cmx"

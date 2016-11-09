@@ -51,6 +51,9 @@ newspeak.cmxa: $(FILES.CMX)
 newspeak.o: $(FILES.CMX)
 	@$(OCAMLOPT) -output-obj nums.cmxa str.cmxa $(FILES.CMX) -o newspeak.o
 
+install:
+	ocamlfind install newspeak newspeak/META newspeak.o newspeak.cmxa newspeak.cma ../bin/newspeak.cmi
+
 CLEANFILES=newspeak.cmxa newspeak.cma newspeak.o
 TARGET=newspeak
 DIRS=utils/ newspeak/

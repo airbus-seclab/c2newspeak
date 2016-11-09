@@ -66,5 +66,5 @@ clean: check.clean
 check.clean: 
 	@$(MAKE) -s -C tests clean
 
-install-pkg:
-	$(MAKE) -s -C src -f newspeak.Makefile install-pkg
+install:
+	$(MAKE) -s -C src -f newspeak.Makefile install

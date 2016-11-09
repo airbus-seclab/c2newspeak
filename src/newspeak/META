@@ -1,0 +1,6 @@
+description = "Newspeak intermediate language"
+if_exists = "newspeak.cmi"
+requires = ""
+version = "1"
+archive(byte) = "newspeak.cma"
+archive(native) = "newspeak.cmxa"
