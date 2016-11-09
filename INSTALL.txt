@@ -14,7 +14,7 @@ Newspeak is designed for the purpose of static analysis.
   This will produce the documentation in html in the doc/ directory. 
   The documentation index file is index.html.
 
-- To install newspeak as an ocaml package, run "make install-pkg" as root
+- To install newspeak as an ocaml package, run "make install" as root
 - To compile a C file to Newspeak, use c2newspeak
 - To read and manipulate Newspeak files in your own project, use the libraries 
   newspeak.cma (for bytecode) 
