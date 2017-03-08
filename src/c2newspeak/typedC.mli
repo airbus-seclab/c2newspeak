@@ -190,3 +190,10 @@ val promote	 : Newspeak.ikind -> Newspeak.ikind
 val comp_of_typ	 : typ -> (field_decl list * bool)
 
 val equals_typ	 : typ -> typ -> bool
+
+  (** [read name] retrieves the list of file names, program and size of
+      pointers from a typedC npk file. **)
+val read: string -> t
+
+(** [write name prog] write the program prog into the file name *)
+val write : string -> t -> unit

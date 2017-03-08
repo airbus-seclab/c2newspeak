@@ -333,3 +333,19 @@ let promote k =
   match k with
       (_, n) when n < !Conf.size_of_int -> int_kind ()
     | _ -> k
+
+let write name prog =
+  let cout = open_out_bin name in
+    Marshal.to_channel cout "TNPK!" [];
+    Marshal.to_channel cout prog [];
+    close_out cout
+      
+let read name =
+  try
+    let cin = open_in_bin name in
+    let str = Marshal.from_channel cin in
+    if str <> "TNPK!" then
+      invalid_arg ("TypedC.read: "^name^" is not an typed npk file");
+    Marshal.from_channel cin
+  with Failure _ ->
+    invalid_arg ("TypedC.read: unable to open "^name)
