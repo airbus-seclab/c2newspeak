@@ -62,7 +62,7 @@ let accept_extern 	  = ref true
 let accept_flex_array 	  = ref true
 let no_opt 		  = ref false
 let accept_mult_def 	  = ref true
-
+let typed_npk = ref true
 (* TODO: Handle assumptions correctly *)
 (* let assumptions = ref [] *)
 
@@ -185,6 +185,9 @@ let argslist = [
   ("-o", Arg.Set_string output_file,
    "gives the name of Newspeak output\n");
 
+  ("--typed-npk", Arg.Set typed_npk,
+   "compiles to typed npk rather than classical newspeak\n");
+  
   (opt_of_flag DirtyCast, Arg.Clear (flag_of_error DirtyCast),
    "rejects casts");
 
@@ -264,7 +267,7 @@ let argslist = [
    "verbose option: displays C Intermediate Representation output");
 
   ("--print-npko", Arg.Set verb_npko,
-   "verbose option: displays NewsPeak Object output");
+   "verbose option: displays Newspeak Object output");
 
   ("--print-newspeak", Arg.Set verb_newspeak,
    "verbose option: displays Newspeak output");

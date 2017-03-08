@@ -1315,5 +1315,5 @@ let translate prog =
     (* TODO: optimization: could remove this phase if cir had a type 
        structure of name 
        and all the structures' type were in a hashtbl *)
-    Hashtbl.iter add_glbdecl used_globals;
     { C.globals = glbdecls; C.init = !init; C.fundecs = fundefs }
+
