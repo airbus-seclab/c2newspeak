@@ -52,7 +52,7 @@ newspeak.o: $(FILES.CMX)
 	@$(OCAMLOPT) -output-obj nums.cmxa str.cmxa $(FILES.CMX) -o newspeak.o
 
 install:
-	ocamlfind install newspeak newspeak/META newspeak.a newspeak.o newspeak.cmxa newspeak.cma ../bin/newspeak.cmi
+	ocamlfind install newspeak newspeak/META newspeak.a newspeak.o newspeak.cmxa newspeak.cma ../bin/newspeak.cmi c2newspeak/typedC.cmi c2newspeak/typedC.o c2newspeak/typedC.cmx	
 
 CLEANFILES=newspeak.cmxa newspeak.cma newspeak.o
 TARGET=newspeak

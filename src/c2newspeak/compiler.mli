@@ -24,3 +24,4 @@
 *)
 
 val compile: string -> Npkil.t
+val to_typedC: string -> TypedC.t

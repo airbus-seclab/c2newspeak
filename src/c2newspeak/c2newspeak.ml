@@ -63,7 +63,17 @@ let execute () =
       Linker.link nos;
       Npkcontext.dump_xml_warns ()
     end
-	    
+
+let to_typedC () =
+  let fname = List.hd !Npkcontext.input_files in
+  let prog = Compiler.to_typedC fname in
+  let tno = create_no_filename fname in
+  TypedC.write tno prog
+    
 let _ =
+  let exec =
+    if !Npkcontext.typed_npk then to_typedC
+    else execute
+  in
   X2newspeak.process Params.version_string Params.comment_string execute
     

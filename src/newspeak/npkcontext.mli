@@ -68,7 +68,7 @@ val accept_gnuc : bool ref
 val remove_temp : bool ref
 
 val accept_flex_array: bool ref
-
+val typed_npk: bool ref
 (** If no_opt is set, then no code simplification is performed *)
 val no_opt : bool ref
 

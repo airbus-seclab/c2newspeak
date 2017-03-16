@@ -108,3 +108,8 @@ let compile fname =
   let prog = add_types prog	       in
   let prog = translate_typedC2cir prog in
     translate_cir2npkil prog
+
+let to_typedC fname =
+  let prog = parse fname in
+  let prog = bare2C prog in
+  add_types prog
