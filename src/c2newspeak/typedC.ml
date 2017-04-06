@@ -345,7 +345,7 @@ let read name =
     let cin = open_in_bin name in
     let str = Marshal.from_channel cin in
     if str <> "TNPK!" then
-      invalid_arg ("TypedC.read: "^name^" is not an typed npk file");
+      invalid_arg ("TypedC.read: "^name^" is not a typed npk file");
     Marshal.from_channel cin
   with Failure _ ->
     invalid_arg ("TypedC.read: unable to open "^name)

@@ -68,12 +68,13 @@ let to_typedC () =
   let fname = List.hd !Npkcontext.input_files in
   let prog = Compiler.to_typedC fname in
   let tno = create_no_filename fname in
+  Printf.printf "entree dans write";
   TypedC.write tno prog
     
 let _ =
-  let exec =
-    if !Npkcontext.typed_npk then to_typedC
+  let exec () =
+    if !Npkcontext.typed_npk = true then to_typedC
     else execute
   in
-  X2newspeak.process Params.version_string Params.comment_string execute
+  X2newspeak.process Params.version_string Params.comment_string exec
     
