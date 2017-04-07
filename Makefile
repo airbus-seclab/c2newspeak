@@ -68,3 +68,6 @@ check.clean:
 
 install:
 	$(MAKE) -s -C src -f newspeak.Makefile install
+
+package:
+	$(MAKE) -s -C src -f newspeak.Makefile package
