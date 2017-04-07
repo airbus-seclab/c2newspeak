@@ -68,7 +68,6 @@ let to_typedC () =
   let fname = List.hd !Npkcontext.input_files in
   let prog = Compiler.to_typedC fname in
   let tno = create_no_filename fname in
-  Printf.printf "entree dans write";
   TypedC.write tno prog
     
 let _ =
