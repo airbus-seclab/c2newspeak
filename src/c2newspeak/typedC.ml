@@ -253,7 +253,7 @@ let rec string_of_typ t =
     | Array _ -> "Array"
     | Comp cmp -> (string_of_aux_cmp cmp)
     | Fun ft -> string_of_ftyp ft
-    | Va_arg -> "Va_arg"
+    | Va_arg -> "va_arg"
 
 and string_of_aux_cmp cmp =
   match cmp with
