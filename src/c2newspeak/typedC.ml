@@ -239,17 +239,17 @@ let rec string_of_exp e =
 
 let rec string_of_typ t =
   match t with
-    | Void -> "Void"
+    | Void -> "void"
     | Int (sign, sz) -> 
 	let sign =
 	  match sign with
 	      Newspeak.Signed -> ""
 	    | Newspeak.Unsigned -> "u"
 	in
-	  sign^"int"^(string_of_int sz)
+	  sign^"int"^(string_of_int sz)^"_t"
     | Bitfield _ -> "Bitfield"
     | Float _ -> "Float"
-    | Ptr t' -> "Ptr "^(string_of_typ t')
+    | Ptr t' -> (string_of_typ t')^" *"
     | Array _ -> "Array"
     | Comp cmp -> (string_of_aux_cmp cmp)
     | Fun ft -> string_of_ftyp ft
