@@ -138,7 +138,7 @@ let extract_no fname =
       no
   end
     
-let execute () =
+let execute () () =
     (* TODO: this code should be factored with c2newspeak!!! into x2newspeak *)
   Normalize.init_bodies !Npkcontext.input_files;
      

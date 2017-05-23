@@ -26,7 +26,7 @@ let process version_string comment_string execute =
   try
     Npkcontext.handle_cmdline_options version_string comment_string;
     set_config ();
-    execute ()
+    execute () ()
   with Invalid_argument msg ->
     prerr_endline ("Fatal error: "^msg);
     exit 1

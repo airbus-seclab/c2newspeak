@@ -71,9 +71,9 @@ let to_typedC () =
   TypedC.write tno prog
     
 let _ =
-  let exec =
-    if !Npkcontext.typed_npk then to_typedC
+  let exec () =
+    if !Npkcontext.typed_npk = true then to_typedC
     else execute
   in
-  X2newspeak.process Params.version_string Params.comment_string execute
+  X2newspeak.process Params.version_string Params.comment_string exec
     

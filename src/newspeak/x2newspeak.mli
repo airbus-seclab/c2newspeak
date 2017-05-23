@@ -1,1 +1,1 @@
-val process: string -> string -> (unit -> unit) -> unit
+val process: string -> string -> (unit -> unit -> unit) -> unit

@@ -239,21 +239,21 @@ let rec string_of_exp e =
 
 let rec string_of_typ t =
   match t with
-    | Void -> "Void"
+    | Void -> "void"
     | Int (sign, sz) -> 
 	let sign =
 	  match sign with
 	      Newspeak.Signed -> ""
 	    | Newspeak.Unsigned -> "u"
 	in
-	  sign^"int"^(string_of_int sz)
+	  sign^"int"^(string_of_int sz)^"_t"
     | Bitfield _ -> "Bitfield"
     | Float _ -> "Float"
-    | Ptr t' -> "Ptr "^(string_of_typ t')
+    | Ptr t' -> (string_of_typ t')^" *"
     | Array _ -> "Array"
     | Comp cmp -> (string_of_aux_cmp cmp)
     | Fun ft -> string_of_ftyp ft
-    | Va_arg -> "Va_arg"
+    | Va_arg -> "va_arg"
 
 and string_of_aux_cmp cmp =
   match cmp with
@@ -345,7 +345,7 @@ let read name =
     let cin = open_in_bin name in
     let str = Marshal.from_channel cin in
     if str <> "TNPK!" then
-      invalid_arg ("TypedC.read: "^name^" is not an typed npk file");
+      invalid_arg ("TypedC.read: "^name^" is not a typed npk file");
     Marshal.from_channel cin
   with Failure _ ->
     invalid_arg ("TypedC.read: unable to open "^name)

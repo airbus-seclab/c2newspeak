@@ -62,7 +62,7 @@ let accept_extern 	  = ref true
 let accept_flex_array 	  = ref true
 let no_opt 		  = ref false
 let accept_mult_def 	  = ref true
-let typed_npk = ref true
+let typed_npk = ref false
 (* TODO: Handle assumptions correctly *)
 (* let assumptions = ref [] *)
 
