@@ -29,14 +29,14 @@ INSTALL.FILES=newspeak/temps.cmi newspeak/conf.cmi newspeak/eBigInt.cmi \
 	      newspeak/newspeak.cmi \
 	      utils/standardApplication.cmi newspeak/npkcontext.cmi \
               newspeak/lowspeak.cmi newspeak/npk2lpk.cmi newspeak/npkil.cmi \
-		newspeak.cma newspeak.cmxa newspeak.o
+		newspeak.cma newspeak.cmxa newspeak.o c2newspeak/typedC.cmi
 
 all: $(INSTALL.FILES)
 	$(CP) $(INSTALL.FILES) ../bin
 
 FILES=version newspeak/temps newspeak/conf newspeak/eBigInt \
       utils/listUtils newspeak/newspeak utils/standardApplication \
-      newspeak/npkcontext newspeak/lowspeak newspeak/npk2lpk newspeak/npkil
+      newspeak/npkcontext newspeak/lowspeak newspeak/npk2lpk newspeak/npkil c2newspeak/csyntax c2newspeak/typedC
 FILES.CMO=$(addsuffix .cmo,$(FILES))
 FILES.CMX=$(addsuffix .cmx,$(FILES))
 
@@ -52,7 +52,7 @@ newspeak.o: $(FILES.CMX)
 	@$(OCAMLOPT) -output-obj nums.cmxa str.cmxa $(FILES.CMX) -o newspeak.o
 
 install:
-	ocamlfind install newspeak newspeak/META newspeak.a newspeak.o newspeak.cmxa newspeak.cma ../bin/newspeak.cmi c2newspeak/typedC.cmi c2newspeak/typedC.o c2newspeak/typedC.cmx	
+	ocamlfind install newspeak newspeak/META newspeak.a newspeak.o newspeak.cmxa newspeak.cma ../bin/newspeak.cmi c2newspeak/typedC.cmi
 
 package:
 	rm -rf ../pkg/ && mkdir ../pkg/
@@ -60,7 +60,7 @@ package:
 
 CLEANFILES=newspeak.cmxa newspeak.cma newspeak.o
 TARGET=newspeak
-DIRS=utils/ newspeak/
+DIRS=utils/ newspeak/ c2newspeak/
 LIBX=nums.cmxa str.cmxa
 
 include common.Makefile
